@@ -42,6 +42,10 @@ import {
     Ban,
     ToggleLeft,
     ToggleRight,
+    Megaphone,
+    Zap,
+    Archive,
+    AlertCircle,
 } from "lucide-react";
 import DeleteConfirmationModal from "../../Components/DeleteConfirmationModal";
 import { normalizePhotoUrl } from "@/Helpers/PhotoUrlHelper";
@@ -244,6 +248,8 @@ export default function Inscriptions({
     approvedCount = 0,
     rejectedCount = 0,
     userFamilyId = null,
+    pendingTransfersCount = 0,
+    flashInfoAnnonces = [],
 }) {
     const formatDateDisplay = (value, fallback = "N/A") => {
         if (!value) return fallback;
@@ -324,8 +330,51 @@ export default function Inscriptions({
         setPagination({ ...pagination, [tab]: newPage });
     };
 
+    // --- ÉTAT FLASH INFO ---
+    const [flashInfoList, setFlashInfoList] = useState(flashInfoAnnonces);
+    const [showFlashModal, setShowFlashModal] = useState(false);
+    const [flashForm, setFlashForm] = useState({ titre: "", contenu: "", date_expiration: "" });
+    const [flashSubmitting, setFlashSubmitting] = useState(false);
+    const [flashErrors, setFlashErrors] = useState({});
+    const [flashSearch, setFlashSearch] = useState("");
+
+    const handleFlashSubmit = async (e) => {
+        e.preventDefault();
+        const newErrors = {};
+        if (!flashForm.titre.trim()) newErrors.titre = "Le titre est obligatoire.";
+        if (!flashForm.contenu.trim()) newErrors.contenu = "Le contenu est obligatoire.";
+        if (Object.keys(newErrors).length) { setFlashErrors(newErrors); return; }
+        setFlashSubmitting(true);
+        try {
+            const res = await axios.post(withBasePath("", "/conducteur/flash-info"), {
+                titre: flashForm.titre,
+                contenu: flashForm.contenu,
+                date_expiration: flashForm.date_expiration || null,
+            });
+            setFlashInfoList((prev) => [res.data.annonce, ...prev]);
+            setFlashForm({ titre: "", contenu: "", date_expiration: "" });
+            setFlashErrors({});
+            setShowFlashModal(false);
+            showSuccessToast("✅ Annonce soumise ! Elle sera publiée après validation par l'administrateur.");
+        } catch (err) {
+            const msg = err.response?.data?.message || "Une erreur est survenue.";
+            showError("❌ " + msg);
+        } finally {
+            setFlashSubmitting(false);
+        }
+    };
+
+    const filteredFlash = flashInfoList.filter((a) => {
+        if (!flashSearch.trim()) return true;
+        const q = flashSearch.toLowerCase();
+        return (
+            (a.details?.titre || "").toLowerCase().includes(q) ||
+            (a.details?.contenu || "").toLowerCase().includes(q)
+        );
+    });
+
     // --- ÉTAT ---
-    const [activeTab, setActiveTab] = useState("pending"); // Onglet actif : pending, approved, rejected, families
+    const [activeTab, setActiveTab] = useState("families"); // Onglet actif : families, members, flash-info
 
     // --- AJOUT DES FILTRES ---
     const [filters, setFilters] = useState({
@@ -377,6 +426,11 @@ export default function Inscriptions({
     const [rejectReason, setRejectReason] = useState("");
     const [approvingId, setApprovingId] = useState(null);
     const [rejectingId, setRejectingId] = useState(null);
+    const [selectedPendingIds, setSelectedPendingIds] = useState([]);
+    const [bulkApproving, setBulkApproving] = useState(false);
+    const [bulkRejecting, setBulkRejecting] = useState(false);
+
+    const [deleteTarget, setDeleteTarget] = useState(null); // { id, kind, name }
 
     // Modal famille
     const [showFamilyModal, setShowFamilyModal] = useState(false);
@@ -567,6 +621,22 @@ export default function Inscriptions({
                 null,
         ),
         fonction_professionnelle: member.fonction_professionnelle || null,
+        telephone2: member.telephone2 || null,
+        fonctions_eglise: member.fonctions_eglise?.length > 0 ? member.fonctions_eglise : (member.raw?.fonctions || []).map(f => f.nom).filter(Boolean),
+        classe_nom: member.classe_nom || null,
+        ville_nom: member.ville_nom || member.raw?.ville?.nom || null,
+        contact_urgence: member.contact_urgence || null,
+        contact_urgence_tel: member.contact_urgence_tel || null,
+        statut_marital: member.statut_marital || (() => {
+            const s = member.sacrements || member.raw?.sacrements;
+            if (!s) return null;
+            if (s.est_marie) return 'Marié(e)';
+            if (s.est_divorce) return 'Divorcé(e)';
+            if (s.est_veuf) return 'Veuf(ve)';
+            return 'Célibataire';
+        })(),
+        sacrements: member.sacrements || null,
+        relation: member.relation || null,
         created_at: member.created_at || null,
         updated_at: member.updated_at || member.created_at || null,
         raw: member,
@@ -740,6 +810,23 @@ export default function Inscriptions({
             active_tab: activeTab,
         });
     }, [inscriptionsOnly, membersOnly, filteredItems, activeTab]);
+
+    // Stats membres pour le nouveau bloc de résumé
+    const memberStats = React.useMemo(() => {
+        const total = membersOnly.length;
+        const hommes = membersOnly.filter(m => String(m.raw?.genre || m.genre || '').toUpperCase() === 'M').length;
+        const femmes = membersOnly.filter(m => String(m.raw?.genre || m.genre || '').toUpperCase() === 'F').length;
+        const actifs = membersOnly.filter(m => m.status === 'actif').length;
+        return {
+            total,
+            hommes,
+            femmes,
+            pctHommes: total > 0 ? Math.round((hommes / total) * 100) : 0,
+            pctFemmes: total > 0 ? Math.round((femmes / total) * 100) : 0,
+            actifs,
+        };
+    }, [membersOnly]);
+
     const resetFilters = () => {
         setFilters({
             search: "",
@@ -783,34 +870,30 @@ export default function Inscriptions({
         setPagination((prev) => ({ ...prev, [tabKey]: 1 }));
     }, [filters]);
 
+    useEffect(() => {
+        if (activeTab !== "pending" && selectedPendingIds.length > 0) {
+            setSelectedPendingIds([]);
+        }
+    }, [activeTab, selectedPendingIds.length]);
+
     // --- ACTIONS ---
 
     // Suppression unifiée
-    const handleDelete = (id, kind) => {
-        const itemText =
-            kind === "inscription"
-                ? "cette demande d'inscription"
-                : "ce membre";
-        if (
-            !window.confirm(
-                `Êtes-vous sûr de vouloir supprimer ${itemText} ?`,
-            )
-        ) {
-            return;
-        }
+    const handleDelete = (id, kind, name = null) => {
+        setDeleteTarget({ id, kind, name });
+    };
 
+    const confirmDeleteAction = () => {
+        if (!deleteTarget) return;
+        const { id, kind } = deleteTarget;
         const url =
             kind === "inscription"
                 ? `/conducteur/inscriptions/${id}`
                 : `/conducteur/members/${id}`;
 
         router.delete(url, {
-            onSuccess: () => {
-                // Gestion succès
-            },
-            onError: (errors) => {
-                alert("Erreur lors de la suppression.");
-            },
+            onSuccess: () => setDeleteTarget(null),
+            onError: () => setDeleteTarget(null),
         });
     };
 
@@ -915,6 +998,155 @@ export default function Inscriptions({
                 null,
         });
         setShowDetailModal(true);
+    };
+
+    const canApproveItem = (item) =>
+        activeTab === "pending" &&
+        !item.admin_approved &&
+        !item.conducteur_approved &&
+        item.status !== "approved" &&
+        item.status !== "rejected";
+
+    const getCurrentPendingPageItems = () => {
+        if (activeTab !== "pending") return [];
+        const currentPageInscriptions = pagination.pending;
+        const startIndex = (currentPageInscriptions - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return filteredItems.slice(startIndex, endIndex);
+    };
+
+    const getCurrentPendingPageSelectableIds = () =>
+        getCurrentPendingPageItems()
+            .filter((item) => canApproveItem(item))
+            .map((item) => item.id);
+
+    const isPendingSelected = (id) => selectedPendingIds.includes(id);
+
+    const togglePendingSelect = (id) => {
+        setSelectedPendingIds((prev) =>
+            prev.includes(id)
+                ? prev.filter((selectedId) => selectedId !== id)
+                : [...prev, id],
+        );
+    };
+
+    const isAllPendingPageSelected = () => {
+        const selectableIds = getCurrentPendingPageSelectableIds();
+        return (
+            selectableIds.length > 0 &&
+            selectableIds.every((id) => selectedPendingIds.includes(id))
+        );
+    };
+
+    const toggleSelectAllPendingPage = () => {
+        const selectableIds = getCurrentPendingPageSelectableIds();
+        if (selectableIds.length === 0) return;
+
+        setSelectedPendingIds((prev) => {
+            if (selectableIds.every((id) => prev.includes(id))) {
+                return prev.filter((id) => !selectableIds.includes(id));
+            }
+            return [...new Set([...prev, ...selectableIds])];
+        });
+    };
+
+    const clearPendingSelection = () => setSelectedPendingIds([]);
+
+    const handleBulkApprovePending = async () => {
+        if (selectedPendingIds.length === 0 || bulkApproving) return;
+
+        setBulkApproving(true);
+        const results = await Promise.allSettled(
+            selectedPendingIds.map((id) =>
+                axios.post(
+                    withBasePath("", `/conducteur/inscriptions/${id}/approve`),
+                    { reason: "" },
+                    {
+                        headers: {
+                            "X-CSRF-TOKEN":
+                                document
+                                    .querySelector('meta[name="csrf-token"]')
+                                    ?.getAttribute("content") || "",
+                        },
+                    },
+                ),
+            ),
+        );
+
+        const successCount = results.filter(
+            (result) => result.status === "fulfilled",
+        ).length;
+        const failedCount = results.length - successCount;
+
+        if (successCount > 0) {
+            showSuccessToast(`${successCount} inscription(s) validée(s).`);
+        }
+        if (failedCount > 0) {
+            showError(
+                `${failedCount} validation(s) ont échoué. Vérifie les inscriptions déjà traitées.`,
+            );
+        }
+
+        clearPendingSelection();
+        setBulkApproving(false);
+        router.reload({
+            only: [
+                "inscriptions",
+                "members",
+                "pendingCount",
+                "approvedCount",
+                "rejectedCount",
+            ],
+        });
+    };
+
+    const handleBulkRejectPending = async () => {
+        if (selectedPendingIds.length === 0 || bulkRejecting) return;
+        const reason = "Refus groupé par le conducteur";
+
+        setBulkRejecting(true);
+        const results = await Promise.allSettled(
+            selectedPendingIds.map((id) =>
+                axios.post(
+                    withBasePath("", `/conducteur/inscriptions/${id}/reject`),
+                    { reason },
+                    {
+                        headers: {
+                            "X-CSRF-TOKEN":
+                                document
+                                    .querySelector('meta[name="csrf-token"]')
+                                    ?.getAttribute("content") || "",
+                        },
+                    },
+                ),
+            ),
+        );
+
+        const successCount = results.filter(
+            (result) => result.status === "fulfilled",
+        ).length;
+        const failedCount = results.length - successCount;
+
+        if (successCount > 0) {
+            showSuccessToast(`${successCount} inscription(s) refusée(s).`);
+        }
+        if (failedCount > 0) {
+            showError(
+                `${failedCount} refus ont échoué. Vérifie les inscriptions déjà traitées.`,
+            );
+        }
+
+        clearPendingSelection();
+        setBulkRejecting(false);
+        router.reload({
+            only: [
+                "inscriptions",
+                "members",
+                "pendingCount",
+                "approvedCount",
+                "rejectedCount",
+            ],
+        });
     };
 
     const closeDetailModal = () => {
@@ -1129,12 +1361,12 @@ export default function Inscriptions({
 
     const openMemberModal = async (item) => {
         const normalized = normalizeMemberForModal(item);
-        setSelectedMember(normalized);
+setSelectedMember(normalized);
         setShowMemberModal(true);
 
-        // Enrichir avec les sacrements si non déjà présents
+        // Enrichir avec les sacrements uniquement si vraiment absents du payload (pas juste null)
         const memberId = normalized.id ?? normalized.raw?.id;
-        if (memberId && !normalized.sacrements) {
+        if (memberId && normalized.sacrements === undefined) {
             try {
                 const res = await axios.get(
                     withBasePath("", `/users/${memberId}/sacrements`),
@@ -1295,19 +1527,11 @@ export default function Inscriptions({
             if (csrfToken) {
                 formData.append("_token", csrfToken);
             }
+            formData.append("_method", "PUT");
 
-            console.log("AUTO-SAVE - Envoi des données pour membre", memberId);
-            console.log(
-                "AUTO-SAVE - FormData entries:",
-                Array.from(formData.entries()),
-            );
-
-            const response = await axios.put(
+            const response = await axios.post(
                 `/conducteur/members/${memberId}`,
                 formData,
-                {
-                    headers: { "Content-Type": "multipart/form-data" },
-                },
             );
 
             setSaveNotification({ show: true, message: "Sauvegarde automatique effectuée" });
@@ -1485,9 +1709,7 @@ export default function Inscriptions({
 
             setIsSubmitting(true);
             axios
-                .post("/conducteur/quick-member", formData, {
-                    headers: { "Content-Type": "multipart/form-data" },
-                })
+                .post("/conducteur/quick-member", formData)
                 .then((response) => {
                     console.log("Succès!", response.data);
                     showSuccessToast("Le membre a bien ete ajoute.", 2500);
@@ -1553,10 +1775,9 @@ export default function Inscriptions({
                 });
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
                 if (csrfToken) formData.append("_token", csrfToken);
+                formData.append("_method", "PUT");
 
-                await axios.put(withBasePath("", `/conducteur/members/${memberId}`), formData, {
-                    headers: { "Content-Type": "multipart/form-data" },
-                });
+                await axios.post(withBasePath("", `/conducteur/members/${memberId}`), formData);
                 showSuccessToast("✅ Modifications enregistrées avec succès.", 3000);
                 setShowModal(false);
                 setTimeout(() => router.reload(), 600);
@@ -1775,7 +1996,7 @@ export default function Inscriptions({
                                     "",
                                     "/conducteur/transferts",
                                 )}
-                                className="bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
+                                className="relative bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
                             >
                                 <svg
                                     className="w-5 h-5"
@@ -1791,62 +2012,53 @@ export default function Inscriptions({
                                     />
                                 </svg>
                                 Transferts
+                                {pendingTransfersCount > 0 && (
+                                    <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 shadow-md animate-pulse">
+                                        {pendingTransfersCount > 99 ? "99+" : pendingTransfersCount}
+                                    </span>
+                                )}
                             </Link>
                         </div>
                     </div>
 
-                    {/* STATS RAPIDES (TRANSPARENT DESIGN) */}
+                    {/* STATS MEMBRES */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white flex items-center gap-4">
                             <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white text-xl">
                                 <Users />
                             </div>
                             <div>
-                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">
-                                    Total Demandes
-                                </div>
-                                <div className="text-2xl font-bold">
-                                    {calculatedStats.total}
-                                </div>
+                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">Total membres</div>
+                                <div className="text-2xl font-bold">{memberStats.total}</div>
                             </div>
                         </div>
                         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white text-xl">
-                                <Clock />
+                            <div className="w-12 h-12 rounded-full bg-blue-400/30 flex items-center justify-center text-white text-xl">
+                                <User />
                             </div>
                             <div>
-                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">
-                                    En attente
-                                </div>
-                                <div className="text-2xl font-bold">
-                                    {calculatedStats.pending}
-                                </div>
+                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">Hommes</div>
+                                <div className="text-2xl font-bold">{memberStats.hommes}</div>
+                                <div className="text-xs opacity-60 mt-0.5">{memberStats.pctHommes}%</div>
                             </div>
                         </div>
                         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white text-xl">
-                                <Check />
+                            <div className="w-12 h-12 rounded-full bg-pink-400/30 flex items-center justify-center text-white text-xl">
+                                <User />
                             </div>
                             <div>
-                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">
-                                    Approuvés
-                                </div>
-                                <div className="text-2xl font-bold">
-                                    {calculatedStats.approved}
-                                </div>
+                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">Femmes</div>
+                                <div className="text-2xl font-bold">{memberStats.femmes}</div>
+                                <div className="text-xs opacity-60 mt-0.5">{memberStats.pctFemmes}%</div>
                             </div>
                         </div>
                         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white text-xl">
-                                <X />
+                            <div className="w-12 h-12 rounded-full bg-green-400/30 flex items-center justify-center text-white text-xl">
+                                <UserCheck />
                             </div>
                             <div>
-                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">
-                                    Rejetés
-                                </div>
-                                <div className="text-2xl font-bold">
-                                    {calculatedStats.rejected}
-                                </div>
+                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">Membres actifs</div>
+                                <div className="text-2xl font-bold">{memberStats.actifs}</div>
                             </div>
                         </div>
                     </div>
@@ -1854,38 +2066,31 @@ export default function Inscriptions({
                     {/* ONGLETS */}
                     <div className="flex gap-3 mb-8 overflow-x-auto">
                         <button
-                            onClick={() => switchTab("pending")}
-                            className={`px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "pending" ? "bg-yellow-500 text-white shadow-lg" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
-                        >
-                            <Clock className="w-5 h-5" /> En attente
-                        </button>
-                        <button
-                            onClick={() => switchTab("approved")}
-                            className={`px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "approved" ? "bg-green-500 text-white shadow-lg" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
-                        >
-                            <Check className="w-5 h-5" /> Approuvé
-                        </button>
-                        <button
-                            onClick={() => switchTab("rejected")}
-                            className={`px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "rejected" ? "bg-red-500 text-white shadow-lg" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
-                        >
-                            <X className="w-5 h-5" /> Refusé
-                        </button>
-                        <button
                             onClick={() => switchTab("families")}
                             className={`px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "families" ? "bg-blue-500 text-white shadow-lg" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
                         >
-                            <Users className="w-5 h-5" /> Famille
+                            <Users className="w-5 h-5" /> Ma famille
                         </button>
                         <button
                             onClick={() => switchTab("members")}
-                            className={`px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "members" ? "bg-purple-500 text-white shadow-lg" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
+                            className={`px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "members" ? "bg-gradient-to-r from-purple-500 to-purple-700 text-white shadow-lg ring-2 ring-purple-300/50" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
                         >
                             <UserCheck className="w-5 h-5" /> Tous les Membres
+                            {membersOnly.length > 0 && (
+                                <span className="px-2 py-0.5 rounded-full text-xs bg-white/25 font-medium">
+                                    {membersOnly.length}
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => switchTab("flash-info")}
+                            className={`px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "flash-info" ? "bg-yellow-400 text-gray-900 shadow-lg" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
+                        >
+                            <Megaphone className="w-5 h-5" /> Flash Info
                         </button>
                     </div>
                     {/* SECTION RECHERCHE ET FILTRES */}
-                    <div className="border-slate-100 mb-8">
+                    <div className={`border-slate-100 mb-8 ${activeTab === "flash-info" ? "hidden" : ""}`}>
                         <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
                             <div className="relative w-full sm:max-w-md">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
@@ -2006,39 +2211,43 @@ export default function Inscriptions({
                                 : familiesList;
 
                             return (
-                                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+                                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 border-t-4 border-t-blue-500">
+                                    <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
+                                        <Users className="w-4 h-4 text-blue-600" />
+                                        <span className="text-sm font-semibold text-slate-700">Membres de ma famille</span>
+                                    </div>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left">
-                                            <thead className="bg-blue-600 text-white border-b border-slate-200">
+                                            <thead className="bg-gradient-to-r from-slate-700 to-slate-800 text-white">
                                                 <tr>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         #
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Nom complet
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Famille
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Code Famille
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Code Membre
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Rôle
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Email
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Téléphone
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Statut
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-right">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-right">
                                                         Actions
                                                     </th>
                                                 </tr>
@@ -2180,12 +2389,12 @@ export default function Inscriptions({
                                                                     member.id ||
                                                                     idx
                                                                 }
-                                                                className={`${member.is_deceased ? "bg-gray-100 opacity-60" : member.transfer_locked ? "opacity-60" : "hover:bg-slate-50"} transition`}
+                                                                className={`${member.is_deceased ? "bg-gray-50 opacity-60" : member.transfer_locked ? "opacity-60" : "hover:bg-indigo-50/40 cursor-pointer"} transition-colors`}
                                                             >
-                                                                <td className="p-5 text-slate-500 font-mono text-xs">
+                                                                <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">
                                                                     {idx + 1}
                                                                 </td>
-                                                                <td className="p-5">
+                                                                <td className="px-4 py-3.5">
                                                                     <div className="flex items-center gap-3">
                                                                         <ProfilePhoto
                                                                             user={{
@@ -2222,7 +2431,7 @@ export default function Inscriptions({
                                                                         </div>
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     <div className="flex items-center gap-2">
                                                                         <Users className="w-4 h-4 text-blue-500" />
                                                                         <span>
@@ -2231,7 +2440,7 @@ export default function Inscriptions({
                                                                         </span>
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     <div className="flex flex-col gap-1">
                                                                         {getFamilyCodeHistory(
                                                                             member,
@@ -2278,13 +2487,13 @@ export default function Inscriptions({
                                                                         )}
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-50 border border-slate-200 rounded-full text-xs font-semibold text-slate-700">
                                                                         {member.code_membre ||
                                                                             "N/A"}
                                                                     </span>
                                                                 </td>
-                                                                <td className="p-5">
+                                                                <td className="px-4 py-3.5">
                                                                     <span
                                                                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                                                             member.is_responsable ||
@@ -2308,16 +2517,16 @@ export default function Inscriptions({
                                                                                 "Membre"}
                                                                     </span>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     {member.email ||
                                                                         "N/A"}
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     {member.phone ||
                                                                         member.telephone ||
                                                                         "N/A"}
                                                                 </td>
-                                                                <td className="p-5">
+                                                                <td className="px-4 py-3.5">
                                                                     <span
                                                                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                                                             member.status ===
@@ -2338,46 +2547,27 @@ export default function Inscriptions({
                                                                               : "Actif"}
                                                                     </span>
                                                                 </td>
-                                                                <td className="p-5 text-right">
-                                                                    <div className="flex items-center justify-end gap-2">
+                                                                <td className="px-4 py-3.5 text-right">
+                                                                    <div className="flex items-center justify-end gap-1.5">
                                                                         <button
                                                                             type="button"
                                                                             title="Voir les détails"
-                                                                            className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition transform hover:scale-105"
-                                                                            onClick={() => {
-                                                                                openMemberModal(
-                                                                                    member,
-                                                                                );
-                                                                            }}
+                                                                            className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 ring-1 ring-blue-200 transition-all hover:scale-110 active:scale-95"
+                                                                            onClick={() => openMemberModal(member)}
                                                                         >
-                                                                            <Eye
-                                                                                size={
-                                                                                    18
-                                                                                }
-                                                                            />
+                                                                            <Eye size={15} />
                                                                         </button>
                                                                         <button
                                                                             type="button"
                                                                             title="Modifier"
-                                                                            disabled={
-                                                                                member.transfer_locked
-                                                                            }
-                                                                            className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition transform hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                                            disabled={member.transfer_locked}
+                                                                            className="p-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 ring-1 ring-amber-200 transition-all hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                                                                             onClick={() => {
-                                                                                if (
-                                                                                    member.transfer_locked
-                                                                                )
-                                                                                    return;
-                                                                                openEditModal(
-                                                                                    member,
-                                                                                );
+                                                                                if (member.transfer_locked) return;
+                                                                                openEditModal(member);
                                                                             }}
                                                                         >
-                                                                            <Edit
-                                                                                size={
-                                                                                    18
-                                                                                }
-                                                                            />
+                                                                            <Edit size={15} />
                                                                         </button>
                                                                     </div>
                                                                 </td>
@@ -2459,48 +2649,59 @@ export default function Inscriptions({
                         })()
                     ) : activeTab === "members" ? (
                         // TABLEAU DE TOUS LES MEMBRES CRÉÉS
-                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 border-t-4 border-t-purple-500">
+                            <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <UserCheck className="w-4 h-4 text-purple-600" />
+                                    <span className="text-sm font-semibold text-slate-700">Tous les membres</span>
+                                    {membersOnly.length > 0 && (
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                                            {membersOnly.length}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
-                                    <thead className="bg-blue-600 text-white border-b border-slate-200">
+                                    <thead className="bg-gradient-to-r from-slate-700 to-slate-800 text-white">
                                         <tr>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 N°
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Nom
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Famille
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Code Famille
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Code Membre
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Email
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Téléphone
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Rôle
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Statut
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Date Naissance
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Date Création
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Date Modification
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider text-right">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-right">
                                                 Actions
                                             </th>
                                         </tr>
@@ -2553,14 +2754,14 @@ export default function Inscriptions({
                                                         return (
                                                             <tr
                                                                 key={member.id}
-                                                                className={`${member.is_deceased ? "bg-gray-100 opacity-60" : member.transfer_locked ? "opacity-60" : "hover:bg-slate-50"} transition`}
+                                                                className={`${member.is_deceased ? "bg-gray-50 opacity-60" : member.transfer_locked ? "opacity-60" : "hover:bg-indigo-50/40 cursor-pointer"} transition-colors`}
                                                             >
-                                                                <td className="p-5 text-slate-500 font-mono text-xs">
+                                                                <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">
                                                                     {startIndex +
                                                                         idx +
                                                                         1}
                                                                 </td>
-                                                                <td className="p-5">
+                                                                <td className="px-4 py-3.5">
                                                                     <div className="flex items-center gap-3">
                                                                         <ProfilePhoto
                                                                             user={{
@@ -2591,14 +2792,14 @@ export default function Inscriptions({
                                                                         </div>
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     {memberFamily
                                                                         ? memberFamily.nom
                                                                         : member.famille_id
                                                                           ? `Famille #${member.famille_id}`
                                                                           : "Aucune famille"}
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     <div className="flex flex-col gap-1">
                                                                         {(getFamilyCodeHistory(
                                                                             member,
@@ -2657,22 +2858,22 @@ export default function Inscriptions({
                                                                             )}
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-50 border border-slate-200 rounded-full text-xs font-semibold text-slate-700">
                                                                         {member.code_membre ||
                                                                             "N/A"}
                                                                     </span>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     {
                                                                         member.email
                                                                     }
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     {member.phone ||
                                                                         "N/A"}
                                                                 </td>
-                                                                <td className="p-5">
+                                                                <td className="px-4 py-3.5">
                                                                     <span
                                                                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                                                             member.role ===
@@ -2694,7 +2895,7 @@ export default function Inscriptions({
                                                                                 "Membre"}
                                                                     </span>
                                                                 </td>
-                                                                <td className="p-5">
+                                                                <td className="px-4 py-3.5">
                                                                     <span
                                                                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                                                             member.status ===
@@ -2716,144 +2917,78 @@ export default function Inscriptions({
                                                                                 "Actif"}
                                                                     </span>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600 text-sm">
+                                                                <td className="px-4 py-3.5 text-slate-500 text-sm">
                                                                     {formatDateDisplay(
                                                                         member.date_naissance,
                                                                         "N/A",
                                                                     )}
                                                                 </td>
-                                                                <td className="p-5 text-slate-600 text-sm">
+                                                                <td className="px-4 py-3.5 text-slate-500 text-sm">
                                                                     {formatDateDisplay(
                                                                         member.created_at,
                                                                         "N/A",
                                                                     )}
                                                                 </td>
-                                                                <td className="p-5 text-slate-600 text-sm">
+                                                                <td className="px-4 py-3.5 text-slate-500 text-sm">
                                                                     {formatDateDisplay(
                                                                         member.updated_at ||
                                                                             member.created_at,
                                                                         "N/A",
                                                                     )}
                                                                 </td>
-                                                                <td className="p-5">
-                                                                    <div className="flex items-center justify-end gap-2">
+                                                                <td className="px-4 py-3.5">
+                                                                    <div className="flex items-center justify-end gap-1.5">
                                                                         <button
                                                                             type="button"
                                                                             title="Voir les détails"
-                                                                            className="p-2 rounded-lg transition-all"
-                                                                            style={{
-                                                                                backgroundColor:
-                                                                                    "rgba(37, 99, 235, 0.1)",
-                                                                                border: "2px solid rgba(37, 99, 235, 0.2)",
-                                                                            }}
-                                                                            onClick={() => {
-                                                                                openMemberModal(
-                                                                                    member,
-                                                                                );
-                                                                            }}
+                                                                            className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 ring-1 ring-blue-200 transition-all hover:scale-110 active:scale-95"
+                                                                            onClick={() => openMemberModal(member)}
                                                                         >
-                                                                            <Eye className="w-5 h-5 text-blue-600" />
+                                                                            <Eye className="w-4 h-4" />
                                                                         </button>
                                                                         <button
                                                                             type="button"
                                                                             title="Modifier"
-                                                                            className="p-2 rounded-lg transition-all"
-                                                                            style={{
-                                                                                backgroundColor:
-                                                                                    "rgba(37, 99, 235, 0.1)",
-                                                                                border: "2px solid rgba(37, 99, 235, 0.2)",
-                                                                            }}
-                                                                            disabled={
-                                                                                member.transfer_locked
-                                                                            }
+                                                                            disabled={member.transfer_locked}
+                                                                            className="p-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 ring-1 ring-amber-200 transition-all hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                                                                             onClick={() => {
-                                                                                if (
-                                                                                    member.transfer_locked
-                                                                                )
-                                                                                    return;
-                                                                                console.log(
-                                                                                    "Modifier clicked for member:",
-                                                                                    member,
-                                                                                );
-                                                                                openEditModal(
-                                                                                    member,
-                                                                                );
+                                                                                if (member.transfer_locked) return;
+                                                                                openEditModal(member);
                                                                             }}
                                                                         >
-                                                                            <Edit className="w-5 h-5 text-blue-600" />
+                                                                            <Edit className="w-4 h-4" />
                                                                         </button>
                                                                         <button
                                                                             type="button"
-                                                                            title={
-                                                                                member.status ===
-                                                                                "actif"
-                                                                                    ? "Désactiver"
-                                                                                    : "Activer"
-                                                                            }
-                                                                            className="p-2 rounded-lg transition-all"
-                                                                            style={{
-                                                                                backgroundColor:
-                                                                                    member.status ===
-                                                                                    "actif"
-                                                                                        ? "rgba(22, 163, 74, 0.1)"
-                                                                                        : "rgba(220, 38, 38, 0.1)",
-                                                                                border:
-                                                                                    member.status ===
-                                                                                    "actif"
-                                                                                        ? "2px solid rgba(22, 163, 74, 0.2)"
-                                                                                        : "2px solid rgba(220, 38, 38, 0.2)",
-                                                                            }}
-                                                                            disabled={
-                                                                                member.transfer_locked
-                                                                            }
+                                                                            title={member.status === "actif" ? "Désactiver" : "Activer"}
+                                                                            disabled={member.transfer_locked}
+                                                                            className={`p-2 rounded-lg ring-1 transition-all hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+                                                                                member.status === "actif"
+                                                                                    ? "bg-green-50 hover:bg-green-100 text-green-600 ring-green-200"
+                                                                                    : "bg-slate-50 hover:bg-slate-100 text-slate-500 ring-slate-200"
+                                                                            }`}
                                                                             onClick={() => {
-                                                                                if (
-                                                                                    member.transfer_locked
-                                                                                )
-                                                                                    return;
-                                                                                if (
-                                                                                    member.status ===
-                                                                                    "actif"
-                                                                                ) {
-                                                                                    openDeactivateModal(
-                                                                                        member,
-                                                                                    );
+                                                                                if (member.transfer_locked) return;
+                                                                                if (member.status === "actif") {
+                                                                                    openDeactivateModal(member);
                                                                                 } else {
-                                                                                    validateMember(
-                                                                                        member.id,
-                                                                                    );
+                                                                                    validateMember(member.id);
                                                                                 }
                                                                             }}
                                                                         >
-                                                                            <Power
-                                                                                className={`w-5 h-5 ${member.status === "actif" ? "text-green-600" : "text-red-600"}`}
-                                                                            />
+                                                                            <Power className="w-4 h-4" />
                                                                         </button>
                                                                         <button
                                                                             type="button"
                                                                             title="Supprimer"
-                                                                            className="p-2 rounded-lg transition-all"
-                                                                            style={{
-                                                                                backgroundColor:
-                                                                                    "rgba(220, 38, 38, 0.1)",
-                                                                                border: "2px solid rgba(220, 38, 38, 0.2)",
-                                                                            }}
-                                                                            disabled={
-                                                                                member.transfer_locked
-                                                                            }
+                                                                            disabled={member.transfer_locked}
+                                                                            className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 ring-1 ring-red-200 transition-all hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                                                                             onClick={() => {
-                                                                                if (
-                                                                                    member.transfer_locked
-                                                                                )
-                                                                                    return;
-
-                                                                                handleDelete(
-                                                                                    member.id,
-                                                                                    "member",
-                                                                                );
+                                                                                if (member.transfer_locked) return;
+                                                                                handleDelete(member.id, "member", `${member.prenom || ""} ${member.nom || ""}`.trim());
                                                                             }}
                                                                         >
-                                                                            <Trash2 className="w-5 h-5 text-red-600" />
+                                                                            <Trash2 className="w-4 h-4" />
                                                                         </button>
                                                                     </div>
                                                                 </td>
@@ -2894,8 +3029,251 @@ export default function Inscriptions({
                                 itemsPerPage={ITEMS_PER_PAGE}
                             />
                         </div>
+                    ) : activeTab === "flash-info" ? (
+                        /* ══════════ ONGLET FLASH INFO ══════════ */
+                        <div className="space-y-6">
+                            {/* Header */}
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                                        <Megaphone className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-white">Flash Info Paroissial</h2>
+                                        <p className="text-blue-200 text-sm">Soumettez des informations à diffuser dans toute la communauté</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowFlashModal(true)}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Faire une annonce
+                                </button>
+                            </div>
+
+                            {/* Bandeau info */}
+                            <div className="flex items-start gap-3 bg-blue-600/20 border border-blue-400/30 rounded-xl px-5 py-4 text-blue-100 text-sm">
+                                <Zap className="w-5 h-5 flex-shrink-0 text-yellow-300 mt-0.5" />
+                                <span>
+                                    Vos annonces sont soumises à l'<strong>administrateur</strong> pour validation avant d'apparaître dans le flash info visible par toute la plateforme.
+                                </span>
+                            </div>
+
+                            {/* Barre de recherche */}
+                            <div className="relative">
+                                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <input
+                                    type="text"
+                                    value={flashSearch}
+                                    onChange={(e) => setFlashSearch(e.target.value)}
+                                    placeholder="Rechercher par titre ou contenu…"
+                                    className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-white/40 outline-none focus:border-yellow-400/60 focus:bg-white/15 transition-all"
+                                />
+                            </div>
+
+                            {/* Liste */}
+                            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 space-y-3">
+                                {filteredFlash.length === 0 ? (
+                                    <div className="text-center py-10">
+                                        <Megaphone className="w-12 h-12 text-white/30 mx-auto mb-3" />
+                                        <p className="text-white/60 text-sm">
+                                            {flashSearch ? "Aucun résultat pour votre recherche." : "Aucune annonce soumise pour le moment."}
+                                        </p>
+                                        {!flashSearch && (
+                                            <button
+                                                onClick={() => setShowFlashModal(true)}
+                                                className="mt-4 px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-gray-900 rounded-lg text-sm font-semibold transition-colors"
+                                            >
+                                                + Faire ma première annonce
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    filteredFlash.map((a) => {
+                                        const titre = a.details?.titre || "(Sans titre)";
+                                        const contenu = a.details?.contenu || "";
+                                        const statut = a.statut || "SOUMISE";
+                                        const dateCreation = a.created_at
+                                            ? new Date(a.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                                            : "—";
+                                        const datePublication = a.date_publication
+                                            ? new Date(a.date_publication).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                                            : null;
+                                        const dateExp = a.date_expiration
+                                            ? new Date(a.date_expiration).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                                            : null;
+                                        const isPublished = statut === "PUBLIEE";
+                                        const isArchived = statut === "ARCHIVEE";
+                                        return (
+                                            <div key={a.id} className={`bg-white rounded-xl border shadow-sm p-4 flex flex-col gap-2 ${isPublished ? "border-green-200" : isArchived ? "border-gray-200 opacity-60" : "border-yellow-200"}`}>
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <Zap className={`w-4 h-4 flex-shrink-0 ${isPublished ? "text-green-500" : "text-yellow-500"}`} />
+                                                        <span className="font-semibold text-gray-900 truncate">{titre}</span>
+                                                    </div>
+                                                    <span className={`flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full border ${
+                                                        isPublished
+                                                            ? "bg-green-50 text-green-700 border-green-200"
+                                                            : isArchived
+                                                              ? "bg-gray-50 text-gray-500 border-gray-200"
+                                                              : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                                    }`}>
+                                                        {isPublished ? "✅ Publiée" : isArchived ? "Archivée" : "⏳ En attente de validation"}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-gray-600 line-clamp-2">{contenu}</p>
+                                                <div className="flex items-center gap-4 text-xs text-gray-400 mt-1 flex-wrap">
+                                                    <span className="flex items-center gap-1">
+                                                        <Calendar className="w-3.5 h-3.5" />
+                                                        Soumise le {dateCreation}
+                                                    </span>
+                                                    {isPublished && datePublication && (
+                                                        <span className="flex items-center gap-1 text-green-500">
+                                                            <CheckCircle className="w-3.5 h-3.5" />
+                                                            Publiée le {datePublication}
+                                                        </span>
+                                                    )}
+                                                    {dateExp && (
+                                                        <span className="flex items-center gap-1">
+                                                            <Clock className="w-3.5 h-3.5" />
+                                                            Expire le {dateExp}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            {/* Modal création flash info */}
+                            {showFlashModal && (
+                                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setShowFlashModal(false); setFlashErrors({}); }} />
+                                    <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+                                        <form onSubmit={handleFlashSubmit}>
+                                            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                                                        <Megaphone className="w-5 h-5 text-blue-600" />
+                                                    </div>
+                                                    <div>
+                                                        <h2 className="text-lg font-bold text-gray-900">Nouvelle annonce Flash Info</h2>
+                                                        <p className="text-xs text-gray-500">Sera publiée après validation par l'administrateur</p>
+                                                    </div>
+                                                </div>
+                                                <button type="button" onClick={() => { setShowFlashModal(false); setFlashErrors({}); }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                                                    <X className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                            <div className="px-6 py-5 space-y-4">
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Titre <span className="text-red-500">*</span></label>
+                                                    <input
+                                                        type="text"
+                                                        className={`w-full h-11 border rounded-lg px-4 text-sm outline-none transition-all focus:shadow-md ${flashErrors.titre ? "border-red-400 focus:border-red-400" : "border-gray-300 focus:border-blue-500"}`}
+                                                        placeholder="ex: Réunion de prière, Service du dimanche..."
+                                                        value={flashForm.titre}
+                                                        onChange={(e) => {
+                                                            setFlashForm((p) => ({ ...p, titre: e.target.value }));
+                                                            setFlashErrors((p) => ({ ...p, titre: "" }));
+                                                        }}
+                                                    />
+                                                    {flashErrors.titre && <p className="text-red-500 text-xs mt-1">{flashErrors.titre}</p>}
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Message <span className="text-red-500">*</span></label>
+                                                    <textarea
+                                                        rows={4}
+                                                        className={`w-full border rounded-lg px-4 py-3 text-sm outline-none transition-all resize-none focus:shadow-md ${flashErrors.contenu ? "border-red-400 focus:border-red-400" : "border-gray-300 focus:border-blue-500"}`}
+                                                        placeholder="Rédigez votre message ici. Il sera affiché dans le flash info après validation..."
+                                                        value={flashForm.contenu}
+                                                        onChange={(e) => {
+                                                            setFlashForm((p) => ({ ...p, contenu: e.target.value }));
+                                                            setFlashErrors((p) => ({ ...p, contenu: "" }));
+                                                        }}
+                                                    />
+                                                    <div className="flex justify-between mt-1">
+                                                        {flashErrors.contenu ? <p className="text-red-500 text-xs">{flashErrors.contenu}</p> : <span />}
+                                                        <span className="text-xs text-gray-400">{flashForm.contenu.length}/2000</span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                                        Date d'expiration
+                                                        <span className="ml-1 text-xs text-gray-400 font-normal">(optionnel)</span>
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        className="w-full h-11 border border-gray-300 rounded-lg px-4 text-sm outline-none focus:border-blue-500 focus:shadow-md transition-all"
+                                                        value={flashForm.date_expiration}
+                                                        min={new Date().toISOString().split("T")[0]}
+                                                        onChange={(e) => setFlashForm((p) => ({ ...p, date_expiration: e.target.value }))}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-lg px-4 py-3 text-xs text-amber-700">
+                                                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                                    Cette annonce sera visible <strong>uniquement après validation par l'administrateur</strong>.
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-end gap-3 px-6 pb-6">
+                                                <button type="button" onClick={() => { setShowFlashModal(false); setFlashErrors({}); }} className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                                    Annuler
+                                                </button>
+                                                <button type="submit" disabled={flashSubmitting} className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-md">
+                                                    {flashSubmitting ? (
+                                                        <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg> Envoi...</>
+                                                    ) : (
+                                                        <><Megaphone className="w-4 h-4" /> Soumettre</>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     ) : (
                         // TABLEAU DES INSCRIPTIONS (pending, approved, rejected)
+                        <div className="space-y-3">
+                            {activeTab === "pending" && (
+                                <div className="bg-white rounded-xl border border-slate-200 px-4 py-3 flex flex-wrap items-center gap-3">
+                                    <span className="text-sm text-slate-600 font-semibold">
+                                        {selectedPendingIds.length > 0
+                                            ? `${selectedPendingIds.length} sélectionnée(s)`
+                                            : "Sélection multiple"}
+                                    </span>
+                                    <div className="ml-auto flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={clearPendingSelection}
+                                            disabled={selectedPendingIds.length === 0 || bulkApproving}
+                                            className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg transition disabled:opacity-50"
+                                        >
+                                            Effacer
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleBulkApprovePending}
+                                            disabled={selectedPendingIds.length === 0 || bulkApproving}
+                                            className="px-3 py-1.5 text-xs font-semibold bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition disabled:opacity-50"
+                                        >
+                                            {bulkApproving ? "Validation..." : "Valider la sélection"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleBulkRejectPending}
+                                            disabled={selectedPendingIds.length === 0 || bulkRejecting}
+                                            className="px-3 py-1.5 text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition disabled:opacity-50"
+                                        >
+                                            {bulkRejecting ? "Refus..." : "Refuser la sélection"}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
@@ -2903,6 +3281,17 @@ export default function Inscriptions({
                                         className={`${tableHeaderClass} border-b border-slate-200`}
                                     >
                                         <tr>
+                                            {activeTab === "pending" && (
+                                                <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 rounded accent-white cursor-pointer"
+                                                        checked={isAllPendingPageSelected()}
+                                                        onChange={toggleSelectAllPendingPage}
+                                                        title="Tout sélectionner sur cette page"
+                                                    />
+                                                </th>
+                                            )}
                                             <th className="p-6 text-sm font-bold uppercase tracking-wider">
                                                 Type
                                             </th>
@@ -2941,7 +3330,7 @@ export default function Inscriptions({
                                         {filteredItems.length === 0 ? (
                                             <tr>
                                                 <td
-                                                    colSpan="10"
+                                                    colSpan={activeTab === "pending" ? "11" : "10"}
                                                     className="p-12 text-center text-slate-500"
                                                 >
                                                     Aucun résultat.
@@ -2980,6 +3369,22 @@ export default function Inscriptions({
                                                             key={`${item.kind}-${item.id}`}
                                                             className="hover:bg-slate-50 transition"
                                                         >
+                                                            {activeTab === "pending" && (
+                                                                <td className="p-6">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="w-4 h-4 rounded accent-[#B6C01A] cursor-pointer disabled:opacity-40"
+                                                                        checked={isPendingSelected(item.id)}
+                                                                        onChange={() => togglePendingSelect(item.id)}
+                                                                        disabled={!canApproveItem(item)}
+                                                                        title={
+                                                                            canApproveItem(item)
+                                                                                ? "Sélectionner"
+                                                                                : "Inscription non éligible à la validation"
+                                                                        }
+                                                                    />
+                                                                </td>
+                                                            )}
                                                             <td className="p-6">
                                                                 <span
                                                                     className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -3201,10 +3606,7 @@ export default function Inscriptions({
                                                                         Détails
                                                                     </button>
                                                                     {activeTab === "pending" &&
-                                                                        !item.admin_approved &&
-                                                                        !item.conducteur_approved &&
-                                                                        item.status !== "approved" &&
-                                                                        item.status !== "rejected" && (
+                                                                        canApproveItem(item) && (
                                                                         <div className="flex gap-1">
                                                                             <button
                                                                                 onClick={() =>
@@ -3298,6 +3700,7 @@ export default function Inscriptions({
                                     />
                                 );
                             })()}
+                        </div>
                         </div>
                     )}
                 </div>
@@ -4830,6 +5233,7 @@ export default function Inscriptions({
                                 </button>
                             </div>
                             <div className="p-8 space-y-6">
+                                {/* ── INFORMATIONS PERSONNELLES ── */}
                                 <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                                     <div className="flex items-center gap-2 mb-4 text-indigo-600 font-bold uppercase text-xs tracking-wider">
                                         <User className="w-4 h-4" />
@@ -4838,344 +5242,232 @@ export default function Inscriptions({
                                     <div className="flex gap-6">
                                         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0 flex items-center justify-center text-white text-3xl font-bold shadow-md overflow-hidden">
                                             {selectedMember.profile_photo_url ? (
-                                                <img
-                                                    src={
-                                                        selectedMember.profile_photo_url
-                                                    }
-                                                    alt={`${selectedMember.prenom} ${selectedMember.nom}`}
-                                                    className="w-full h-full object-cover"
-                                                />
+                                                <img src={selectedMember.profile_photo_url} alt={`${selectedMember.prenom} ${selectedMember.nom}`} className="w-full h-full object-cover" />
                                             ) : (
-                                                <>
-                                                    {selectedMember.prenom?.[0]}
-                                                    {selectedMember.nom?.[0]}
-                                                </>
+                                                <>{selectedMember.prenom?.[0]}{selectedMember.nom?.[0]}</>
                                             )}
                                         </div>
                                         <div className="flex-grow space-y-3">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">
-                                                        Nom
-                                                    </label>
-                                                    <p className="text-slate-800 font-medium">
-                                                        {selectedMember.nom}
-                                                    </p>
+                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">Nom</label>
+                                                    <p className="text-slate-800 font-medium">{selectedMember.nom}</p>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">
-                                                        Prénom
-                                                    </label>
-                                                    <p className="text-slate-800 font-medium">
-                                                        {selectedMember.prenom}
-                                                    </p>
+                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">Prénom</label>
+                                                    <p className="text-slate-800 font-medium">{selectedMember.prenom}</p>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">
-                                                        Rôle
-                                                    </label>
-                                                    <p className="text-slate-800 font-medium">
-                                                        {selectedMember.role ===
-                                                        "responsable_famille"
-                                                            ? "Responsable de famille"
-                                                            : selectedMember.role ===
-                                                                "membre_famille"
-                                                              ? "Membre de famille"
-                                                              : selectedMember.role ||
-                                                                "Membre"}
-                                                    </p>
+                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">Genre</label>
+                                                    <p className="text-slate-800 font-medium">{selectedMember.raw?.genre === 'M' ? 'Homme' : selectedMember.raw?.genre === 'F' ? 'Femme' : selectedMember.raw?.genre || '—'}</p>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">
-                                                        Statut
-                                                    </label>
-                                                    <p className="text-slate-800 font-medium">
-                                                        {selectedMember.status ===
-                                                        "actif"
-                                                            ? "Actif"
-                                                            : "Inactif"}
-                                                    </p>
+                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">Date de naissance</label>
+                                                    <p className="text-slate-800 font-medium">{formatDateDisplay(selectedMember.raw?.date_naissance, '—')}</p>
                                                 </div>
                                             </div>
-                                            {selectedMember.raw
-                                                ?.date_naissance && (
+                                            <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">
-                                                        Date de naissance
-                                                    </label>
+                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">Rôle</label>
                                                     <p className="text-slate-800 font-medium">
-                                                        {formatDateDisplay(
-                                                            selectedMember.raw
-                                                                .date_naissance,
-                                                            "N/A",
-                                                        )}
+                                                        {selectedMember.role === 'responsable_famille' ? 'Responsable de famille' : selectedMember.role === 'membre_famille' ? 'Membre de famille' : selectedMember.role || 'Membre'}
                                                     </p>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">Statut</label>
+                                                    <p className="text-slate-800 font-medium">{selectedMember.status === 'actif' ? 'Actif' : 'Inactif'}</p>
+                                                </div>
+                                            </div>
+                                            {(selectedMember.relation || selectedMember.raw?.relation) && (
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">Relation</label>
+                                                    <p className="text-slate-800 font-medium">{selectedMember.relation || selectedMember.raw?.relation}</p>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                 </div>
 
+                                {/* ── CONTACT & FAMILLE ── */}
                                 <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                                     <div className="flex items-center gap-2 mb-4 text-blue-600 font-bold uppercase text-xs tracking-wider">
                                         <Users className="w-4 h-4" />
                                         <span>Contact & Famille</span>
                                     </div>
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="flex items-start gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mt-0.5">
-                                                    <i className="fas fa-envelope text-sm"></i>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">
-                                                        Email
-                                                    </label>
-                                                    <p className="text-slate-800 font-medium">
-                                                        {selectedMember.email ||
-                                                            "Non renseigné"}
-                                                    </p>
-                                                </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Email</label>
+                                            <p className="text-slate-800 font-medium">{selectedMember.email || '—'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Téléphone</label>
+                                            <p className="text-slate-800 font-medium">{selectedMember.phone || selectedMember.raw?.telephone || '—'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Téléphone 2</label>
+                                            <p className="text-slate-800 font-medium">{selectedMember.telephone2 || selectedMember.raw?.telephone2 || '—'}</p>
+                                        </div>
+                                        {(selectedMember.fonction_professionnelle || selectedMember.raw?.profession) && (
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Profession</label>
+                                                <p className="text-slate-800 font-medium">{selectedMember.fonction_professionnelle || selectedMember.raw?.profession}</p>
                                             </div>
-                                            <div className="flex items-start gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mt-0.5">
-                                                    <i className="fas fa-phone-alt text-sm"></i>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-semibold text-slate-400 uppercase">
-                                                        Téléphone
-                                                    </label>
-                                                    <p className="text-slate-800 font-medium">
-                                                        {selectedMember.phone ||
-                                                            "Non renseigné"}
-                                                    </p>
-                                                </div>
-                                            </div>
+                                        )}
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Fonction Église</label>
+                                            <p className="text-slate-800 font-medium">{selectedMember.fonctions_eglise?.length > 0 ? selectedMember.fonctions_eglise.join(', ') : '—'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Ville</label>
+                                            <p className="text-slate-800 font-medium">{selectedMember.ville_nom || selectedMember.raw?.ville?.nom || selectedMember.raw?.raw?.ville?.nom || 'Non renseignée'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Classe Méthodiste</label>
+                                            <p className="text-slate-800 font-medium">{selectedMember.classe_nom || '—'}</p>
                                         </div>
                                         {selectedMember.famille_id && (
-                                            <div className="pt-4 border-t border-slate-100">
-                                                <div className="flex items-start gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center mt-0.5">
-                                                        <Users className="w-4 h-4" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs font-semibold text-slate-400 uppercase">
-                                                            Famille
-                                                        </label>
-                                                        <p className="text-slate-800 font-medium">
-                                                            {(() => {
-                                                                const memberFamily =
-                                                                    familiesList.find(
-                                                                        (f) =>
-                                                                            f.members &&
-                                                                            f.members.some(
-                                                                                (
-                                                                                    m,
-                                                                                ) =>
-                                                                                    m.id ===
-                                                                                    selectedMember.id,
-                                                                            ),
-                                                                    );
-                                                                return memberFamily
-                                                                    ? memberFamily.nom
-                                                                    : `Famille #${selectedMember.famille_id}`;
-                                                            })()}
-                                                        </p>
-                                                    </div>
-                                                </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Famille</label>
+                                                <p className="text-slate-800 font-medium">
+                                                    {(() => {
+                                                        const mf = familiesList.find(f => f.members && f.members.some(m => m.id === selectedMember.id));
+                                                        return mf ? mf.nom : selectedMember.famille_nom || `Famille #${selectedMember.famille_id}`;
+                                                    })()}
+                                                </p>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Statut marital</label>
+                                            <p className="text-slate-800 font-medium">{selectedMember.statut_marital || selectedMember.raw?.statut_marital || '—'}</p>
+                                        </div>
+                                        {(selectedMember.contact_urgence || selectedMember.contact_urgence_tel || selectedMember.raw?.contact_urgence) && (
+                                            <div className="col-span-2 pt-3 border-t border-slate-100">
+                                                <label className="block text-xs font-semibold text-slate-400 uppercase mb-2">Contact d'urgence</label>
+                                                <p className="text-slate-800 font-medium">
+                                                    {(selectedMember.contact_urgence || selectedMember.raw?.contact_urgence)}
+                                                    {((selectedMember.contact_urgence || selectedMember.raw?.contact_urgence) && (selectedMember.contact_urgence_tel || selectedMember.raw?.contact_urgence_tel)) ? ' — ' : ''}
+                                                    {(selectedMember.contact_urgence_tel || selectedMember.raw?.contact_urgence_tel)}
+                                                </p>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                                    <div className="flex items-center gap-2 mb-4 text-green-600 font-bold uppercase text-xs tracking-wider">
-                                        <CheckCircle className="w-4 h-4" />
-                                        <span>
-                                            Informations supplémentaires
-                                        </span>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                Date d'inscription
-                                            </label>
-                                            <p className="text-slate-800 font-medium">
-                                                {formatDateDisplay(
-                                                    selectedMember.raw
-                                                        ?.created_at ||
-                                                        selectedMember.created_at ||
-                                                        null,
-                                                    "Non disponible",
-                                                )}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                Dernière modification
-                                            </label>
-                                            <p className="text-slate-800 font-medium">
-                                                {formatDateDisplay(
-                                                    selectedMember.raw
-                                                        ?.updated_at ||
-                                                        selectedMember.updated_at ||
-                                                        selectedMember.raw
-                                                            ?.created_at ||
-                                                        selectedMember.created_at ||
-                                                        null,
-                                                    "Non disponible",
-                                                )}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Section Informations Religieuses pour les membres */}
+                                {/* ── VIE SPIRITUELLE & SACREMENTS ── */}
+                                {(selectedMember.sacrements?.baptise || selectedMember.sacrements?.premiere_communion || selectedMember.sacrements?.marie_religieusement || selectedMember.raw?.baptise) && (
                                 <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                                     <div className="flex items-center gap-2 mb-4 text-purple-600 font-bold uppercase text-xs tracking-wider">
                                         <i className="fas fa-dove"></i>
-                                        <span>Détails religieux</span>
+                                        <span>Vie Spirituelle & Sacrements</span>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-4">
+                                        {/* Badges */}
+                                        <div className="flex flex-wrap gap-2 mb-2">
+                                            {(selectedMember.sacrements?.baptise || selectedMember.raw?.baptise) && <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100">✓ Baptisé(e)</span>}
+                                            {(selectedMember.sacrements?.premiere_communion || selectedMember.raw?.premiere_communion) && <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100">✓ 1re Communion</span>}
+                                            {(selectedMember.sacrements?.marie_religieusement || selectedMember.raw?.mariage_religieux || selectedMember.raw?.marie_religieusement) && <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100">✓ Mariage Religieux</span>}
+                                        </div>
+                                        {/* Détails Baptême */}
+                                        {(selectedMember.sacrements?.baptise || selectedMember.raw?.baptise) && (selectedMember.sacrements?.bapteme_date || selectedMember.raw?.date_bapteme || selectedMember.sacrements?.bapteme_lieu || selectedMember.raw?.lieu_bapteme) && (
+                                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                                <p className="text-xs font-bold text-slate-600 mb-3">💧 Baptême</p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {(selectedMember.sacrements?.bapteme_date || selectedMember.raw?.date_bapteme) && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Date</label><p className="text-slate-800 font-medium text-sm">{formatDateDisplay(selectedMember.sacrements?.bapteme_date || selectedMember.raw?.date_bapteme, '—')}</p></div>}
+                                                    {(selectedMember.sacrements?.bapteme_lieu || selectedMember.raw?.lieu_bapteme) && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Lieu</label><p className="text-slate-800 font-medium text-sm">{selectedMember.sacrements?.bapteme_lieu || selectedMember.raw?.lieu_bapteme}</p></div>}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {/* Détails Communion */}
+                                        {(selectedMember.sacrements?.premiere_communion || selectedMember.raw?.premiere_communion) && (selectedMember.sacrements?.premiere_communion_date || selectedMember.raw?.date_premiere_communion || selectedMember.sacrements?.premiere_communion_lieu) && (
+                                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                                <p className="text-xs font-bold text-slate-600 mb-3">🍞 1re Communion</p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {(selectedMember.sacrements?.premiere_communion_date || selectedMember.raw?.date_premiere_communion) && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Date</label><p className="text-slate-800 font-medium text-sm">{formatDateDisplay(selectedMember.sacrements?.premiere_communion_date || selectedMember.raw?.date_premiere_communion, '—')}</p></div>}
+                                                    {selectedMember.sacrements?.premiere_communion_lieu && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Lieu</label><p className="text-slate-800 font-medium text-sm">{selectedMember.sacrements.premiere_communion_lieu}</p></div>}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {/* Détails Mariage Religieux */}
+                                        {(selectedMember.sacrements?.marie_religieusement || selectedMember.raw?.mariage_religieux || selectedMember.raw?.marie_religieusement) && (selectedMember.sacrements?.mariage_religieux_date || selectedMember.raw?.date_mariage_religieux || selectedMember.sacrements?.mariage_religieux_lieu || selectedMember.raw?.lieu_mariage_religieux) && (
+                                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                                <p className="text-xs font-bold text-slate-600 mb-3">💍 Mariage Religieux</p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {(selectedMember.sacrements?.mariage_religieux_date || selectedMember.raw?.date_mariage_religieux) && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Date</label><p className="text-slate-800 font-medium text-sm">{formatDateDisplay(selectedMember.sacrements?.mariage_religieux_date || selectedMember.raw?.date_mariage_religieux, '—')}</p></div>}
+                                                    {(selectedMember.sacrements?.mariage_religieux_lieu || selectedMember.raw?.lieu_mariage_religieux) && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Lieu</label><p className="text-slate-800 font-medium text-sm">{selectedMember.sacrements?.mariage_religieux_lieu || selectedMember.raw?.lieu_mariage_religieux}</p></div>}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                )}
+
+                                {/* ── ÉTAT CIVIL ── */}
+                                {(selectedMember.sacrements?.est_marie || selectedMember.sacrements?.est_divorce || selectedMember.sacrements?.est_veuf || selectedMember.sacrements?.dot_effectue) && (
+                                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                                    <div className="flex items-center gap-2 mb-4 text-rose-600 font-bold uppercase text-xs tracking-wider">
+                                        <span>❤️</span>
+                                        <span>État Civil</span>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {selectedMember.sacrements?.est_marie && (
+                                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                                <p className="text-xs font-bold text-rose-600 mb-3">💒 Mariage Civil</p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {selectedMember.sacrements?.mariage_civil_date && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Date</label><p className="text-slate-800 font-medium text-sm">{formatDateDisplay(selectedMember.sacrements.mariage_civil_date, '—')}</p></div>}
+                                                    {selectedMember.sacrements?.mariage_civil_lieu && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Lieu</label><p className="text-slate-800 font-medium text-sm">{selectedMember.sacrements.mariage_civil_lieu}</p></div>}
+                                                    {(selectedMember.raw?.date_mariage) && !selectedMember.sacrements?.mariage_civil_date && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Date</label><p className="text-slate-800 font-medium text-sm">{formatDateDisplay(selectedMember.raw.date_mariage, '—')}</p></div>}
+                                                    {(selectedMember.raw?.lieu_mariage) && !selectedMember.sacrements?.mariage_civil_lieu && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Lieu</label><p className="text-slate-800 font-medium text-sm">{selectedMember.raw.lieu_mariage}</p></div>}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {selectedMember.sacrements?.est_divorce && (
+                                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                                <p className="text-xs font-bold text-rose-600 mb-3">📋 Divorce</p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {selectedMember.sacrements?.divorce_date && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Date</label><p className="text-slate-800 font-medium text-sm">{formatDateDisplay(selectedMember.sacrements.divorce_date, '—')}</p></div>}
+                                                    {selectedMember.sacrements?.divorce_lieu && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Lieu</label><p className="text-slate-800 font-medium text-sm">{selectedMember.sacrements.divorce_lieu}</p></div>}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {selectedMember.sacrements?.est_veuf && (
+                                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                                <p className="text-xs font-bold text-rose-600 mb-3">🕯️ Veuvage</p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {selectedMember.sacrements?.deces_conjoint_date && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Date décès conjoint</label><p className="text-slate-800 font-medium text-sm">{formatDateDisplay(selectedMember.sacrements.deces_conjoint_date, '—')}</p></div>}
+                                                    {selectedMember.sacrements?.deces_conjoint_lieu && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Lieu</label><p className="text-slate-800 font-medium text-sm">{selectedMember.sacrements.deces_conjoint_lieu}</p></div>}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {selectedMember.sacrements?.dot_effectue && (
+                                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                                <p className="text-xs font-bold text-rose-600 mb-3">🎁 Dot</p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {selectedMember.sacrements?.dot_date && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Date</label><p className="text-slate-800 font-medium text-sm">{formatDateDisplay(selectedMember.sacrements.dot_date, '—')}</p></div>}
+                                                    {selectedMember.sacrements?.dot_lieu && <div><label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Lieu</label><p className="text-slate-800 font-medium text-sm">{selectedMember.sacrements.dot_lieu}</p></div>}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                )}
+
+                                {/* ── HISTORIQUE ── */}
+                                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                                    <div className="flex items-center gap-2 mb-4 text-green-600 font-bold uppercase text-xs tracking-wider">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <span>Historique d'enregistrement</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                Baptisé
-                                            </label>
-                                            <p className="text-slate-800 font-medium">
-                                                {selectedMember.raw?.baptise
-                                                    ? "Oui"
-                                                    : "Non"}
-                                            </p>
+                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Date d'inscription</label>
+                                            <p className="text-slate-800 font-medium">{formatDateDisplay(selectedMember.raw?.created_at || selectedMember.created_at, 'Non disponible')}</p>
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                Première Communion
-                                            </label>
-                                            <p className="text-slate-800 font-medium">
-                                                {selectedMember.raw
-                                                    ?.premiere_communion
-                                                    ? "Oui"
-                                                    : "Non"}
-                                            </p>
+                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Dernière modification</label>
+                                            <p className="text-slate-800 font-medium">{formatDateDisplay(selectedMember.raw?.updated_at || selectedMember.updated_at || selectedMember.raw?.created_at || selectedMember.created_at, 'Non disponible')}</p>
                                         </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                Mariage Religieux
-                                            </label>
-                                            <p className="text-slate-800 font-medium">
-                                                {(selectedMember.raw?.mariage_religieux ||
-                                                    selectedMember.raw?.marie_religieusement ||
-                                                    selectedMember.sacrements?.marie_religieusement)
-                                                    ? "Oui"
-                                                    : "Non"}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                Statut Marital
-                                            </label>
-                                            <p className="text-slate-800 font-medium">
-                                                {selectedMember.raw
-                                                    ?.statut_marital ||
-                                                    "Non renseigné"}
-                                            </p>
-                                        </div>
-                                        {selectedMember.raw?.date_bapteme && (
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                    Date Baptême
-                                                </label>
-                                                <p className="text-slate-800 font-medium">
-                                                    {
-                                                        selectedMember.raw
-                                                            .date_bapteme
-                                                    }
-                                                </p>
-                                            </div>
-                                        )}
-                                        {selectedMember.raw?.lieu_bapteme && (
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                    Lieu Baptême
-                                                </label>
-                                                <p className="text-slate-800 font-medium">
-                                                    {
-                                                        selectedMember.raw
-                                                            .lieu_bapteme
-                                                    }
-                                                </p>
-                                            </div>
-                                        )}
-                                        {selectedMember.raw
-                                            ?.date_premiere_communion && (
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                    Date Première Communion
-                                                </label>
-                                                <p className="text-slate-800 font-medium">
-                                                    {
-                                                        selectedMember.raw
-                                                            .date_premiere_communion
-                                                    }
-                                                </p>
-                                            </div>
-                                        )}
-                                        {selectedMember.raw
-                                            ?.date_mariage_religieux && (
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                    Date Mariage Religieux
-                                                </label>
-                                                <p className="text-slate-800 font-medium">
-                                                    {
-                                                        selectedMember.raw
-                                                            .date_mariage_religieux
-                                                    }
-                                                </p>
-                                            </div>
-                                        )}
-                                        {selectedMember.raw
-                                            ?.lieu_mariage_religieux && (
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                    Lieu Mariage Religieux
-                                                </label>
-                                                <p className="text-slate-800 font-medium">
-                                                    {
-                                                        selectedMember.raw
-                                                            .lieu_mariage_religieux
-                                                    }
-                                                </p>
-                                            </div>
-                                        )}
-                                        {selectedMember.raw?.date_mariage && (
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                    Date Mariage
-                                                </label>
-                                                <p className="text-slate-800 font-medium">
-                                                    {
-                                                        selectedMember.raw
-                                                            .date_mariage
-                                                    }
-                                                </p>
-                                            </div>
-                                        )}
-                                        {selectedMember.raw?.lieu_mariage && (
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
-                                                    Lieu Mariage
-                                                </label>
-                                                <p className="text-slate-800 font-medium">
-                                                    {
-                                                        selectedMember.raw
-                                                            .lieu_mariage
-                                                    }
-                                                </p>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -5455,6 +5747,54 @@ export default function Inscriptions({
                     </div>
                 )}
             </div>
+
+            {/* Modale de confirmation de suppression */}
+            {deleteTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setDeleteTarget(null)}
+                    />
+                    <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                                <Trash2 className="w-5 h-5 text-red-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-800 text-base">
+                                    {deleteTarget.kind === "inscription"
+                                        ? "Supprimer la demande"
+                                        : "Supprimer le membre"}
+                                </h3>
+                                {deleteTarget.name && (
+                                    <p className="text-sm text-slate-500 mt-0.5">
+                                        {deleteTarget.name}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                        <p className="text-sm text-slate-600 mb-6">
+                            Cette action est irréversible. Voulez-vous continuer ?
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition text-sm font-medium"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmDeleteAction}
+                                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition text-sm font-semibold"
+                            >
+                                Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

@@ -11,6 +11,7 @@ import {
     MARITAL_STATUS_OPTIONS,
     RESPONSABLE_MARITAL_STATUS_OPTIONS,
     RELATION_OPTIONS,
+    relationLabelFromValue,
     buildClasseOptions,
     buildVilleOptions,
 } from "../../../Helpers/select2SingleOptions";
@@ -226,6 +227,21 @@ const MultiSelectDropdown = ({
     );
 };
 
+const MEMBRE_TEMP_INITIAL = {
+    nom: "", prenom: "", email: "", telephone: "", relation: "",
+    genre: "", dateNaissance: "", statutMarital: "",
+    dateMariage: "", lieuMariage: "",
+    dateDivorce: "", lieuDivorce: "",
+    dateDeces: "", lieuDeces: "",
+    dote: "", lieuDote: "",
+    lienParente: "",
+    baptise: false, dateBapteme: "", lieuBapteme: "",
+    premiereCommunion: false, datePremiereCommunion: "", lieuPremiereCommunion: "",
+    marieReligieusement: false, dateMariageReligieux: "", lieuMariageReligieux: "",
+    fonction: "", employment_status: "", profession_detail: "", niveau_etude: "",
+    photo: null, photoPreview: null,
+};
+
 // --- Main Component ---
 export default function RegisterFamille({
     labels = ["Famille", "Responsable", "Membres", "Vérification"],
@@ -303,7 +319,8 @@ export default function RegisterFamille({
             genre: "",
             lienParente: "",
             employment_status: "",
-            profession: "",
+            profession_detail: "",
+            niveau_etude: "",
             fonction: "",
             statutMarital: "",
             dateMariage: "",
@@ -338,41 +355,7 @@ export default function RegisterFamille({
     );
     const [membreTemp, setMembreTemp] = usePersistentState(
         "registerFamille_membreTemp",
-        {
-            nom: "",
-            prenom: "",
-            email: "",
-            telephone: "",
-            relation: "",
-            genre: "",
-            dateNaissance: "",
-            statutMarital: "",
-            dateMariage: "",
-            lieuMariage: "",
-            dateDivorce: "",
-            lieuDivorce: "",
-            dateDeces: "",
-            lieuDeces: "",
-            dote: "",
-            lieuDote: "",
-            lienParente: "",
-            // Champs religieux - baptême
-            baptise: false,
-            dateBapteme: "",
-            lieuBapteme: "",
-            // Champs religieux - première communion
-            premiereCommunion: false,
-            datePremiereCommunion: "",
-            lieuPremiereCommunion: "",
-            // Champs religieux - mariage religieux
-            marieReligieusement: false,
-            dateMariageReligieux: "",
-            lieuMariageReligieux: "",
-            fonction: "",
-            employment_status: "",
-            profession: "",
-            photo: null,
-            photoPreview: null,
+        { ...MEMBRE_TEMP_INITIAL,
         },
         { excludeKeys: ["photo", "photoPreview"] },
     );
@@ -390,7 +373,7 @@ export default function RegisterFamille({
         usePersistentState("registerFamille_selectedRolesResponsable", []);
     const [selectedMembresRoles, setSelectedMembresRoles] = usePersistentState(
         "registerFamille_selectedMembresRoles",
-        new Set(),
+        [],
     );
     const [selectedCity, setSelectedCity] = usePersistentState(
         "registerFamille_selectedCity",
@@ -477,6 +460,23 @@ export default function RegisterFamille({
         fetchData();
     }, []);
 
+    // Purger les IDs de fonctions obsolètes (ex: fonctions combinées supprimées par migration)
+    useEffect(() => {
+        if (churchRoles.length > 0) {
+            const validIds = new Set(churchRoles.map((r) => String(r.id)));
+            setSelectedRolesResponsable((prev) =>
+                (Array.isArray(prev) ? prev : []).filter((id) =>
+                    validIds.has(String(id)),
+                ),
+            );
+            setSelectedMembresRoles((prev) =>
+                (Array.isArray(prev) ? prev : []).filter((id) =>
+                    validIds.has(String(id)),
+                ),
+            );
+        }
+    }, [churchRoles]);
+
     // Fermer les dropdowns
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -536,8 +536,7 @@ export default function RegisterFamille({
 
         if (!membreTemp.nom) newErrors["membre.nom"] = "Nom requis";
         if (!membreTemp.prenom) newErrors["membre.prenom"] = "Prénom requis";
-        if (!membreTemp.email) newErrors["membre.email"] = "Email requis";
-        else if (!/^\S+@\S+\.\S+$/.test(membreTemp.email))
+        if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email))
             newErrors["membre.email"] = "Adresse email invalide";
         if (!membreTemp.relation)
             newErrors["membre.relation"] = "Relation requise";
@@ -558,8 +557,8 @@ export default function RegisterFamille({
             newErrors["membre.statutMarital"] = "Statut marital requis";
         if (!membreTemp.employment_status)
             newErrors["membre.employment_status"] = "Statut d'emploi requis";
-        if (membreTemp.employment_status === "TRAVAILLEUR" && !membreTemp.profession)
-            newErrors["membre.profession"] = "Profession requise";
+        if (membreTemp.employment_status === "TRAVAILLEUR" && !membreTemp.profession_detail)
+            newErrors["membre.profession_detail"] = "Profession requise";
         // niveau_etude optionnel
 
         // Vérifier conditions statut marital
@@ -620,44 +619,13 @@ export default function RegisterFamille({
 
         // Reset formulaire
         setTimeout(() => {
-            setMembreTemp({
-                nom: "",
-                prenom: "",
-                email: "",
-                telephone: "",
-                relation: "",
-                genre: "",
-                dateNaissance: "",
-                statutMarital: "",
-                dateMariage: "",
-                lieuMariage: "",
-                dateDivorce: "",
-                lieuDivorce: "",
-                dateDeces: "",
-                lieuDeces: "",
-                dateDote: "",
-                lieuDote: "",
-                baptise: false,
-                dateBapteme: "",
-                lieuBapteme: "",
-                premiereCommunion: false,
-                datePremiereCommunion: "",
-                lieuPremiereCommunion: "",
-                marieReligieusement: false,
-                dateMariageReligieux: "",
-                lieuMariageReligieux: "",
-                fonction: "",
-                employment_status: "",
-                profession: "",
-                photo: null,
-                photoPreview: null,
-            });
+            setMembreTemp({ ...MEMBRE_TEMP_INITIAL });
             setErrors({});
         }, 500);
     };
 
     const editerMembre = (index) => {
-        setMembreTemp(membres[index]);
+        setMembreTemp({ ...MEMBRE_TEMP_INITIAL, ...membres[index] });
         setEditingMemberIndex(index);
         document
             .querySelector("[data-member-form]")
@@ -666,38 +634,7 @@ export default function RegisterFamille({
 
     const annulerEdition = () => {
         setEditingMemberIndex(null);
-        setMembreTemp({
-            nom: "",
-            prenom: "",
-            email: "",
-            telephone: "",
-            relation: "",
-            genre: "",
-            dateNaissance: "",
-            statutMarital: "",
-            dateMariage: "",
-            lieuMariage: "",
-            dateDivorce: "",
-            lieuDivorce: "",
-            dateDeces: "",
-            lieuDeces: "",
-            dateDote: "",
-            lieuDote: "",
-            baptise: false,
-            dateBapteme: "",
-            lieuBapteme: "",
-            premiereCommunion: false,
-            datePremiereCommunion: "",
-            lieuPremiereCommunion: "",
-            marieReligieusement: false,
-            dateMariageReligieux: "",
-            lieuMariageReligieux: "",
-            fonction: "",
-            employment_status: "",
-            profession: "",
-            photo: null,
-            photoPreview: null,
-        });
+        setMembreTemp({ ...MEMBRE_TEMP_INITIAL });
         setErrors({});
     };
 
@@ -781,8 +718,8 @@ export default function RegisterFamille({
             if (!responsable.employment_status)
                 newErrors["responsable.employment_status"] =
                     "Statut d'emploi requis";
-            if (responsable.employment_status === "TRAVAILLEUR" && !responsable.profession)
-                newErrors["responsable.profession"] = "Requis";
+            if (responsable.employment_status === "TRAVAILLEUR" && !responsable.profession_detail)
+                newErrors["responsable.profession_detail"] = "Requis";
             // niveau_etude optionnel
             if (!responsable.statutMarital)
                 newErrors["responsable.statutMarital"] = "Requis";
@@ -955,7 +892,10 @@ export default function RegisterFamille({
                         );
                         memberHasErrors = true;
                     }
-                    if (!m.profession) {
+                    if (
+                        m.employment_status === "TRAVAILLEUR" &&
+                        !m.profession_detail
+                    ) {
                         memberErrors.push(
                             `Membre ${idx + 1}: Profession requise`,
                         );
@@ -1041,7 +981,8 @@ export default function RegisterFamille({
             "dateNaissance",
             "genre",
             "employment_status",
-            "profession",
+            "profession_detail",
+            "niveau_etude",
             "statutMarital",
             "lienParente",
             "photo",
@@ -1094,10 +1035,17 @@ export default function RegisterFamille({
             }
         });
 
-        // Fonctions du responsable comme tableau
-        selectedRolesResponsable.forEach((id) => {
-            formData.append("responsable[fonction_ids][]", id);
-        });
+        if (responsable.lienParente) {
+            formData.append("responsable[relation]", responsable.lienParente);
+        }
+
+        // Fonctions du responsable (uniquement IDs valides)
+        const validFonctionIds = new Set(churchRoles.map((r) => String(r.id)));
+        (Array.isArray(selectedRolesResponsable) ? selectedRolesResponsable : [])
+            .filter((id) => validFonctionIds.has(String(id)))
+            .forEach((id) => {
+                formData.append("responsable[fonction_ids][]", id);
+            });
 
         // === 3. MEMBRES ===
         if (membres.length > 0) {
@@ -1115,7 +1063,8 @@ export default function RegisterFamille({
                 "dateNaissance",
                 "statutMarital",
                 "employment_status",
-                "profession",
+                "profession_detail",
+                "niveau_etude",
                 "lienParente",
                 "photo",
                 "dateMariage",
@@ -1138,11 +1087,13 @@ export default function RegisterFamille({
             ];
 
             membres.forEach((m, i) => {
-                // Envoyer fonction_ids comme tableau
+                // Envoyer fonction_ids comme tableau (uniquement IDs valides)
                 if (Array.isArray(m.fonction_ids) && m.fonction_ids.length > 0) {
-                    m.fonction_ids.forEach((id) => {
-                        formData.append(`membres[${i}][fonction_ids][]`, id);
-                    });
+                    m.fonction_ids
+                        .filter((id) => validFonctionIds.has(String(id)))
+                        .forEach((id) => {
+                            formData.append(`membres[${i}][fonction_ids][]`, id);
+                        });
                 }
 
                 membreFields.forEach((k) => {
@@ -1157,7 +1108,7 @@ export default function RegisterFamille({
                         "dateNaissance",
                         "relation",
                         "employment_status",
-                        "profession",
+                        "profession_detail",
                         "statutMarital",
                     ];
                     const shouldSendEmpty = requiredFields.includes(k);
@@ -1268,7 +1219,8 @@ export default function RegisterFamille({
                 genre: "",
                 lienParente: "",
                 employment_status: "",
-                profession: "",
+                profession_detail: "",
+                niveau_etude: "",
                 fonction: "",
                 statutMarital: "",
                 dateMariage: "",
@@ -1319,7 +1271,8 @@ export default function RegisterFamille({
                 lieuMariageReligieux: "",
                 fonction: "",
                 employment_status: "",
-                profession: "",
+                profession_detail: "",
+                niveau_etude: "",
                 photo: null,
                 photoPreview: null,
             });
@@ -1792,6 +1745,11 @@ export default function RegisterFamille({
                                         ),
                                     )}
                                 />
+                                {getFieldError("responsable.lienParente") && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                        {getFieldError("responsable.lienParente")}
+                                    </p>
+                                )}
                             </FormField>
                         </div>
 
@@ -1810,7 +1768,7 @@ export default function RegisterFamille({
                                         setResponsable({
                                             ...responsable,
                                             employment_status: e.target.value,
-                                            profession: "",
+                                            profession_detail: "",
                                             niveau_etude: "",
                                         })
                                     }
@@ -1854,15 +1812,27 @@ export default function RegisterFamille({
 
                         {responsable.employment_status === "TRAVAILLEUR" && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Profession" icon={Briefcase} required hint="ex: Infirmier, Comptable">
+                                <FormField
+                                    label="Profession / Activité"
+                                    icon={Briefcase}
+                                    required
+                                    hint="ex: Infirmier, Comptable"
+                                >
                                     <input
                                         className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
-                                        value={responsable.profession}
-                                        onChange={(e) => setResponsable({ ...responsable, profession: e.target.value })}
+                                        value={responsable.profession_detail || ""}
+                                        onChange={(e) =>
+                                            setResponsable({
+                                                ...responsable,
+                                                profession_detail: e.target.value,
+                                            })
+                                        }
                                         placeholder="ex: Enseignant, Commerçant"
                                     />
-                                    {getFieldError("responsable.profession") && (
-                                        <p className="text-red-500 text-xs mt-1">{getFieldError("responsable.profession")}</p>
+                                    {getFieldError("responsable.profession_detail") && (
+                                        <p className="text-red-500 text-xs mt-1">
+                                            {getFieldError("responsable.profession_detail")}
+                                        </p>
                                     )}
                                 </FormField>
                             </div>
@@ -2485,7 +2455,7 @@ export default function RegisterFamille({
                                                 setMembreTemp({
                                                     ...membreTemp,
                                                     employment_status: e.target.value,
-                                                    profession: "",
+                                                    profession_detail: "",
                                                     niveau_etude: "",
                                                 })
                                             }
@@ -2527,12 +2497,22 @@ export default function RegisterFamille({
 
                                 {membreTemp.employment_status === "TRAVAILLEUR" && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <FormField label="Profession" icon={Briefcase} required>
-                                            <input className={STYLES.input} value={membreTemp.profession}
-                                                onChange={(e) => setMembreTemp({ ...membreTemp, profession: e.target.value })}
-                                                placeholder="Ex: Enseignant..." />
-                                            {getFieldError("membre.profession") && (
-                                                <p className="text-red-500 text-xs mt-1">{getFieldError("membre.profession")}</p>
+                                        <FormField label="Profession / Activité" icon={Briefcase} required>
+                                            <input
+                                                className={STYLES.input}
+                                                value={membreTemp.profession_detail || ""}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        profession_detail: e.target.value,
+                                                    })
+                                                }
+                                                placeholder="Ex: Enseignant..."
+                                            />
+                                            {getFieldError("membre.profession_detail") && (
+                                                <p className="text-red-500 text-xs mt-1">
+                                                    {getFieldError("membre.profession_detail")}
+                                                </p>
                                             )}
                                         </FormField>
                                     </div>
@@ -3064,7 +3044,7 @@ export default function RegisterFamille({
                                                             <span className="font-medium">
                                                                 Relation:
                                                             </span>{" "}
-                                                            {m.relation} •{" "}
+                                                            {relationLabelFromValue(m.relation)} •{" "}
                                                             {m.genre === "M"
                                                                 ? "♂ Masculin"
                                                                 : "♀ Féminin"}
@@ -3171,12 +3151,12 @@ export default function RegisterFamille({
                                                                     ` à ${m.lieuMariageReligieux}`}
                                                             </div>
                                                         )}
-                                                        {m.profession && (
+                                                        {m.profession_detail && (
                                                             <div className="text-xs text-gray-600">
                                                                 <span className="font-medium">
                                                                     Profession:
                                                                 </span>{" "}
-                                                                {m.profession}
+                                                                {m.profession_detail}
                                                             </div>
                                                         )}
                                                         {m.fonction && (
@@ -3303,7 +3283,9 @@ export default function RegisterFamille({
                                     </li>
                                     <li>
                                         <strong>Profession:</strong>{" "}
-                                        {responsable.profession}
+                                        {responsable.profession_detail ||
+                                            responsable.niveau_etude ||
+                                            "—"}
                                     </li>
                                 </ul>
                             </div>
@@ -3342,7 +3324,7 @@ export default function RegisterFamille({
                                                 {m.prenom} {m.nom}
                                             </span>
                                             <span className="text-xs text-gray-500">
-                                                {m.relation}
+                                                {relationLabelFromValue(m.relation)}
                                             </span>
                                             <span className="text-xs text-gray-500">
                                                 {m.genre === "M"
@@ -3439,7 +3421,9 @@ export default function RegisterFamille({
                                     dateNaissance: "",
                                     genre: "",
                                     lienParente: "",
-                                    profession: "",
+                                    employment_status: "",
+                                    profession_detail: "",
+                                    niveau_etude: "",
                                     fonction: "",
                                     statutMarital: "",
                                     dateMariage: "",
@@ -3489,7 +3473,9 @@ export default function RegisterFamille({
                                     dateMariageReligieux: "",
                                     lieuMariageReligieux: "",
                                     fonction: "",
-                                    profession: "",
+                                    employment_status: "",
+                                    profession_detail: "",
+                                    niveau_etude: "",
                                     photo: null,
                                     photoPreview: null,
                                 });

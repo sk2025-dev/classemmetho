@@ -108,6 +108,7 @@ export default function Dashboard({
     familyStats,
     familyData,
     validatedActesCount = 0,
+    flashInfoBadgeCount = 0,
     surveyBadgeCount = 0,
     prayerBadgeCount = 0,
 }) {
@@ -250,9 +251,9 @@ export default function Dashboard({
                                         </span>
                                     )}
                                 {item.icon === "liturgique" &&
-                                    validatedActesCount > 0 && (
+                                    (validatedActesCount + flashInfoBadgeCount) > 0 && (
                                         <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
-                                            {validatedActesCount}
+                                            {validatedActesCount + flashInfoBadgeCount}
                                         </span>
                                     )}
                                 {item.icon === "sondage" &&

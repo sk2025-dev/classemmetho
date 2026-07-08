@@ -131,9 +131,9 @@ const NotificationBadge = ({ count }) => (
 
 export default function Dashboard({
     role,
-    pendingInscriptions = 0,
     surveyBadgeCount = 0,
     prayerBadgeCount = 0,
+    flashInfoBadgeCount = 0,
     auth,
     familyName = null,
     classeLabel = null,
@@ -143,7 +143,7 @@ export default function Dashboard({
             title: "Inscription",
             desc: "Famille et classe méthodiste",
             icon: "inscription",
-            href: "/admin/inscriptions",
+            href: "/admin/inscriptions/type-selection",
             color: "text-blue-600",
             bg: "bg-blue-100",
         },
@@ -278,13 +278,6 @@ export default function Dashboard({
                                         {item.desc}
                                     </p>
                                 </div>
-                                {/* Badge numerique pour les demandes en attente */}
-                                {item.icon === "inscription" &&
-                                    pendingInscriptions > 0 && (
-                                        <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold shadow">
-                                            {pendingInscriptions}
-                                        </span>
-                                    )}
                                 {item.icon === "sondage" &&
                                     surveyBadgeCount > 0 && (
                                         <NotificationBadge
@@ -295,6 +288,12 @@ export default function Dashboard({
                                     prayerBadgeCount > 0 && (
                                         <NotificationBadge
                                             count={prayerBadgeCount}
+                                        />
+                                    )}
+                                {item.icon === "annonce" &&
+                                    flashInfoBadgeCount > 0 && (
+                                        <NotificationBadge
+                                            count={flashInfoBadgeCount}
                                         />
                                     )}
                             </div>

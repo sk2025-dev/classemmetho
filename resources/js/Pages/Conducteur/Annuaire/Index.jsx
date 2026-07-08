@@ -563,54 +563,19 @@ const MemberDetailsModal = ({
     userData,
     onClose,
 }) => {
-    // Génère l'avatar de remplacement avec l'initiale
     const getFallbackAvatar = (initial) => {
         return `data:image/svg+xml,${encodeURIComponent(
-            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="45" fill="#fbbf24"/>
-        <text x="50" y="65" font-size="40" text-anchor="middle" fill="white" font-weight="bold">
-          ${initial}
-        </text>
-      </svg>`,
+            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="20" fill="#6B46C1"/><text x="20" y="27" text-anchor="middle" fill="white" font-size="18" font-family="sans-serif" font-weight="bold">${(initial ?? "?").toUpperCase()}</text></svg>`
         )}`;
     };
 
-    const initial = (member?.prenoms || member?.nom || "?")
-        .charAt(0)
-        .toUpperCase();
-    const fallbackAvatar = getFallbackAvatar(initial);
-    const photoSrc = member?.photo || fallbackAvatar;
-
-    if (!member) return null;
-
     return (
-        <div className="member-details">
-            {/* IDENTITÉ */}
+        <div>
+            {/* INFORMATIONS PERSONNELLES */}
             <div className="detail-section">
-                <h3>🧍 Identité</h3>
+                <h3>👤 Informations personnelles</h3>
                 <div className="member-identity">
-                    <div className="member-photo-large">
-                        <img
-                            src={photoSrc}
-                            alt={`${member.prenoms} ${member.nom}`}
-                            onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = fallbackAvatar;
-                            }}
-                        />
-                    </div>
-                    <div className="member-identity-info">
-                        <p>
-                            <strong>Nom & Prénoms:</strong> {member.prenoms}{" "}
-                            {member.nom}
-                        </p>
-                        <p>
-                            <strong>Famille:</strong> {member.famille || "-"}
-                        </p>
-                        <p>
-                            <strong>Genre:</strong>{" "}
-                            {member.sexe === "M" ? "Masculin" : "Féminin"}
-                        </p>
+                    <div className="personal-info">
                         <p>
                             <strong>Date de naissance:</strong>{" "}
                             {member.dateNaissance
@@ -864,6 +829,7 @@ const Annuaire = ({
 
     // États des filtres (initialisés avec les valeurs de la requête)
     const [searchTerm, setSearchTerm] = useState(filters.search || "");
+    const [searchInput, setSearchInput] = useState(filters.search || "");
     const [classeFilter, setClasseFilter] = useState(filters.classe || "");
     const [familleFilter, setFamilleFilter] = useState(filters.famille || "");
     const [professionFilter, setProfessionFilter] = useState(
@@ -918,6 +884,12 @@ const Annuaire = ({
         currentView,
     ]);
 
+    const submitSearch = () => {
+        const nextSearch = searchInput.trim();
+        setSearchInput(nextSearch);
+        setSearchTerm(nextSearch);
+    };
+
     // Debounce sur l'application des filtres
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -971,6 +943,7 @@ const Annuaire = ({
     // Réinitialiser tous les filtres
     const resetFilters = () => {
         setSearchTerm("");
+        setSearchInput("");
         setClasseFilter("");
         setFamilleFilter("");
         setProfessionFilter("");
@@ -1454,9 +1427,34 @@ const Annuaire = ({
     };
 
     // ========== VUES ==========
+    const localSearchQuery = searchInput.trim().toLowerCase();
+    const matchesLocalSearch = (member) => {
+        if (!localSearchQuery) return true;
+        const haystack = [
+            member.nom,
+            member.prenoms,
+            member.telephone,
+            member.profession,
+            member.codeMembre,
+            member.codeFamille,
+            member.famille,
+            member.classeMethodiste,
+            member.email,
+        ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+        return haystack.includes(localSearchQuery);
+    };
+    const filterMembersBySearch = (members) =>
+        members.filter(matchesLocalSearch);
 
     // Vue tableau (pour 'all')
     const renderTableView = () => {
+        const normalizedMembers = paginatedMembers
+            .map(normalizeMember)
+            .filter(Boolean);
+        const visibleMembers = filterMembersBySearch(normalizedMembers);
         return (
             <>
                 <div className="table-scroll">
@@ -1489,9 +1487,8 @@ const Annuaire = ({
                             </tr>
                         </thead>
                         <tbody>
-                            {paginatedMembers.length > 0 ? (
-                                paginatedMembers.map((rawMember, idx) => {
-                                    const member = normalizeMember(rawMember);
+                            {visibleMembers.length > 0 ? (
+                                visibleMembers.map((member, idx) => {
                                     const rowNumber =
                                         (membersCurrentPage - 1) *
                                             membersPerPage +
@@ -1662,13 +1659,15 @@ const Annuaire = ({
 
     // Vue grille (pour 'all')
     const renderGridView = () => {
+        const normalizedMembers = paginatedMembers
+            .map(normalizeMember)
+            .filter(Boolean);
+        const visibleMembers = filterMembersBySearch(normalizedMembers);
         return (
             <>
                 <div className="grid-view">
-                    {paginatedMembers.length > 0 ? (
-                        paginatedMembers.map((rawMember) => {
-                            const member = normalizeMember(rawMember);
-                            return (
+                    {visibleMembers.length > 0 ? (
+                        visibleMembers.map((member) => (
                                 <div key={member.id} className="grid-card">
                                     <div className="grid-cover"></div>
                                     <div className="grid-profile-container">
@@ -1752,8 +1751,7 @@ const Annuaire = ({
                                         </button>
                                     </div>
                                 </div>
-                            );
-                        })
+                        ))
                     ) : (
                         <p className="col-span-full text-center py-12 text-gray-400 italic">
                             Aucun membre trouvé.
@@ -1859,12 +1857,21 @@ const Annuaire = ({
             <div className="classes-list">
                 {classesPage.data.map((classe) => {
                     const members = classe.members || [];
-                    const totalMembers = members.length;
+                    const normalizedMembers = members
+                        .map(normalizeMember)
+                        .filter(Boolean);
+                    const filteredMembers = filterMembersBySearch(
+                        normalizedMembers,
+                    );
+                    if (localSearchQuery && filteredMembers.length === 0) {
+                        return null;
+                    }
+                    const totalMembers = filteredMembers.length;
                     const membersPerPage = 10;
                     const currentPage = classMemberPages[classe.id] || 1;
                     const totalPages = Math.ceil(totalMembers / membersPerPage);
                     const startIndex = (currentPage - 1) * membersPerPage;
-                    const displayedMembers = members.slice(
+                    const displayedMembers = filteredMembers.slice(
                         startIndex,
                         startIndex + membersPerPage,
                     );
@@ -2140,10 +2147,16 @@ const Annuaire = ({
                                     type="text"
                                     placeholder="Rechercher (nom, prénom, téléphone, profession, code membre, code famille)..."
                                     className="input-control input-search"
-                                    value={searchTerm}
+                                    value={searchInput}
                                     onChange={(e) =>
-                                        setSearchTerm(e.target.value)
+                                        setSearchInput(e.target.value)
                                     }
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            submitSearch();
+                                        }
+                                    }}
                                 />
                             </div>
 
@@ -2286,6 +2299,26 @@ const Annuaire = ({
                                     );
                                 })}
                             </select>
+
+                            <button
+                                onClick={submitSearch}
+                                className="btn btn-primary"
+                            >
+                                <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                    />
+                                </svg>
+                                Rechercher
+                            </button>
 
                             <button
                                 onClick={resetFilters}

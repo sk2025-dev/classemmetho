@@ -61,6 +61,10 @@ export default function AdminPage({
         setClassesData(initialDataByType?.classes || []);
     }, [initialDataByType?.classes]);
 
+    useEffect(() => {
+        setMembresData(initialMembres || []);
+    }, [initialMembres]);
+
     // --- LOGIQUE D'APPEL API ---
 
     // Classes
@@ -230,7 +234,10 @@ export default function AdminPage({
     const handleDeleteMember = (member) => {
         router.delete(withBasePath("", `/admin/membres/${member.id}`), {
             preserveScroll: true,
-            onSuccess: () => toast.success("Membre supprimé avec succès"),
+            onSuccess: () => {
+                setMembresData((prev) => prev.filter((m) => m.id !== member.id));
+                toast.success("Membre supprimé avec succès");
+            },
             onError: (errors) => {
                 console.error("Erreur suppression membre:", errors);
                 toast.error("Erreur lors de la suppression du membre");
@@ -286,7 +293,6 @@ export default function AdminPage({
         });
 
         router.post(withBasePath("", "/admin/membres"), formData, {
-            headers: { "Content-Type": "multipart/form-data" },
             preserveScroll: true,
             onSuccess: (response) => {
                 toast.success("Membre ajouté avec succès");

@@ -7,6 +7,9 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "symfony/string": "^7.2",
+        "maennchen/zipstream-php": "^2.4",
+        "psr/http-message": "^1.1",
         "barryvdh/laravel-dompdf": "^3.1",
         "endroid/qr-code": "^6.0",
         "inertiajs/inertia-laravel": "^2.0",
@@ -85,6 +88,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.3.31"
         }
     },
     "minimum-stability": "stable",

@@ -35,12 +35,6 @@ const ANNONCE_TYPES = [
         emoji: "⚰️",
         color: "slate",
     },
-    {
-        value: "generale",
-        label: "Demande de prière générale",
-        emoji: "🙏",
-        color: "sage",
-    },
 ];
 
 /* ════════════════════════════════════════
@@ -68,12 +62,7 @@ export default function Index({
     const [selectedAnnonce, setSelectedAnnonce] = useState(null);
     const [annonceStep, setAnnonceStep] = useState(1);
     const [annonceProcessing, setAnnonceProcessing] = useState(false);
-    const [annonceForm, setAnnonceForm] = useState({
-        type_annonce: "",
-        membre_id: "",
-        message: "",
-        date_annonce: "",
-    });
+    const [annonceForm, setAnnonceForm] = useState({ titre: "", contenu: "" });
     const [annPage, setAnnPage] = useState(1);
     const [annFilter, setAnnFilter] = useState("tous"); // tous | en_cours | validees | refusees
 
@@ -168,39 +157,23 @@ export default function Index({
     const goToAnn = (n) => setAnnPage(Math.max(1, Math.min(annTotalPages, n)));
 
     const openAnnonce = () => {
-        setAnnonceForm({
-            type_annonce: "",
-            membre_id: "",
-            message: "",
-            date_annonce: "",
-        });
-        setAnnonceStep(1);
+        setAnnonceForm({ titre: "", contenu: "" });
         setShowAnnonceModal(true);
     };
     const closeAnnonce = () => {
         if (annonceProcessing) return;
         setShowAnnonceModal(false);
-        setAnnonceStep(1);
-        setAnnonceForm({
-            type_annonce: "",
-            membre_id: "",
-            message: "",
-            date_annonce: "",
-        });
+        setAnnonceForm({ titre: "", contenu: "" });
     };
     const submitAnnonce = async () => {
-        if (!annonceForm.type_annonce || !annonceForm.message.trim()) {
-            notify("Veuillez remplir tous les champs obligatoires.", "error");
-            return;
-        }
-        if (!annonceForm.membre_id) {
-            notify("Veuillez sélectionner un membre concerné.", "error");
+        if (!annonceForm.titre.trim() || !annonceForm.contenu.trim()) {
+            notify("Veuillez remplir le titre et le contenu.", "error");
             return;
         }
         try {
             setAnnonceProcessing(true);
             const res = await axios.post(
-                withBasePath("", "/membre-famille/annonces"),
+                withBasePath("", "/membre-famille/flash-annonces"),
                 annonceForm,
             );
             const newA = res.data?.annonce || {
@@ -211,16 +184,9 @@ export default function Index({
             };
             setAnnonces((prev) => [newA, ...prev]);
             closeAnnonce();
-            setActiveTab("annonces");
-            setAnnTab("mes");
-            notify(
-                "✅ Demande de prière soumise ! Elle sera traitée par votre conducteur puis le pasteur.",
-            );
+            notify("✅ Annonce soumise ! Elle sera publiée après validation par l'administrateur.");
         } catch (e) {
-            notify(
-                e?.response?.data?.message || "Une erreur est survenue.",
-                "error",
-            );
+            notify(e?.response?.data?.message || "Une erreur est survenue.", "error");
         } finally {
             setAnnonceProcessing(false);
         }
@@ -427,6 +393,8 @@ export default function Index({
                                     });
                                     const refusConducteur =
                                         histMap["REFUSEE_PAR_CONDUCTEUR"];
+                                    const refusBureauConducteur =
+                                        histMap["REFUSEE_PAR_BUREAU_CONDUCTEUR"];
                                     const refusPasteur =
                                         histMap["REFUSEE_PAR_PASTEUR"];
                                     const getEtape = (key) => {
@@ -441,6 +409,9 @@ export default function Index({
                                         };
                                     };
                                     const etapeConducteur = getEtape(
+                                        "TRANSMISE_AU_BUREAU_CONDUCTEUR",
+                                    );
+                                    const etapeBureauConducteur = getEtape(
                                         "TRANSMISE_AU_PASTEUR",
                                     );
                                     const etapePasteur = getEtape("VALIDEE");
@@ -525,6 +496,8 @@ export default function Index({
                                                     label="Conducteur"
                                                     done={
                                                         acte.statut ===
+                                                            "TRANSMISE_AU_BUREAU_CONDUCTEUR" ||
+                                                        acte.statut ===
                                                             "TRANSMISE_AU_PASTEUR" ||
                                                         acte.statut ===
                                                             "REFUSEE_PAR_CONDUCTEUR" ||
@@ -546,6 +519,33 @@ export default function Index({
                                                                   refusConducteur.created_at,
                                                               )
                                                             : etapeConducteur?.date
+                                                    }
+                                                />
+                                                <StatusStep
+                                                    label="Bureau des Conducteurs"
+                                                    done={
+                                                        acte.statut ===
+                                                            "TRANSMISE_AU_PASTEUR" ||
+                                                        acte.statut ===
+                                                            "REFUSEE_PAR_BUREAU_CONDUCTEUR" ||
+                                                        VALID.includes(
+                                                            acte.statut,
+                                                        )
+                                                    }
+                                                    active={
+                                                        acte.statut ===
+                                                        "TRANSMISE_AU_BUREAU_CONDUCTEUR"
+                                                    }
+                                                    refused={
+                                                        acte.statut ===
+                                                        "REFUSEE_PAR_BUREAU_CONDUCTEUR"
+                                                    }
+                                                    date={
+                                                        refusBureauConducteur
+                                                            ? formatDateTime(
+                                                                  refusBureauConducteur.created_at,
+                                                              )
+                                                            : etapeBureauConducteur?.date
                                                     }
                                                 />
                                                 <StatusStep
@@ -766,20 +766,9 @@ export default function Index({
                                     Faire une annonce
                                 </div>
                                 <div className="cta-ann-sub">
-                                    Partagez une demande de prière, une action
-                                    de grâce, un avis de décès ou des
-                                    félicitations avec toute l'assemblée.
-                                </div>
-                                <div className="cta-ann-types">
-                                    {ANNONCE_TYPES.map((t) => (
-                                        <span
-                                            key={t.value}
-                                            className={`cann-pill cann-${t.color}`}
-                                        >
-                                            {t.emoji}{" "}
-                                            {t.label.split("/")[0].trim()}
-                                        </span>
-                                    ))}
+                                    Partagez une information avec toute
+                                    l'assemblée. Votre annonce sera publiée
+                                    dans le flash info après validation.
                                 </div>
                                 <div className="cta-ann-note">
                                     <svg
@@ -796,8 +785,7 @@ export default function Index({
                                             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                                         />
                                     </svg>{" "}
-                                    Validée par conducteur puis pasteur · Fiche
-                                    PDF générée
+                                    Validée par l'administrateur · Publiée dans le flash info
                                 </div>
                             </section>
                             <section className="cta-card">
@@ -1409,15 +1397,9 @@ export default function Index({
                     >
                         <div className="modal-head">
                             <div>
-                                <div className="modal-title">
-                                    {annonceStep === 1 && "Type de demande de prière"}
-                                    {annonceStep === 2 &&
-                                        `${selectedType?.emoji || "🙏"} ${selectedType?.label || "Demande de prière"}`}
-                                    {annonceStep === 3 && "Confirmation"}
-                                </div>
+                                <div className="modal-title">📢 Faire une annonce</div>
                                 <div className="modal-sub">
-                                    Étape {annonceStep} / 3 · Circuit :
-                                    Conducteur → Pasteur
+                                    Sera publiée dans le flash info après validation de l'admin
                                 </div>
                             </div>
                             <button
@@ -1429,296 +1411,63 @@ export default function Index({
                             </button>
                         </div>
 
-                        {/* Steps pill */}
-                        <div className="ann-steps-bar">
-                            {["Type", "Détails", "Confirmation"].map((s, i) => (
-                                <div
-                                    key={i}
-                                    className={`asb-step ${annonceStep > i + 1 ? "done" : annonceStep === i + 1 ? "active" : ""}`}
-                                >
-                                    <div className="asb-dot">
-                                        {annonceStep > i + 1 ? "✓" : i + 1}
-                                    </div>
-                                    <span>{s}</span>
-                                </div>
-                            ))}
-                        </div>
-
                         <div className="modal-body">
-                            {/* ÉTAPE 1 */}
-                            {annonceStep === 1 && (
-                                <div className="ann-type-grid">
-                                    {ANNONCE_TYPES.map((t) => (
-                                        <button
-                                            key={t.value}
-                                            type="button"
-                                            className={`ann-type-btn atype-${t.color} ${annonceForm.type_annonce === t.value ? "sel" : ""}`}
-                                            onClick={() =>
-                                                setAnnonceForm((f) => ({
-                                                    ...f,
-                                                    type_annonce: t.value,
-                                                }))
-                                            }
-                                        >
-                                            <span className="atb-emoji">
-                                                {t.emoji}
-                                            </span>
-                                            <span className="atb-label">
-                                                {t.label}
-                                            </span>
-                                            {annonceForm.type_annonce ===
-                                                t.value && (
-                                                <span className="atb-check">
-                                                    ✓
-                                                </span>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* ÉTAPE 2 */}
-                            {annonceStep === 2 && (
-                                <div className="ann-form">
-                                    <Field
-                                        label="Personne / Famille concernée"
-                                        required
-                                    >
-                                        <select
+                            <div className="ann-form">
+                                    <Field label="Titre de l'annonce" required>
+                                        <input
                                             className="ann-input"
-                                            value={annonceForm.membre_id}
+                                            type="text"
+                                            placeholder="Ex: Cérémonie de mariage, Annonce de naissance..."
+                                            value={annonceForm.titre}
                                             onChange={(e) =>
-                                                setAnnonceForm((f) => ({
-                                                    ...f,
-                                                    membre_id: e.target.value,
-                                                }))
+                                                setAnnonceForm((f) => ({ ...f, titre: e.target.value }))
                                             }
-                                        >
-                                            <option value="">
-                                                -- Sélectionnez un membre --
-                                            </option>
-                                            {familyMembers.map((m) => (
-                                                <option key={m.id} value={m.id}>
-                                                    {m.prenom} {m.nom}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            maxLength={255}
+                                        />
                                     </Field>
-                                    <Field
-                                        label="Message de l'annonce"
-                                        required
-                                    >
+                                    <Field label="Contenu de l'annonce" required>
                                         <textarea
                                             className="ann-textarea"
-                                            rows={4}
-                                            placeholder={getPlaceholder(
-                                                annonceForm.type_annonce,
-                                            )}
-                                            value={annonceForm.message}
+                                            rows={5}
+                                            placeholder="Décrivez votre annonce en détail..."
+                                            value={annonceForm.contenu}
                                             onChange={(e) =>
-                                                setAnnonceForm((f) => ({
-                                                    ...f,
-                                                    message: e.target.value,
-                                                }))
+                                                setAnnonceForm((f) => ({ ...f, contenu: e.target.value }))
                                             }
                                         />
                                         <div className="ann-chars">
-                                            {annonceForm.message.length}/500
+                                            {annonceForm.contenu.length}/2000
                                         </div>
-                                    </Field>
-                                    <Field label="Date de l'événement">
-                                        <input
-                                            className="ann-input"
-                                            type="date"
-                                            value={annonceForm.date_annonce}
-                                            onChange={(e) =>
-                                                setAnnonceForm((f) => ({
-                                                    ...f,
-                                                    date_annonce:
-                                                        e.target.value,
-                                                }))
-                                            }
-                                        />
                                     </Field>
                                     <div className="ann-visibility">
-                                        <svg
-                                            width="13"
-                                            height="13"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h.5A2.5 2.5 0 0021.5 5.5v-1.565"
-                                            />
+                                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        Visible par toute la paroisse après
-                                        validation du pasteur
+                                        Visible par toute la paroisse après validation de l'administrateur
                                     </div>
                                 </div>
-                            )}
-
-                            {/* ÉTAPE 3 */}
-                            {annonceStep === 3 && (
-                                <div className="ann-recap">
-                                    <div
-                                        className={`ann-recap-type atype-${selectedType?.color}`}
-                                    >
-                                        <span style={{ fontSize: 30 }}>
-                                            {selectedType?.emoji}
-                                        </span>
-                                        <div>
-                                            <div className="art-label">
-                                                {selectedType?.label}
-                                            </div>
-                                            <div className="art-sub">
-                                                Annonce paroissiale
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {annonceForm.membre_id && (
-                                        <RecapRow
-                                            label="Concerné(e)"
-                                            value={(() => {
-                                                const m = familyMembers.find(
-                                                    (fm) =>
-                                                        String(fm.id) ===
-                                                        String(
-                                                            annonceForm.membre_id,
-                                                        ),
-                                                );
-                                                return m
-                                                    ? `${m.prenom} ${m.nom}`
-                                                    : "Membre";
-                                            })()}
-                                        />
-                                    )}
-                                    {annonceForm.date_annonce && (
-                                        <RecapRow
-                                            label="Date"
-                                            value={formatDate(
-                                                annonceForm.date_annonce,
-                                            )}
-                                        />
-                                    )}
-                                    <div className="ann-recap-msg">
-                                        <div className="arm-label">Message</div>
-                                        <div className="arm-text">
-                                            {annonceForm.message}
-                                        </div>
-                                    </div>
-                                    <div className="ann-circuit-info">
-                                        <svg
-                                            width="13"
-                                            height="13"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                            />
-                                        </svg>
-                                        Après soumission :{" "}
-                                        <strong>Conducteur</strong> →{" "}
-                                        <strong>Pasteur</strong> →{" "}
-                                        <strong>
-                                            Téléchargement du fichier
-                                        </strong>
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
                         <div className="modal-foot">
-                            {annonceStep > 1 ? (
-                                <button
-                                    type="button"
-                                    className="btn-mghost"
-                                    onClick={() => setAnnonceStep((s) => s - 1)}
-                                >
-                                    ← Retour
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    className="btn-mghost"
-                                    onClick={closeAnnonce}
-                                >
-                                    Annuler
-                                </button>
-                            )}
-                            {annonceStep < 3 ? (
-                                <button
-                                    type="button"
-                                    className="btn-mnext"
-                                    disabled={
-                                        annonceStep === 1 &&
-                                        !annonceForm.type_annonce
-                                    }
-                                    onClick={() => {
-                                        if (
-                                            annonceStep === 2 &&
-                                            !annonceForm.membre_id
-                                        ) {
-                                            notify(
-                                                "Veuillez sélectionner un membre.",
-                                                "error",
-                                            );
-                                            return;
-                                        }
-                                        if (
-                                            annonceStep === 2 &&
-                                            !annonceForm.message.trim()
-                                        ) {
-                                            notify(
-                                                "Le message est obligatoire.",
-                                                "error",
-                                            );
-                                            return;
-                                        }
-                                        setAnnonceStep((s) => s + 1);
-                                    }}
-                                >
-                                    Suivant →
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    className="btn-msubmit"
-                                    disabled={annonceProcessing}
-                                    onClick={submitAnnonce}
-                                >
-                                    {annonceProcessing ? (
-                                        <>
-                                            <svg
-                                                width="13"
-                                                height="13"
-                                                className="spin"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                                />
-                                            </svg>{" "}
-                                            Envoi...
-                                        </>
-                                    ) : (
-                                        <>📢 Soumettre l'annonce</>
-                                    )}
-                                </button>
-                            )}
+                            <button
+                                type="button"
+                                className="btn-mghost"
+                                onClick={closeAnnonce}
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-msubmit"
+                                disabled={annonceProcessing || !annonceForm.titre.trim() || !annonceForm.contenu.trim()}
+                                onClick={submitAnnonce}
+                            >
+                                {annonceProcessing ? (
+                                    <><svg width="13" height="13" className="spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Envoi...</>
+                                ) : (
+                                    <>📢 Soumettre l'annonce</>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2111,29 +1860,28 @@ export default function Index({
 
 function AnnonceDotTrack({ statut, expanded }) {
     const steps = [
-        { key: "SOUMISE", label: "Soumise", icon: "📝" },
-        { key: "EN_ATTENTE_CONDUCTEUR", label: "Conducteur", icon: "📋" },
-        { key: "TRANSMISE_AU_PASTEUR", label: "Pasteur", icon: "✝" },
+        { key: "SOUMISE",                       label: "Soumise",               icon: "📝" },
+        { key: "EN_ATTENTE_CONDUCTEUR",          label: "Conducteur",            icon: "📋" },
+        { key: "TRANSMISE_AU_BUREAU_CONDUCTEUR", label: "Bureau des Conducteurs", icon: "🏛" },
+        { key: "TRANSMISE_AU_PASTEUR",           label: "Pasteur",               icon: "✝" },
     ];
     const isRefuse = String(statut).startsWith("REFUSEE");
     const isValidated = VALID.includes(statut);
     const activeIdx = isRefuse
-        ? statut === "REFUSEE_PAR_CONDUCTEUR"
-            ? 1
-            : 2
-        : statut === "EN_ATTENTE_CONDUCTEUR"
-          ? 1
-          : statut === "TRANSMISE_AU_PASTEUR"
-            ? 2
-            : isValidated
-              ? 2
-              : 0;
+        ? statut === "REFUSEE_PAR_CONDUCTEUR" ? 1
+        : statut === "REFUSEE_PAR_BUREAU_CONDUCTEUR" ? 2
+        : 3
+        : statut === "EN_ATTENTE_CONDUCTEUR" ? 1
+        : statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" ? 2
+        : statut === "TRANSMISE_AU_PASTEUR" ? 3
+        : isValidated ? 3
+        : 0;
 
     return (
         <div className={`ann-track ${expanded ? "ann-track-exp" : ""}`}>
             {steps.map((s, i) => {
                 const isDone = isValidated
-                    ? i <= 2
+                    ? i <= steps.length - 1
                     : !isRefuse && i < activeIdx;
                 const isActive = !isValidated && i === activeIdx;
                 const isRef = isRefuse && isActive;

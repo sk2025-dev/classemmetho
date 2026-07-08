@@ -50,7 +50,40 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn() => $request->session()->get('success'),
                 'error' => fn() => $request->session()->get('error'),
             ],
-            'flashAnnouncements' => fn() => ActeLiturgique::query()
+            'flashAnnouncements' => fn () => $this->loadFlashAnnouncements(),
+            'auth' => [
+                'user' => $request->user() ? [
+                    'id' => $request->user()->id,
+                    'nom' => $request->user()->nom,
+                    'prenom' => $request->user()->prenom,
+                    'email' => $request->user()->email,
+                    'telephone' => $request->user()->telephone,
+                    'photo' => $request->user()->photo ?? null,
+                    'profile_photo_url' => $request->user()->profile_photo_url
+                        ?: PhotoHelper::getPhotoUrl(
+                            $request->user()->photo_path,
+                            $request->user()->prenom,
+                            $request->user()->nom
+                        ),
+                    'role' => $request->user()->role,
+                    'identifier' => $request->user()->identifier,
+                    'code_membre' => $request->user()->code_membre,
+                    'classe' => $request->user()->classe ? [
+                        'id' => $request->user()->classe->id,
+                        'nom' => $request->user()->classe->nom,
+                    ] : null,
+                ] : null,
+            ],
+        ];
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, \App\Models\ActeLiturgique>
+     */
+    private function loadFlashAnnouncements()
+    {
+        try {
+            return ActeLiturgique::query()
                 ->with(['membre:id,prenom,nom', 'family:id,nom'])
                 ->whereIn('statut', ['VALIDEE', 'PUBLIEE'])
                 ->where(function ($q) {
@@ -77,30 +110,9 @@ class HandleInertiaRequests extends Middleware
                     'date_publication',
                     'created_at',
                     'statut',
-                ]),
-            'auth' => [
-                'user' => $request->user() ? [
-                    'id' => $request->user()->id,
-                    'nom' => $request->user()->nom,
-                    'prenom' => $request->user()->prenom,
-                    'email' => $request->user()->email,
-                    'telephone' => $request->user()->telephone,
-                    'photo' => $request->user()->photo ?? null,
-                    'profile_photo_url' => $request->user()->profile_photo_url
-                        ?: PhotoHelper::getPhotoUrl(
-                            $request->user()->photo_path,
-                            $request->user()->prenom,
-                            $request->user()->nom
-                        ),
-                    'role' => $request->user()->role,
-                    'identifier' => $request->user()->identifier,
-                    'code_membre' => $request->user()->code_membre,
-                    'classe' => $request->user()->classe ? [
-                        'id' => $request->user()->classe->id,
-                        'nom' => $request->user()->classe->nom,
-                    ] : null,
-                ] : null,
-            ],
-        ];
+                ]);
+        } catch (\Throwable) {
+            return collect();
+        }
     }
 }

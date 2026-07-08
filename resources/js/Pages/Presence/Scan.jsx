@@ -4,20 +4,35 @@ import axios from "axios";
 import { withBasePath } from "../../Utils/urlHelper";
 
 export default function PresenceScan() {
-    const {
-        token,
-        event,
-        isInvalidToken,
-        isExpired,
-        isNotYetOpen,
-        isClosed,
-        openingAt,
-    } = usePage().props;
+    const { token, event, isInvalidToken, isExpired, isNotYetOpen, isClosed, startAt } =
+        usePage().props;
 
     const [codeMembre, setCodeMembre] = useState("");
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
     const [status, setStatus] = useState("idle");
+
+    const formatRemaining = (targetDate) => {
+        if (!targetDate) {
+            return null;
+        }
+
+        const diffMs = new Date(targetDate).getTime() - Date.now();
+        if (diffMs <= 0) {
+            return "quelques instants";
+        }
+
+        const totalMinutes = Math.ceil(diffMs / 60000);
+        if (totalMinutes >= 60) {
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            return `${hours}h${String(minutes).padStart(2, "0")}`;
+        }
+
+        return `${totalMinutes} min`;
+    };
+
+    const remainingBeforeStart = formatRemaining(startAt);
 
     const submit = async (e) => {
         e.preventDefault();
@@ -43,9 +58,7 @@ export default function PresenceScan() {
             setCodeMembre("");
         } catch (error) {
             setStatus("error");
-            setMessage(
-                error.response?.data?.message || "Une erreur est survenue.",
-            );
+            setMessage(error.response?.data?.message || "Une erreur est survenue.");
         } finally {
             setLoading(false);
         }
@@ -121,9 +134,10 @@ export default function PresenceScan() {
                                 fontWeight: 600,
                             }}
                         >
-                            Le scan sera disponible deux jours avant l'activité
-                            {openingAt
-                                ? ` (activation: ${new Date(openingAt).toLocaleString("fr-FR")}).`
+                            L'activité n'a pas encore commencé. Vous pourrez scanner dans{" "}
+                            {remainingBeforeStart || "quelques instants"}
+                            {startAt
+                                ? ` (début: ${new Date(startAt).toLocaleString("fr-FR")}).`
                                 : "."}
                         </p>
                     )}
@@ -136,7 +150,7 @@ export default function PresenceScan() {
                                 fontWeight: 600,
                             }}
                         >
-                            Cette activité est passée. Le scan n'est plus disponible.
+                            Cette activité est terminée. Le scan n'est plus possible.
                         </p>
                     )}
 
@@ -192,14 +206,8 @@ export default function PresenceScan() {
                                 marginTop: "14px",
                                 padding: "10px 12px",
                                 borderRadius: "8px",
-                                background:
-                                    status === "success"
-                                        ? "#dcfce7"
-                                        : "#fee2e2",
-                                color:
-                                    status === "success"
-                                        ? "#166534"
-                                        : "#991b1b",
+                                background: status === "success" ? "#dcfce7" : "#fee2e2",
+                                color: status === "success" ? "#166534" : "#991b1b",
                                 fontWeight: 600,
                             }}
                         >

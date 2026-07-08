@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import { withBasePath } from "@/Utils/urlHelper";
+import Select2Single from "@/Components/Select2Single";
 
 const fmt = (n) =>
     `${Number(n || 0).toLocaleString("fr-FR", {
@@ -1561,8 +1562,8 @@ export default function TresorierClasse({
                         <label style={{ fontSize: 11, fontWeight: 700 }}>
                             Membre
                         </label>
-                        <select
-                            style={inputStyle}
+                        <Select2Single
+                            name="paiement_user_id"
                             value={paiementForm.user_id}
                             onChange={(e) =>
                                 setPaiementForm((p) => ({
@@ -1570,14 +1571,10 @@ export default function TresorierClasse({
                                     user_id: e.target.value,
                                 }))
                             }
-                        >
-                            <option value="">-- Choisir --</option>
-                            {memberOptions.map((m) => (
-                                <option key={m.value} value={m.value}>
-                                    {m.label}
-                                </option>
-                            ))}
-                        </select>
+                            options={memberOptions}
+                            placeholder="-- Choisir --"
+                            noOptionsMessage="Aucun membre trouvé"
+                        />
                     </div>
                     <div>
                         <label style={{ fontSize: 11, fontWeight: 700 }}>

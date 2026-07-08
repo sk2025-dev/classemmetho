@@ -14,7 +14,7 @@ import {
 import ProfilePhoto from "@/Components/ProfilePhoto";
 import { withBasePath } from "../../Utils/urlHelper";
 
-// Composant Badge pour le RÃ´le
+// Composant Badge pour le Rôle
 const StatusBadge = ({ role }) => {
     const isResp = role === "responsable";
 
@@ -285,7 +285,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                                         </div>
                                                         {member.is_deceased && (
                                                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-300 text-gray-600 border border-gray-400">
-                                                                âœ DÃ©cÃ©dÃ©
+                                                                ✝ Décédé
                                                             </span>
                                                         )}
                                                     </div>
@@ -308,20 +308,20 @@ export default function Inscriptions({ family, members, familyStats }) {
                                                     />
                                                 </td>
                                                 <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                    {member.email || "â€”"}
+                                                    {member.email || "—"}
                                                 </td>
                                                 <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                    {member.telephone || "â€”"}
+                                                    {member.telephone || "—"}
                                                 </td>
                                                 <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                    {member.ville_name || "â€”"}
+                                                    {member.ville_name || "—"}
                                                 </td>
                                                 <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                    {member.profession || "â€”"}
+                                                    {member.profession || "—"}
                                                 </td>
                                                 <td className="px-6 py-4 text-left text-sm text-gray-600">
                                                     {member.fonction_name ||
-                                                        "â€”"}
+                                                        "—"}
                                                 </td>
                                                 <td className="px-6 py-4 text-left text-sm">
                                                     <StatusBadge
@@ -354,7 +354,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                                                     )
                                                                 }
                                                                 className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1.5 rounded transition-colors"
-                                                                title="Voir les dÃ©tails"
+                                                                title="Voir les détails"
                                                             >
                                                                 <Eye className="w-4 h-4" />
                                                             </button>
@@ -373,7 +373,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                     {filteredMembers.length > PER_PAGE && (
                         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white rounded-b-xl">
                             <span className="text-sm text-gray-500">
-                                {(page - 1) * PER_PAGE + 1}â€“{Math.min(page * PER_PAGE, filteredMembers.length)} sur {filteredMembers.length} membres
+                                {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filteredMembers.length)} sur {filteredMembers.length} membres
                             </span>
                             <div className="flex items-center gap-1">
                                 <button
@@ -381,18 +381,18 @@ export default function Inscriptions({ family, members, familyStats }) {
                                     disabled={page === 1}
                                     className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
-                                    â€¹ PrÃ©c.
+                                    ‹ Préc.
                                 </button>
                                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                                     .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
                                     .reduce((acc, p, idx, arr) => {
-                                        if (idx > 0 && p - arr[idx - 1] > 1) acc.push("â€¦");
+                                        if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
                                         acc.push(p);
                                         return acc;
                                     }, [])
                                     .map((p, idx) =>
-                                        p === "â€¦" ? (
-                                            <span key={`dots-${idx}`} className="px-2 text-gray-400">â€¦</span>
+                                        p === "…" ? (
+                                            <span key={`dots-${idx}`} className="px-2 text-gray-400">…</span>
                                         ) : (
                                             <button
                                                 key={p}
@@ -412,7 +412,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                     disabled={page === totalPages}
                                     className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
-                                    Suiv. â€º
+                                    Suiv. ›
                                 </button>
                             </div>
                         </div>
@@ -426,7 +426,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                             </h3>
                             <p className="text-gray-500 mb-6">
                                 Votre famille n'a pas encore d'autres membres
-                                enregistrÃ©s.
+                                enregistrés.
                             </p>
                         </div>
                     )}
@@ -437,7 +437,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                         <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6">
                             <div className="flex items-start justify-between">
                                 <h3 className="text-lg font-bold">
-                                    DÃ©tails de {selectedMember.prenom}{" "}
+                                    Détails de {selectedMember.prenom}{" "}
                                     {selectedMember.nom}
                                 </h3>
                                 <button
@@ -453,15 +453,15 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         Email
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.email || "â€”"}
+                                        {selectedMember.email || "—"}
                                     </p>
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-600">
-                                        TÃ©lÃ©phone
+                                        Téléphone
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.telephone || "â€”"}
+                                        {selectedMember.telephone || "—"}
                                     </p>
                                 </div>
                                 <div>
@@ -469,7 +469,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         Ville
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.ville_name || "â€”"}
+                                        {selectedMember.ville_name || "—"}
                                     </p>
                                 </div>
                                 <div>
@@ -477,7 +477,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         Profession
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.profession || "â€”"}
+                                        {selectedMember.profession || "—"}
                                     </p>
                                 </div>
                                 <div>
@@ -485,7 +485,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         Fonction
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.fonction_name || "â€”"}
+                                        {selectedMember.fonction_name || "—"}
                                     </p>
                                 </div>
                                 <div>
@@ -493,7 +493,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         Date de naissance
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.date_naissance || "â€”"}
+                                        {selectedMember.date_naissance || "—"}
                                     </p>
                                 </div>
                             </div>

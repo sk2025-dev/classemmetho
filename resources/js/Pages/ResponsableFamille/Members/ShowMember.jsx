@@ -327,8 +327,12 @@ export default function ShowMember({ member, family, auth }) {
                                         colorClass="emerald"
                                     />
                                     <InfoField
-                                        label="Fonction Église"
-                                        value={member.fonction?.nom}
+                                        label="Fonction(s) Église"
+                                        value={
+                                            member.fonctions?.length > 0
+                                                ? member.fonctions.map(f => f.nom).join(', ')
+                                                : (member.fonction?.nom || null)
+                                        }
                                         icon={Briefcase}
                                         colorClass="emerald"
                                     />

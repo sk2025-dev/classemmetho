@@ -482,7 +482,7 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
                                 />
                             </FormField>
 
-                            {(member.hors_communaute || member.retrait) && (
+                            {Boolean(member.hors_communaute || member.retrait) && (
                                 <div className="p-4 rounded-lg bg-orange-50 border border-orange-200 space-y-1 text-sm text-orange-800">
                                     {member.hors_communaute && <p>⚠️ Membre hors communauté</p>}
                                     {member.retrait && (
@@ -566,7 +566,7 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
                                         setData({ ...data, fonction_ids: e.target.value })
                                     }
                                     options={fonctions}
-                                    placeholder="S\u00e9lectionner une ou plusieurs fonctions..."
+                                    placeholder="Sélectionner une ou plusieurs fonctions..."
                                 />
                             </FormField>
 

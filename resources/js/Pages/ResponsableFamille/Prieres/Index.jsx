@@ -7,6 +7,7 @@ import {
     ChevronUp,
     CornerDownRight,
     FileHeart,
+    HeartHandshake,
     EyeOff,
     Eye,
     MessageSquare,
@@ -352,14 +353,6 @@ export default function ResponsableFamillePrieresIndex({
             ...current,
             [request.id]: !isExpanded,
         }));
-
-        if (
-            !isExpanded &&
-            request.direction === "received" &&
-            ["Nouvelle", "Vu", "Transmise"].includes(request.status)
-        ) {
-            updateRequestStatus(request.id, "En priere");
-        }
     };
 
     const currentThreadData = useMemo(() => {
@@ -688,13 +681,35 @@ export default function ResponsableFamillePrieresIndex({
                                                                     <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">
                                                                         {request.message}
                                                                     </p>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleToggleDetails(request)}
-                                                                        className="mt-3 inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700"
-                                                                    >
-                                                                        Voir moins
-                                                                    </button>
+                                                                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleToggleDetails(request)}
+                                                                            className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700"
+                                                                        >
+                                                                            Voir moins
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            disabled={
+                                                                                request.status === "En priere" ||
+                                                                                isResolvedPrayer(request.status)
+                                                                            }
+                                                                            onClick={() => updateRequestStatus(request.id, "En priere")}
+                                                                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                                                                                request.status === "En priere" ||
+                                                                                isResolvedPrayer(request.status)
+                                                                                    ? "cursor-not-allowed bg-emerald-100 text-emerald-700"
+                                                                                    : "bg-emerald-600 text-white hover:bg-emerald-700"
+                                                                            }`}
+                                                                        >
+                                                                            <HeartHandshake className="h-3.5 w-3.5" />
+                                                                            {request.status === "En priere" ||
+                                                                            isResolvedPrayer(request.status)
+                                                                                ? "Marquee comme en priere"
+                                                                                : "Marquer comme en priere"}
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             ) : (
                                                                 <div className="flex flex-wrap items-center gap-2">
@@ -711,9 +726,17 @@ export default function ResponsableFamillePrieresIndex({
                                                                 </div>
                                                             )
                                                         ) : (
-                                                            <p className="max-w-3xl text-sm leading-6 text-slate-600">
-                                                                {request.message}
-                                                            </p>
+                                                            <>
+                                                                <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                                                                    {request.message}
+                                                                </p>
+                                                                {request.status === "En priere" ? (
+                                                                    <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                                                                        <HeartHandshake className="h-3.5 w-3.5" />
+                                                                        Un destinataire prie pour cette demande
+                                                                    </div>
+                                                                ) : null}
+                                                            </>
                                                         )}
                                                     </div>
                                                     {request.sourceLabel ? (

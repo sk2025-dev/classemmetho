@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Link, usePage, router } from "@inertiajs/react";
 import MiniCalendar from "@/Components/MiniCalendar";
@@ -34,12 +34,6 @@ const ANNONCE_TYPES = [
         emoji: "🙏",
         color: "violet",
     },
-    {
-        value: "generale",
-        label: "Demande de prière générale",
-        emoji: "🙏",
-        color: "sage",
-    },
 ];
 
 const MOTIFS_GRACE = [
@@ -74,6 +68,18 @@ const ACTE_TYPES = [
     { value: "naissance", label: "Naissance" },
     { value: "deces", label: "Décès" },
 ];
+
+const TYPE_BADGE_CONFIG = {
+    bapteme:                    { label: 'Baptême',               emoji: '💧', bg: '#dbeafe', color: '#1d4ed8' },
+    mariage:                    { label: 'Mariage',               emoji: '💍', bg: '#fce7f3', color: '#be185d' },
+    deces:                      { label: 'Décès',                 emoji: '🕯️', bg: '#f1f5f9', color: '#475569' },
+    naissance:                  { label: 'Naissance',             emoji: '👶', bg: '#dcfce7', color: '#15803d' },
+    premiere_communion:         { label: '1re Communion',         emoji: '🍞', bg: '#fef3c7', color: '#b45309' },
+    confirmation:               { label: 'Confirmation',          emoji: '✝️', bg: '#ede9fe', color: '#6d28d9' },
+    bapteme_premiere_communion: { label: 'Baptême + Communion',   emoji: '💧', bg: '#dbeafe', color: '#1d4ed8' },
+    grace:                      { label: 'Action de grâce',       emoji: '🙌', bg: '#fef3c7', color: '#d97706' },
+    priere:                     { label: "Prière d'intercession", emoji: '🙏', bg: '#ede9fe', color: '#7c3aed' },
+};
 
 const ACTE_REQUIRED_FIELDS = {
     bapteme: [],
@@ -133,13 +139,24 @@ export default function Index({
 }) {
     const { url } = usePage();
 
-    const [actesPaginator] = useState(
+    const [actesPaginator, setActesPaginator] = useState(
         Array.isArray(actes) || !actes?.data ? null : actes,
     );
 
     const [localActes, setLocalActes] = useState(
-        actesPaginator?.data || (Array.isArray(actes) ? actes : []),
+        Array.isArray(actes) ? actes : (actes?.data ?? []),
     );
+
+    useEffect(() => {
+        if (Array.isArray(actes)) {
+            setLocalActes(actes);
+            setActesPaginator(null);
+        } else if (actes?.data) {
+            setLocalActes(actes.data);
+            setActesPaginator(actes);
+        }
+    }, [actes]);
+
     const currentPage = actesPaginator?.current_page || 1;
     const lastPage = actesPaginator?.last_page || 1;
     const totalActes = actesPaginator?.total || localActes.length;
@@ -422,14 +439,6 @@ export default function Index({
                     .trim()
                     .toUpperCase();
 
-                const globallyEligible = [
-                    "VALIDEE",
-                    "PUBLIEE",
-                    "ARCHIVEE",
-                    "CELEBRE",
-                    "TERMINE",
-                ].includes(statut);
-
                 const ceremonyEligible = [
                     "CEREMONIE_VALIDEE_PAR_PASTEUR",
                     "CEREMONIE_VALIDE_PAR_PASTEUR",
@@ -437,7 +446,7 @@ export default function Index({
 
                 return (
                     type === "mariage" &&
-                    (globallyEligible || ceremonyEligible) &&
+                    ceremonyEligible &&
                     !isFicheMarkedAsSent(details?.fiche_pasteur_envoyee)
                 );
             })
@@ -481,6 +490,7 @@ export default function Index({
                 toBatchDateKey(acte?.created_at) ||
                 toBatchDateKey(acte?.details?.date_souhaitee) ||
                 toBatchDateKey(acte?.date_souhaitee) ||
+                toBatchDateKey(acte?.validated_at) ||
                 toBatchDateKey(acte?.updated_at);
             if (!batchDate) return;
             if (!map.has(batchDate)) {
@@ -996,6 +1006,14 @@ export default function Index({
         return result;
     }, [annonces, quickFilter, selectedFamily, selectedClasse, searchNeedle]);
 
+    const combinedPending = useMemo(() => {
+        const actes = filteredActes.map(a => ({ ...a, _source: 'acte' }));
+        const ann = annFiltered.map(a => ({ ...a, _source: 'annonce' }));
+        return [...actes, ...ann].sort((a, b) =>
+            new Date(b.created_at || 0) - new Date(a.created_at || 0)
+        );
+    }, [filteredActes, annFiltered]);
+
     const annHistFiltered = useMemo(() => {
         let result = [...annoncesHistorique];
 
@@ -1081,6 +1099,19 @@ export default function Index({
     useEffect(() => {
         if (historyPage > historyTotalPages) setHistoryPage(historyTotalPages);
     }, [historyPage, historyTotalPages]);
+
+    const combinedHistorique = useMemo(() => {
+        const actes = filteredHistorique.map(a => ({ ...a, _histSource: 'acte' }));
+        const ann = annHistFiltered.map(a => ({ ...a, _histSource: 'annonce' }));
+        return [...actes, ...ann].sort((a, b) =>
+            new Date(b.validated_at || 0) - new Date(a.validated_at || 0)
+        );
+    }, [filteredHistorique, annHistFiltered]);
+    const combinedHistTotalPages = Math.max(1, Math.ceil(combinedHistorique.length / historyPerPage));
+    const pagedCombinedHist = combinedHistorique.slice(
+        (historyPage - 1) * historyPerPage,
+        historyPage * historyPerPage,
+    );
 
     const annTotalPages = Math.max(
         1,
@@ -1418,6 +1449,85 @@ export default function Index({
             notify(
                 error?.response?.data?.message || "Une erreur est survenue.",
             );
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const bulkApproveAll = async () => {
+        if (!selectedIds.length && !selectedAnnIds.length) {
+            notify("Sélectionnez au moins une demande.");
+            return;
+        }
+        try {
+            setProcessing(true);
+            if (selectedIds.length) {
+                const selectedActes = localActes.filter((a) => selectedIds.includes(a.id));
+                await Promise.all(selectedIds.map((id) =>
+                    axios.post(withBasePath("", `/pasteur/liturgie/${id}/transition`), { statut: "VALIDEE", commentaire: "" })
+                ));
+                setLocalActes((prev) => prev.filter((item) => !selectedIds.includes(item.id)));
+                setHistoriqueList((prev) => [
+                    ...selectedActes.map((a) => ({ ...a, statut: "VALIDEE", note_pastorale: "", validated_at: new Date().toISOString() })),
+                    ...prev,
+                ]);
+                clearSelection();
+            }
+            if (selectedAnnIds.length) {
+                const selected = annonces.filter((a) => selectedAnnIds.includes(a.id));
+                await Promise.all(selectedAnnIds.map((id) => getPasteurAnnonceAction("VALIDEE", id)));
+                setAnnonces((prev) => prev.filter((a) => !selectedAnnIds.includes(a.id)));
+                setAnnoncesHistorique((prev) => [
+                    ...selected.map((a) => ({ ...a, statut: "VALIDEE", note_pastorale: "", validated_at: new Date().toISOString() })),
+                    ...prev,
+                ]);
+                clearAnnSelection();
+            }
+            notify("Validation groupée réussie.");
+        } catch (error) {
+            notify(error?.response?.data?.message || "Une erreur est survenue.");
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const bulkRefuseAll = async () => {
+        if (!selectedIds.length && !selectedAnnIds.length) {
+            notify("Sélectionnez au moins une demande.");
+            return;
+        }
+        const motif = window.prompt("Motif du refus (obligatoire) :");
+        if (!motif || !motif.trim()) {
+            notify("Le motif du refus est obligatoire.");
+            return;
+        }
+        try {
+            setProcessing(true);
+            if (selectedIds.length) {
+                const selectedActes = localActes.filter((a) => selectedIds.includes(a.id));
+                await Promise.all(selectedIds.map((id) =>
+                    axios.post(withBasePath("", `/pasteur/liturgie/${id}/transition`), { statut: "REFUSEE_PAR_PASTEUR", commentaire: motif })
+                ));
+                setLocalActes((prev) => prev.filter((item) => !selectedIds.includes(item.id)));
+                setHistoriqueList((prev) => [
+                    ...selectedActes.map((a) => ({ ...a, statut: "REFUSEE_PAR_PASTEUR", note_pastorale: motif, validated_at: new Date().toISOString() })),
+                    ...prev,
+                ]);
+                clearSelection();
+            }
+            if (selectedAnnIds.length) {
+                const selected = annonces.filter((a) => selectedAnnIds.includes(a.id));
+                await Promise.all(selectedAnnIds.map((id) => getPasteurAnnonceAction("REFUSEE_PAR_PASTEUR", id, motif)));
+                setAnnonces((prev) => prev.filter((a) => !selectedAnnIds.includes(a.id)));
+                setAnnoncesHistorique((prev) => [
+                    ...selected.map((a) => ({ ...a, statut: "REFUSEE_PAR_PASTEUR", note_pastorale: motif, validated_at: new Date().toISOString() })),
+                    ...prev,
+                ]);
+                clearAnnSelection();
+            }
+            notify("Refus groupé enregistré.");
+        } catch (error) {
+            notify(error?.response?.data?.message || "Une erreur est survenue.");
         } finally {
             setProcessing(false);
         }
@@ -2336,9 +2446,9 @@ export default function Index({
                                     />
                                 </svg>
                                 Actes liturgiques
-                                {stats.pending > 0 && (
+                                {(stats.pending + annStats.pending) > 0 && (
                                     <span className="ptab-badge">
-                                        {stats.pending}
+                                        {stats.pending + annStats.pending}
                                     </span>
                                 )}
                             </button>
@@ -2405,37 +2515,6 @@ export default function Index({
                                     <span className="ptab-badge">{mesDemandes.length}</span>
                                 )}
                             </button>
-                            <button
-                                className={`ptab ptab-ann ${activeTab === "annonces" ? "active" : ""}`}
-                                onClick={() => {
-                                    setActiveTab("annonces");
-                                    setQuickFilter("all");
-                                    setSelectedFamily("all");
-                                    setSelectedClasse("all");
-                                    setSearchTerm("");
-                                }}
-                            >
-                                <svg
-                                    width="13"
-                                    height="13"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
-                                    />
-                                </svg>
-                                Demandes de prière
-                                {annStats.pending > 0 && (
-                                    <span className="ptab-badge ptab-badge-ann">
-                                        {annStats.pending}
-                                    </span>
-                                )}
-                            </button>
                         </div>
                         <div className="quick-tools">
                             <select
@@ -2457,12 +2536,11 @@ export default function Index({
                                         🍞 Première Communion
                                     </option>
                                 </optgroup>
-                                <optgroup label="Types d'annonces">
+                                <optgroup label="Demandes de prière">
                                     <option value="grace">
                                         🙌 Action de grâce
                                     </option>
-                                    <option value="deces">⚰️ Décès</option>
-                                    <option value="priere">🙏 Prière</option>
+                                    <option value="priere">🙏 Prière d'intercession</option>
                                 </optgroup>
                                 <optgroup label="Mes contenus">
                                     <option value="mes_annonces">
@@ -2539,216 +2617,128 @@ export default function Index({
                                                         d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                                                     />
                                                 </svg>
-                                                Actes en attente de validation
+                                                En attente de validation
                                             </div>
                                             <div className="panel-sub">
-                                                Transmis par les conducteurs —
-                                                Votre validation est requise
+                                                Actes liturgiques et demandes de prière transmis — Votre validation est requise
                                             </div>
                                         </div>
                                         <div className="panel-actions">
                                             <button
                                                 type="button"
                                                 className="btn-mini"
-                                                onClick={selectAllPending}
-                                                disabled={
-                                                    filteredActes.length === 0
-                                                }
+                                                onClick={() => { selectAllPending(); selectAllAnn(); }}
+                                                disabled={combinedPending.length === 0}
                                             >
                                                 Tout sélectionner
                                             </button>
                                             <button
                                                 type="button"
                                                 className="btn-mini"
-                                                onClick={clearSelection}
-                                                disabled={
-                                                    selectedIds.length === 0
-                                                }
+                                                onClick={() => { clearSelection(); clearAnnSelection(); }}
+                                                disabled={selectedIds.length === 0 && selectedAnnIds.length === 0}
                                             >
                                                 Effacer
                                             </button>
                                             <button
                                                 type="button"
                                                 className="btn-mini btn-mini-approve"
-                                                onClick={bulkApprove}
-                                                disabled={
-                                                    selectedIds.length === 0 ||
-                                                    processing
-                                                }
+                                                onClick={bulkApproveAll}
+                                                disabled={(selectedIds.length === 0 && selectedAnnIds.length === 0) || processing}
                                             >
-                                                Approuver
+                                                ✓ Valider ({selectedIds.length + selectedAnnIds.length})
                                             </button>
                                             <button
                                                 type="button"
                                                 className="btn-mini btn-mini-refuse"
-                                                onClick={bulkRefuse}
-                                                disabled={
-                                                    selectedIds.length === 0 ||
-                                                    processing
-                                                }
+                                                onClick={bulkRefuseAll}
+                                                disabled={(selectedIds.length === 0 && selectedAnnIds.length === 0) || processing}
                                             >
-                                                Refuser
+                                                ✕ Refuser ({selectedIds.length + selectedAnnIds.length})
                                             </button>
                                             <span className="panel-badge">
-                                                {filteredActes.length}
+                                                {combinedPending.length}
                                             </span>
                                         </div>
                                     </div>
-                                    {filteredActes.length === 0 && (
+                                    {combinedPending.length === 0 && (
                                         <div className="empty-state">
-                                            <svg
-                                                width="36"
-                                                height="36"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="1"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                />
+                                            <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
-                                            <span>
-                                                Aucun acte en attente de
-                                                validation
-                                            </span>
+                                            <span>Aucun élément en attente de validation</span>
                                         </div>
                                     )}
-                                    {filteredActes.map((acte) => (
+                                    {combinedPending.map((item) => {
+                                        const typeKey = item.type_acte || item.type_annonce || '';
+                                        const badge = TYPE_BADGE_CONFIG[typeKey] || { label: typeKey, emoji: '📋', bg: '#f3f4f6', color: '#374151' };
+                                        const isActe = item._source === 'acte';
+                                        return (
                                         <div
-                                            key={acte.id}
+                                            key={`${item._source}-${item.id}`}
                                             className="acte-card"
-                                            onClick={() =>
-                                                openModal("detail", acte)
-                                            }
+                                            onClick={() => isActe ? openModal("detail", item) : openAnnModal("detail", item)}
                                         >
+                                            {/* ── TYPE BADGE ── */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 20, background: badge.bg, color: badge.color, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.02em' }}>
+                                                    {badge.emoji} {badge.label}
+                                                </span>
+                                            </div>
                                             <div className="acte-card-top">
-                                                <label
-                                                    className="acte-check"
-                                                    onClick={(e) =>
-                                                        e.stopPropagation()
-                                                    }
-                                                >
+                                                <label className="acte-check" onClick={(e) => e.stopPropagation()}>
                                                     <input
                                                         type="checkbox"
-                                                        checked={selectedIds.includes(
-                                                            acte.id,
-                                                        )}
-                                                        onChange={() =>
-                                                            toggleSelect(
-                                                                acte.id,
-                                                            )
-                                                        }
+                                                        checked={isActe ? selectedIds.includes(item.id) : selectedAnnIds.includes(item.id)}
+                                                        onChange={() => isActe ? toggleSelect(item.id) : toggleAnnSelect(item.id)}
                                                     />
                                                     <span />
                                                 </label>
-                                                <div className="acte-emoji-box">
-                                                    {acte.membre
-                                                        ?.profile_photo_url ? (
-                                                        <img
-                                                            src={
-                                                                acte.membre
-                                                                    .profile_photo_url
-                                                            }
-                                                            alt={
-                                                                acte.membre
-                                                                    ?.prenom +
-                                                                " " +
-                                                                acte.membre?.nom
-                                                            }
-                                                            className="member-photo"
-                                                            style={{
-                                                                width: "100%",
-                                                                height: "100%",
-                                                                objectFit:
-                                                                    "cover",
-                                                                borderRadius:
-                                                                    "50%",
-                                                            }}
-                                                        />
+                                                <div className={`acte-emoji-box${!isActe ? ` atype-${badge.color === '#d97706' ? 'amber' : badge.color === '#7c3aed' ? 'violet' : ''}` : ''}`}>
+                                                    {item.membre?.profile_photo_url ? (
+                                                        <img src={item.membre.profile_photo_url} alt={`${item.membre?.prenom} ${item.membre?.nom}`} className="member-photo" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                                                     ) : (
                                                         <span className="photo-fallback">
-                                                            {iconEmoji(
-                                                                acte.type_acte,
-                                                            )}
+                                                            {isActe ? iconEmoji(item.type_acte) : badge.emoji}
                                                         </span>
                                                     )}
                                                 </div>
                                                 <div className="acte-info">
                                                     <div className="acte-name">
-                                                        {prettyType(
-                                                            acte.type_acte,
-                                                        )}{" "}
-                                                        — {acte.membre?.prenom}{" "}
-                                                        {acte.membre?.nom}
+                                                        {isActe ? prettyType(item.type_acte) : badge.label}
+                                                        {item.membre && ` — ${item.membre.prenom} ${item.membre.nom}`}
                                                     </div>
+                                                    {!isActe && (() => {
+                                                        const motifVal = item.details?.motif;
+                                                        const motifLabel = motifVal
+                                                            ? ([...MOTIFS_GRACE, ...MOTIFS_INTERCESSION].find(m => m.value === motifVal)?.label || motifVal)
+                                                            : null;
+                                                        return motifLabel ? (
+                                                            <div style={{ fontSize: 11.5, fontWeight: 600, color: '#7c3aed', marginTop: 2, marginBottom: 2 }}>
+                                                                {motifLabel}
+                                                            </div>
+                                                        ) : null;
+                                                    })()}
                                                     <div className="acte-meta">
                                                         <span>
-                                                            <svg
-                                                                width="10"
-                                                                height="10"
-                                                                fill="none"
-                                                                viewBox="0 0 24 24"
-                                                                stroke="currentColor"
-                                                                strokeWidth="2"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"
-                                                                />
+                                                            <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" />
                                                             </svg>
-                                                            {acte.classe?.nom ||
-                                                                acte.classe_id ||
-                                                                "—"}
+                                                            {item.classe?.nom || item.classe_id || '—'}
                                                         </span>
                                                         <span>
-                                                            <svg
-                                                                width="10"
-                                                                height="10"
-                                                                fill="none"
-                                                                viewBox="0 0 24 24"
-                                                                stroke="currentColor"
-                                                                strokeWidth="2"
-                                                            >
-                                                                <rect
-                                                                    x="3"
-                                                                    y="4"
-                                                                    width="18"
-                                                                    height="18"
-                                                                    rx="2"
-                                                                    ry="2"
-                                                                />
-                                                                <line
-                                                                    x1="16"
-                                                                    y1="2"
-                                                                    x2="16"
-                                                                    y2="6"
-                                                                />
-                                                                <line
-                                                                    x1="8"
-                                                                    y1="2"
-                                                                    x2="8"
-                                                                    y2="6"
-                                                                />
-                                                                <line
-                                                                    x1="3"
-                                                                    y1="10"
-                                                                    x2="21"
-                                                                    y2="10"
-                                                                />
+                                                            <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                                                             </svg>
-                                                            {formatDate(
-                                                                acte.date_souhaitee,
-                                                            )}
+                                                            {formatDate(item.date_souhaitee || item.created_at)}
                                                         </span>
-                                                        <span>
-                                                            {acte.reference ||
-                                                                "—"}
-                                                        </span>
+                                                        <span>{item.reference || '—'}</span>
                                                     </div>
+                                                    {!isActe && (item.details?.contenu || item.message) && (
+                                                        <div className="cn-text" style={{ marginTop: 4, fontStyle: 'normal' }}>
+                                                            {(item.details?.contenu || item.message || '').slice(0, 100)}…
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <span className="badge badge-transmis">
                                                     <span className="badge-dot" />
@@ -2757,172 +2747,66 @@ export default function Index({
                                             </div>
                                             <div className="conductor-note">
                                                 <div className="cn-label">
-                                                    <svg
-                                                        width="11"
-                                                        height="11"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                                        />
+                                                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                                     </svg>
                                                     Note du conducteur
                                                 </div>
                                                 <div className="cn-text">
-                                                    {acte.note_conducteur ||
-                                                        "Aucune note du conducteur pour ce dossier."}
+                                                    {item.note_conducteur || 'Aucune note du conducteur pour ce dossier.'}
                                                 </div>
                                             </div>
-                                            <div
-                                                className="acte-actions"
-                                                onClick={(e) =>
-                                                    e.stopPropagation()
-                                                }
-                                            >
-                                                <button
-                                                    className="btn-validate"
-                                                    onClick={() =>
-                                                        openModal(
-                                                            "validate",
-                                                            acte,
-                                                        )
-                                                    }
-                                                >
-                                                    <svg
-                                                        width="13"
-                                                        height="13"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2.5"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M5 13l4 4L19 7"
-                                                        />
-                                                    </svg>
-                                                    Accepté
+                                            <div className="acte-actions" onClick={(e) => e.stopPropagation()}>
+                                                <button className="btn-validate" onClick={() => isActe ? openModal('validate', item) : openAnnModal('validate', item)}>
+                                                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                                    {isActe ? 'Accepté' : 'Valider'}
                                                 </button>
-                                                <button
-                                                    className="btn-see"
-                                                    onClick={() =>
-                                                        openModal(
-                                                            "detail",
-                                                            acte,
-                                                        )
-                                                    }
-                                                >
-                                                    <svg
-                                                        width="13"
-                                                        height="13"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                        />
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                        />
-                                                    </svg>
-                                                    Dossier complet
+                                                <button className="btn-see" onClick={() => isActe ? openModal('detail', item) : openAnnModal('detail', item)}>
+                                                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                                    Voir détail
                                                 </button>
-                                                <button
-                                                    className="btn-pdf"
-                                                    onClick={() => {
-                                                        const type = String(
-                                                            acte.type_acte ||
-                                                                "",
-                                                        ).toLowerCase();
-                                                        const url =
-                                                            type ===
-                                                                "naissance" ||
-                                                            type === "deces"
-                                                                ? `/pasteur/liturgie/${acte.id}/fiche?preview=1`
-                                                                : `/pasteur/liturgie/${acte.id}/fiche-conducteur?preview=1`;
-                                                        window.open(
-                                                            url,
-                                                            "_blank",
-                                                        );
-                                                    }}
-                                                >
-                                                    Voir la fiche conducteur
-                                                </button>
-                                                <button
-                                                    className="btn-refuse-sm"
-                                                    onClick={() =>
-                                                        openModal(
-                                                            "refuse",
-                                                            acte,
-                                                        )
-                                                    }
-                                                >
-                                                    <svg
-                                                        width="13"
-                                                        height="13"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2.5"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M6 18L18 6M6 6l12 12"
-                                                        />
-                                                    </svg>
+                                                {isActe && (
+                                                    <button className="btn-pdf" onClick={() => { const t = String(item.type_acte||'').toLowerCase(); window.open(t==='naissance'||t==='deces'?`/pasteur/liturgie/${item.id}/fiche?preview=1`:`/pasteur/liturgie/${item.id}/fiche-conducteur?preview=1`,'_blank'); }}>
+                                                        Voir la fiche
+                                                    </button>
+                                                )}
+                                                {!isActe && (
+                                                    <button className="btn-pdf" onClick={(e) => { e.stopPropagation(); window.open(`/pasteur/liturgie/${item.id}/fiche-priere`, '_blank'); }}>
+                                                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                                        Télécharger fiche
+                                                    </button>
+                                                )}
+                                                <button className="btn-refuse-sm" onClick={() => isActe ? openModal('refuse', item) : openAnnModal('refuse', item)}>
+                                                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                                     Refuser
                                                 </button>
                                             </div>
                                         </div>
-                                    ))}
-                                    {filteredActes.length > 0 &&
-                                        lastPage > 1 && (
-                                            <div className="pager">
-                                                <button
-                                                    type="button"
-                                                    className="pager-btn"
-                                                    onClick={() =>
-                                                        goToActesPage(
-                                                            currentPage - 1,
-                                                        )
-                                                    }
-                                                    disabled={currentPage === 1}
-                                                >
-                                                    Précédent
-                                                </button>
-                                                <div className="pager-info">
-                                                    Page {currentPage} /{" "}
-                                                    {lastPage}
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    className="pager-btn"
-                                                    onClick={() =>
-                                                        goToActesPage(
-                                                            currentPage + 1,
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        currentPage === lastPage
-                                                    }
-                                                >
-                                                    Suivant
-                                                </button>
-                                            </div>
-                                        )}
+                                        );
+                                    })}
+                                    {lastPage > 1 && (
+                                        <div className="flex items-center justify-center gap-3 mt-4 py-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => goToActesPage(currentPage - 1)}
+                                                disabled={currentPage === 1}
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                                ← Précédent
+                                            </button>
+                                            <span className="text-xs text-gray-500 font-medium">
+                                                Page {currentPage} / {lastPage}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => goToActesPage(currentPage + 1)}
+                                                disabled={currentPage === lastPage}
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                                Suivant →
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="side-col">
@@ -3032,441 +2916,155 @@ export default function Index({
                             </div>
 
                             {/* HISTORIQUE ACTES */}
+                            {/* HISTORIQUE UNIFIÉ */}
                             <div className="panel layout-full">
                                 <div className="panel-head">
                                     <div>
                                         <div className="panel-title">
-                                            <svg
-                                                width="16"
-                                                height="16"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                />
+                                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                             Historique pastoral
                                         </div>
-                                        <div className="panel-sub">
-                                            Toutes les approbations et refus
-                                            effectués
-                                        </div>
+                                        <div className="panel-sub">Toutes les approbations et refus effectués</div>
                                     </div>
-                                    {historiqueList.length > 0 && (
+                                    {combinedHistorique.length > 0 && (
                                         <>
                                             <div className="panel-actions">
-                                                <button
-                                                    type="button"
-                                                    className="btn-mini"
-                                                    onClick={selectAllHistory}
-                                                    disabled={
-                                                        historiqueList.length ===
-                                                        0
-                                                    }
-                                                >
-                                                    Tout sélectionner
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="btn-mini"
-                                                    onClick={
-                                                        clearHistorySelection
-                                                    }
-                                                    disabled={
-                                                        selectedHistoryIds.length ===
-                                                        0
-                                                    }
-                                                >
-                                                    Effacer
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="btn-mini btn-mini-approve"
-                                                    onClick={
-                                                        bulkFinalizeHistory
-                                                    }
-                                                    disabled={
-                                                        selectedHistoryIds.length ===
-                                                            0 || processing
-                                                    }
-                                                >
-                                                    Finaliser
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="btn-mini"
-                                                    onClick={
-                                                        bulkDownloadHistory
-                                                    }
-                                                    disabled={
-                                                        selectedHistoryIds.length ===
-                                                        0
-                                                    }
-                                                >
-                                                    Télécharger certifs
-                                                </button>
-                                                <span className="panel-badge">
-                                                    {historiqueList.length}
-                                                </span>
-                                            </div>
-                                            <div className="hist-summary">
-                                                <button
-                                                    type="button"
-                                                    className="hs-gmail-btn"
-                                                    onClick={openFicheModal}
-                                                >
-                                                    <svg
-                                                        width="18"
-                                                        height="18"
-                                                        viewBox="0 0 24 24"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        strokeWidth="1.5"
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                    >
-                                                        <path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z" />
-                                                        <path d="M3 6l9 7 9-7" />
-                                                    </svg>
-                                                    <>
-                                                        Envoyer la fiche de
-                                                        mariage
-                                                    </>
-                                                </button>
+                                                <button type="button" className="btn-mini" onClick={selectAllHistory} disabled={filteredHistorique.length === 0}>Tout sélectionner (actes)</button>
+                                                <button type="button" className="btn-mini" onClick={clearHistorySelection} disabled={selectedHistoryIds.length === 0}>Effacer</button>
+                                                <button type="button" className="btn-mini btn-mini-approve" onClick={bulkFinalizeHistory} disabled={selectedHistoryIds.length === 0 || processing}>Finaliser</button>
+                                                <button type="button" className="btn-mini" onClick={bulkDownloadHistory} disabled={selectedHistoryIds.length === 0}>Télécharger certifs</button>
                                                 {unsentBaptemeActes.length > 0 && (
                                                     <button
                                                         type="button"
-                                                        className="hs-gmail-btn"
-                                                        style={{ background: "linear-gradient(120deg,#1565C0)", borderColor: "rgba(21,101,192,0.7)" }}
+                                                        className="btn-mini btn-mini-approve"
                                                         onClick={openFicheBaptemeModal}
+                                                        style={{ background: '#3b82f6', color: '#fff', borderColor: '#3b82f6' }}
                                                     >
-                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                                            <path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z" />
-                                                            <path d="M3 6l9 7 9-7" />
-                                                        </svg>
-                                                        Envoyer la fiche
-                                                        baptême
+                                                        💧 Envoyer liste baptêmes ({unsentBaptemeActes.length})
                                                     </button>
                                                 )}
-                                                {sessionRefuses > 0 && (
-                                                    <span className="hs-pill red">
-                                                        {sessionRefuses} refusé
-                                                        {sessionRefuses > 1
-                                                            ? "s"
-                                                            : ""}
-                                                    </span>
+                                                {unsentCeremonyActes.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        className="btn-mini btn-mini-approve"
+                                                        onClick={openFicheModal}
+                                                        style={{ background: '#ec4899', color: '#fff', borderColor: '#ec4899' }}
+                                                    >
+                                                        💍 Envoyer liste mariages ({unsentCeremonyActes.length})
+                                                    </button>
+                                                )}
+                                                <span className="panel-badge">{combinedHistorique.length}</span>
+                                            </div>
+                                            <div className="hist-summary">
+                                                <span className="hs-pill green">{combinedHistorique.filter(h => !String(h.statut||'').startsWith('REFUSEE')).length} validé(e)s</span>
+                                                {combinedHistorique.filter(h => String(h.statut||'').startsWith('REFUSEE')).length > 0 && (
+                                                    <span className="hs-pill red">{combinedHistorique.filter(h => String(h.statut||'').startsWith('REFUSEE')).length} refusé(e)s</span>
                                                 )}
                                             </div>
                                         </>
                                     )}
                                 </div>
-                                {historiqueList.length > 0 && (
-                                    <div style={{ padding: "10px 16px 4px" }}>
-                                        <div style={{ position: "relative" }}>
-                                            <svg
-                                                width="15"
-                                                height="15"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                                style={{
-                                                    position: "absolute",
-                                                    left: "10px",
-                                                    top: "50%",
-                                                    transform: "translateY(-50%)",
-                                                    color: "#9ca3af",
-                                                    pointerEvents: "none",
-                                                }}
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z"
-                                                />
-                                            </svg>
-                                            <input
-                                                type="search"
-                                                placeholder="Rechercher dans l'historique (nom, type, référence…)"
-                                                value={historiqueSearchTerm}
-                                                onChange={(e) => {
-                                                    setHistoriqueSearchTerm(e.target.value);
-                                                    setHistoryPage(1);
-                                                }}
-                                                style={{
-                                                    width: "100%",
-                                                    padding: "7px 12px 7px 32px",
-                                                    border: "1px solid #e5e7eb",
-                                                    borderRadius: "7px",
-                                                    fontSize: "13px",
-                                                    outline: "none",
-                                                    background: "#f9fafb",
-                                                    color: "#374151",
-                                                    boxSizing: "border-box",
-                                                }}
-                                            />
-                                        </div>
+                                {combinedHistorique.length > 0 && (
+                                    <div className="ann-filters-bar">
+                                        {[{v:'tous',l:'Toutes'},{v:'en_cours',l:'En cours'},{v:'validees',l:'Validées'},{v:'refusees',l:'Refusées'}].map(f => (
+                                            <button key={f.v} className={`ann-filter-btn ${annFilter === f.v ? 'active' : ''}`} onClick={() => { setAnnFilter(f.v); setHistoryPage(1); }}>{f.l}</button>
+                                        ))}
                                     </div>
                                 )}
-                                {historiqueList.length === 0 && (
-                                    <div className="empty-state">
-                                        <svg
-                                            width="36"
-                                            height="36"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="1"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                            />
+                                {combinedHistorique.length > 0 && (
+                                    <div style={{ position: 'relative', padding: '8px 24px 0' }}>
+                                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ position:'absolute', left:'34px', top:'50%', transform:'translateY(-30%)', color:'#9ca3af', pointerEvents:'none' }}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z" />
                                         </svg>
-                                        <span>
-                                            Aucun acte traité pour le moment
-                                        </span>
+                                        <input type="search" placeholder="Rechercher dans l'historique (nom, type, référence…)" value={historiqueSearchTerm} onChange={(e) => { setHistoriqueSearchTerm(e.target.value); setHistoryPage(1); }} style={{ width:'100%', padding:'7px 12px 7px 32px', border:'1px solid #e5e7eb', borderRadius:'7px', fontSize:'13px', outline:'none', background:'#f9fafb', color:'#374151', boxSizing:'border-box' }} />
                                     </div>
                                 )}
-                                {historiqueList.length > 0 && filteredHistorique.length === 0 && (
+                                {combinedHistorique.length === 0 && (
                                     <div className="empty-state">
-                                        <svg
-                                            width="36"
-                                            height="36"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="1"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z"
-                                            />
+                                        <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        <span>Aucun résultat pour cette recherche.</span>
+                                        <span>Aucun élément traité pour le moment</span>
                                     </div>
                                 )}
-                                {pagedHistorique.map((item) => (
-                                    <div
-                                        className="hist-item"
-                                        key={`hist-${item.id}-${item.validated_at}`}
-                                    >
-                                        <label
-                                            className="hist-check"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedHistoryIds.includes(
-                                                    item.id,
-                                                )}
-                                                onChange={() =>
-                                                    toggleHistorySelect(item.id)
-                                                }
-                                            />
-                                            <span />
-                                        </label>
-                                        <div className="hist-icon-box">
-                                            {item.membre?.profile_photo_url ? (
-                                                <img
-                                                    src={
-                                                        item.membre
-                                                            .profile_photo_url
-                                                    }
-                                                    alt={
-                                                        item.membre?.prenom +
-                                                        " " +
-                                                        item.membre?.nom
-                                                    }
-                                                    style={{
-                                                        width: "100%",
-                                                        height: "100%",
-                                                        objectFit: "cover",
-                                                        borderRadius: "50%",
-                                                    }}
-                                                />
-                                            ) : (
-                                                iconEmoji(item.type_acte)
-                                            )}
-                                        </div>
-                                        <div className="hist-info">
-                                            <div className="hist-name">
-                                                {prettyType(item.type_acte)} —{" "}
-                                                {item.membre?.prenom}{" "}
-                                                {item.membre?.nom}
-                                            </div>
-                                            <div className="hist-detail">
-                                                <svg
-                                                    width="10"
-                                                    height="10"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"
-                                                    />
-                                                </svg>
-                                                Classe{" "}
-                                                {item.classe?.nom ||
-                                                    item.classe_id ||
-                                                    "—"}
-                                                {item.note_pastorale && (
-                                                    <>
-                                                        {" "}
-                                                        ·{" "}
-                                                        <em>
-                                                            {
-                                                                item.note_pastorale
-                                                            }
-                                                        </em>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="hist-right">
-                                            <span
-                                                className={`badge ${item.statut === "REFUSEE_PAR_PASTEUR" ? "badge-refuse" : "badge-valide"}`}
-                                            >
-                                                <span className="badge-dot" />
-                                                {historyStatusLabel(
-                                                    item.statut,
-                                                )}
+                                {pagedCombinedHist.map((item) => {
+                                    const isActe = item._histSource === 'acte';
+                                    const typeKey = isActe ? item.type_acte : (item.type_annonce || item.type_acte);
+                                    const badge = TYPE_BADGE_CONFIG[typeKey] || { label: typeKey || '—', emoji: '📋', bg: '#f3f4f6', color: '#374151' };
+                                    const isRefuse = String(item.statut || '').startsWith('REFUSEE');
+                                    return (
+                                        <div className="hist-item" key={`ch-${item._histSource}-${item.id}-${item.validated_at}`} style={{ flexWrap: 'wrap', gap: 10 }}>
+                                            <span style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 9px', borderRadius:20, background: badge.bg, color: badge.color, fontSize:11, fontWeight:700, letterSpacing:'0.02em', flexShrink:0 }}>
+                                                {badge.emoji} {badge.label}
                                             </span>
-                                            <div className="hist-date">
-                                                {formatDate(item.validated_at)}
-                                            </div>
-                                            {String(
-                                                item.type_acte || "",
-                                            ).toLowerCase() === "mariage" && (
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        gap: 8,
-                                                        marginTop: 8,
-                                                        flexWrap: "wrap",
-                                                    }}
-                                                >
-                                                    {item.details
-                                                        ?.ceremonie_statut ===
-                                                        "CEREMONIE_TRANSMISE_AU_PASTEUR" && (
-                                                        <>
-                                                            <button
-                                                                className="btn-pdf"
-                                                                onClick={() =>
-                                                                    submitCeremonyDecision(
-                                                                        item.id,
-                                                                        "CEREMONIE_VALIDEE_PAR_PASTEUR",
-                                                                    )
-                                                                }
-                                                            >
-                                                                Valider la date
-                                                            </button>
-                                                            <button
-                                                                className="btn-refuse-sm"
-                                                                onClick={() =>
-                                                                    submitCeremonyDecision(
-                                                                        item.id,
-                                                                        "CEREMONIE_REFUSEE_PAR_PASTEUR",
-                                                                    )
-                                                                }
-                                                            >
-                                                                Refuser la date
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
+                                            {isActe && (
+                                                <label className="hist-check" onClick={e => e.stopPropagation()}>
+                                                    <input type="checkbox" checked={selectedHistoryIds.includes(item.id)} onChange={() => toggleHistorySelect(item.id)} />
+                                                    <span />
+                                                </label>
                                             )}
-                                            {item.statut === "VALIDEE" &&
-                                                ((item.type_acte ===
-                                                    "mariage" &&
-                                                    item.details
-                                                        ?.date_souhaitee &&
-                                                    item.details
-                                                        ?.fiche_pasteur_envoyee) ||
-                                                    item.type_acte ===
-                                                        "bapteme") && (
-                                                    <button
-                                                        className="btn-pdf"
-                                                        onClick={() =>
-                                                            finalizeActe(item)
-                                                        }
-                                                    >
-                                                        Marquer{" "}
-                                                        {finalLabelForType(
-                                                            item.type_acte,
-                                                        )}
-                                                    </button>
+                                            <div className="hist-icon-box">
+                                                {isActe ? (
+                                                    item.membre?.profile_photo_url
+                                                        ? <img src={item.membre.profile_photo_url} alt={`${item.membre?.prenom} ${item.membre?.nom}`} style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:'50%' }} />
+                                                        : iconEmoji(item.type_acte)
+                                                ) : (
+                                                    <span style={{ fontSize: 18 }}>{badge.emoji}</span>
                                                 )}
-                                            {(DONE_STATUSES.includes(
-                                                item.statut,
-                                            ) ||
-                                                item.details
-                                                    ?.ceremonie_statut ===
-                                                    "CEREMONIE_VALIDEE_PAR_PASTEUR") && (
-                                                <button
-                                                    className="btn-pdf"
-                                                    onClick={() =>
-                                                        window.open(
-                                                            `/pasteur/liturgie/${item.id}/certificat`,
-                                                            "_blank",
-                                                        )
-                                                    }
-                                                >
-                                                    {isFicheType(item.type_acte)
-                                                        ? "Télécharger fiche"
-                                                        : "Télécharger certificat"}
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                                {historiqueList.length > 0 &&
-                                    historyTotalPages > 1 && (
-                                        <div className="pager">
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    setHistoryPage(
-                                                        historyPage - 1,
-                                                    )
-                                                }
-                                                disabled={historyPage === 1}
-                                            >
-                                                Précédent
-                                            </button>
-                                            <div className="pager-info">
-                                                Page {historyPage} /{" "}
-                                                {historyTotalPages}
                                             </div>
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    setHistoryPage(
-                                                        historyPage + 1,
-                                                    )
-                                                }
-                                                disabled={
-                                                    historyPage ===
-                                                    historyTotalPages
-                                                }
-                                            >
-                                                Suivant
-                                            </button>
+                                            <div className="hist-info">
+                                                <div className="hist-name">
+                                                    {isActe ? prettyType(item.type_acte) : badge.label}
+                                                    {item.membre && ` — ${item.membre.prenom} ${item.membre.nom}`}
+                                                </div>
+                                                <div className="hist-detail">
+                                                    <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" />
+                                                    </svg>
+                                                    Classe {item.classe?.nom || item.classe_id || '—'}
+                                                    {isActe && item.note_pastorale && <> · <em>{item.note_pastorale}</em></>}
+                                                </div>
+                                            </div>
+                                            <div className="hist-right">
+                                                <span className={`badge ${isRefuse ? 'badge-refuse' : 'badge-valide'}`}>
+                                                    <span className="badge-dot" />
+                                                    {isActe ? historyStatusLabel(item.statut) : (isRefuse ? 'Refusé' : 'Publié')}
+                                                </span>
+                                                <div className="hist-date">{formatDate(item.validated_at)}</div>
+                                                {isActe && String(item.type_acte||'').toLowerCase() === 'mariage' && item.details?.ceremonie_statut === 'CEREMONIE_TRANSMISE_AU_PASTEUR' && (
+                                                    <div style={{ display:'flex', gap:8, marginTop:8, flexWrap:'wrap' }}>
+                                                        <button className="btn-pdf" onClick={() => submitCeremonyDecision(item.id, 'CEREMONIE_VALIDEE_PAR_PASTEUR')}>Valider la date</button>
+                                                        <button className="btn-refuse-sm" onClick={() => submitCeremonyDecision(item.id, 'CEREMONIE_REFUSEE_PAR_PASTEUR')}>Refuser la date</button>
+                                                    </div>
+                                                )}
+                                                {isActe && item.statut === 'VALIDEE' && ((item.type_acte === 'mariage' && item.details?.date_souhaitee && item.details?.fiche_pasteur_envoyee) || item.type_acte === 'bapteme') && (
+                                                    <button className="btn-pdf" onClick={() => finalizeActe(item)}>Marquer {finalLabelForType(item.type_acte)}</button>
+                                                )}
+                                                {isActe && ['deces', 'naissance'].includes(item.type_acte) && (
+                                                    <button className="btn-pdf" onClick={() => window.open(`/pasteur/liturgie/${item.id}/certificat`, '_blank')}>Télécharger la fiche</button>
+                                                )}
+                                                {!isActe && ['priere', 'grace'].includes(item.type_acte) && !item.statut?.includes('REFUS') && (
+                                                    <button className="btn-pdf" onClick={() => window.open(`/pasteur/liturgie/${item.id}/fiche-priere`, '_blank')}>Télécharger la fiche</button>
+                                                )}
+                                                {isActe && item.type_acte === 'mariage' && ['CEREMONIE_VALIDE_PAR_PASTEUR', 'CEREMONIE_VALIDEE_PAR_PASTEUR'].includes(item.details?.ceremonie_statut) && (
+                                                    <button className="btn-pdf" onClick={() => window.open(`/pasteur/liturgie/${item.id}/certificat`, '_blank')}>Télécharger certificat</button>
+                                                )}
+                                                {isActe && item.type_acte === 'bapteme' && item.details?.fiche_bapteme_envoyee && (
+                                                    <button className="btn-pdf" onClick={() => window.open(`/pasteur/liturgie/${item.id}/certificat`, '_blank')}>Télécharger certificat</button>
+                                                )}
+                                            </div>
                                         </div>
-                                    )}
+                                    );
+                                })}
+                                {combinedHistTotalPages > 1 && (
+                                    <div className="pager">
+                                        <button type="button" className="pager-btn" onClick={() => setHistoryPage(historyPage - 1)} disabled={historyPage === 1}>Précédent</button>
+                                        <div className="pager-info">Page {historyPage} / {combinedHistTotalPages}</div>
+                                        <button type="button" className="pager-btn" onClick={() => setHistoryPage(historyPage + 1)} disabled={historyPage === combinedHistTotalPages}>Suivant</button>
+                                    </div>
+                                )}
                             </div>
                         </>
                     )}
@@ -4034,606 +3632,6 @@ export default function Index({
                         </div>
                     )}
 
-                    {activeTab === "annonces" && (
-                        <div className="ann-tab-root">
-                            {/* ANNONCES EN ATTENTE */}
-                            <div className="panel layout-full">
-                                <div className="panel-head">
-                                    <div>
-                                        <div className="panel-title">
-                                            <svg
-                                                width="16"
-                                                height="16"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
-                                                />
-                                            </svg>
-                                            Demandes de prière en attente de validation
-                                        </div>
-                                        <div className="panel-sub">
-                                            Transmises par les conducteurs —
-                                            Votre validation les publie
-                                        </div>
-                                    </div>
-                                    <div className="panel-actions">
-                                        {/* ★ BOUTON NOUVELLE ANNONCE PASTEUR ★ */}
-                                        <button
-                                            type="button"
-                                            className="btn-nouvelle-annonce"
-                                            onClick={() =>
-                                                openAnnModal("create")
-                                            }
-                                            disabled={annonceProcessing}
-                                        >
-                                            <svg
-                                                width="13"
-                                                height="13"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2.5"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
-                                                />
-                                            </svg>
-                                            Nouvelle demande de prière
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="btn-mini"
-                                            onClick={selectAllAnn}
-                                            disabled={annFiltered.length === 0}
-                                        >
-                                            Tout sélectionner
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="btn-mini"
-                                            onClick={clearAnnSelection}
-                                            disabled={
-                                                selectedAnnIds.length === 0
-                                            }
-                                        >
-                                            Effacer
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="btn-mini btn-mini-approve"
-                                            onClick={bulkApproveAnn}
-                                            disabled={
-                                                selectedAnnIds.length === 0 ||
-                                                processing
-                                            }
-                                        >
-                                            Approuver
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="btn-mini btn-mini-refuse"
-                                            onClick={bulkRefuseAnn}
-                                            disabled={
-                                                selectedAnnIds.length === 0 ||
-                                                processing
-                                            }
-                                        >
-                                            Refuser
-                                        </button>
-                                        <span className="panel-badge">
-                                            {annFiltered.length}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {annFiltered.length === 0 && (
-                                    <div className="empty-state">
-                                        <svg
-                                            width="36"
-                                            height="36"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="1"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
-                                            />
-                                        </svg>
-                                        <span>
-                                            Aucune demande de prière en attente de
-                                            validation
-                                        </span>
-                                        <button
-                                            type="button"
-                                            className="btn-nouvelle-annonce"
-                                            style={{ marginTop: 14 }}
-                                            onClick={() =>
-                                                openAnnModal("create")
-                                            }
-                                        >
-                                            Créer la première demande de prière
-                                        </button>
-                                    </div>
-                                )}
-
-                                {pagedAnn.map((ann) => {
-                                    const t = ANNONCE_TYPES.find(
-                                        (x) =>
-                                            x.value ===
-                                            (ann.type_annonce || ann.type_acte),
-                                    );
-                                    const msg =
-                                        ann.details?.contenu ||
-                                        ann.message ||
-                                        "";
-                                    const member = ann.membre
-                                        ? `${ann.membre.prenom} ${ann.membre.nom}`
-                                        : null;
-                                    return (
-                                        <div
-                                            key={ann.id}
-                                            className="acte-card"
-                                            onClick={() =>
-                                                openAnnModal("detail", ann)
-                                            }
-                                        >
-                                            <div className="acte-card-top">
-                                                <label
-                                                    className="acte-check"
-                                                    onClick={(e) =>
-                                                        e.stopPropagation()
-                                                    }
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedAnnIds.includes(
-                                                            ann.id,
-                                                        )}
-                                                        onChange={() =>
-                                                            toggleAnnSelect(
-                                                                ann.id,
-                                                            )
-                                                        }
-                                                    />
-                                                    <span />
-                                                </label>
-                                                <div
-                                                    className={`acte-emoji-box atype-${t?.color}`}
-                                                    style={{ fontSize: 22 }}
-                                                >
-                                                    {t?.emoji || "📢"}
-                                                </div>
-                                                <div className="acte-info">
-                                                    <div className="acte-name">
-                                                        {t?.label ||
-                                                            ann.type_annonce}
-                                                        {member &&
-                                                            ` — ${member}`}
-                                                    </div>
-                                                    <div className="acte-meta">
-                                                        {ann.created_at && (
-                                                            <span>
-                                                                📅{" "}
-                                                                {formatDate(
-                                                                    ann.created_at,
-                                                                )}
-                                                            </span>
-                                                        )}
-                                                        {ann.date_annonce && (
-                                                            <span>
-                                                                🗓{" "}
-                                                                {formatDate(
-                                                                    ann.date_annonce,
-                                                                )}
-                                                            </span>
-                                                        )}
-                                                        {ann.classe?.nom && (
-                                                            <span>
-                                                                👥{" "}
-                                                                {ann.classe.nom}
-                                                            </span>
-                                                        )}
-                                                        {ann.conducteur && (
-                                                            <span>
-                                                                ✅ Validé par{" "}
-                                                                {ann.conducteur.prenom}{" "}
-                                                                {ann.conducteur.nom}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div
-                                                        className="cn-text"
-                                                        style={{
-                                                            marginTop: 6,
-                                                            fontStyle: "normal",
-                                                        }}
-                                                    >
-                                                        {msg.slice(0, 120)}
-                                                        {msg.length > 120
-                                                            ? "…"
-                                                            : ""}
-                                                    </div>
-                                                </div>
-                                                <span className="badge badge-transmis">
-                                                    <span className="badge-dot" />
-                                                    AU PASTEUR
-                                                </span>
-                                            </div>
-                                            {ann.note_conducteur && (
-                                                <div className="conductor-note">
-                                                    <div className="cn-label">
-                                                        <svg
-                                                            width="11"
-                                                            height="11"
-                                                            fill="none"
-                                                            viewBox="0 0 24 24"
-                                                            stroke="currentColor"
-                                                            strokeWidth="2"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                                            />
-                                                        </svg>
-                                                        Note du conducteur
-                                                    </div>
-                                                    <div className="cn-text">
-                                                        {ann.note_conducteur}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            <div
-                                                className="acte-actions"
-                                                onClick={(e) =>
-                                                    e.stopPropagation()
-                                                }
-                                            >
-                                                <button
-                                                    className="btn-validate"
-                                                    onClick={() =>
-                                                        openAnnModal(
-                                                            "validate",
-                                                            ann,
-                                                        )
-                                                    }
-                                                >
-                                                    <svg
-                                                        width="13"
-                                                        height="13"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2.5"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M5 13l4 4L19 7"
-                                                        />
-                                                    </svg>
-                                                    Valider
-                                                </button>
-                                                <button
-                                                    className="btn-see"
-                                                    onClick={() =>
-                                                        openAnnModal(
-                                                            "detail",
-                                                            ann,
-                                                        )
-                                                    }
-                                                >
-                                                    <svg
-                                                        width="13"
-                                                        height="13"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                        />
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                        />
-                                                    </svg>
-                                                    Voir détail
-                                                </button>
-                                                <button
-                                                    className="btn-refuse-sm"
-                                                    onClick={() =>
-                                                        openAnnModal(
-                                                            "refuse",
-                                                            ann,
-                                                        )
-                                                    }
-                                                >
-                                                    <svg
-                                                        width="13"
-                                                        height="13"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2.5"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M6 18L18 6M6 6l12 12"
-                                                        />
-                                                    </svg>
-                                                    Refuser
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-
-                                {annFiltered.length > 0 &&
-                                    annTotalPages > 1 && (
-                                        <div className="pager">
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    setAnnPage(annPage - 1)
-                                                }
-                                                disabled={annPage === 1}
-                                            >
-                                                Précédent
-                                            </button>
-                                            <div className="pager-info">
-                                                Page {annPage} / {annTotalPages}
-                                            </div>
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    setAnnPage(annPage + 1)
-                                                }
-                                                disabled={
-                                                    annPage === annTotalPages
-                                                }
-                                            >
-                                                Suivant
-                                            </button>
-                                        </div>
-                                    )}
-                            </div>
-
-                            {/* HISTORIQUE ANNONCES */}
-                            <div className="panel layout-full">
-                                <div className="panel-head">
-                                    <div>
-                                        <div className="panel-title">
-                                            <svg
-                                                width="16"
-                                                height="16"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                />
-                                            </svg>
-                                            Historique des annonces
-                                        </div>
-                                        <div className="panel-sub">
-                                            Toutes les annonces validées et
-                                            refusées
-                                        </div>
-                                    </div>
-                                    {annoncesHistorique.length > 0 && (
-                                        <div className="hist-summary">
-                                            <span className="hs-pill green">
-                                                {annStats.validees} validée
-                                                {annStats.validees > 1
-                                                    ? "s"
-                                                    : ""}
-                                            </span>
-                                            {annStats.refusees > 0 && (
-                                                <span className="hs-pill red">
-                                                    {annStats.refusees} refusée
-                                                    {annStats.refusees > 1
-                                                        ? "s"
-                                                        : ""}
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                {annoncesHistorique.length === 0 && (
-                                    <div className="empty-state">
-                                        <svg
-                                            width="36"
-                                            height="36"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="1"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                            />
-                                        </svg>
-                                        <span>
-                                            Aucune demande de prière traitée pour le
-                                            moment
-                                        </span>
-                                    </div>
-                                )}
-                                {annoncesHistorique.length > 0 && (
-                                    <div className="ann-filters-bar">
-                                        {[
-                                            { v: "tous", l: "Toutes" },
-                                            { v: "en_cours", l: "En cours" },
-                                            { v: "validees", l: "Validées" },
-                                            { v: "refusees", l: "Refusées" },
-                                        ].map((f) => (
-                                            <button
-                                                key={f.v}
-                                                className={`ann-filter-btn ${annFilter === f.v ? "active" : ""}`}
-                                                onClick={() => {
-                                                    setAnnFilter(f.v);
-                                                    setAnnHistPage(1);
-                                                }}
-                                            >
-                                                {f.l}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                                {pagedAnnHist.map((item) => {
-                                    const t = ANNONCE_TYPES.find(
-                                        (x) =>
-                                            x.value ===
-                                            (item.type_annonce ||
-                                                item.type_acte),
-                                    );
-                                    const isRefuse = String(
-                                        item.statut,
-                                    ).startsWith("REFUSEE");
-                                    return (
-                                        <div
-                                            className="hist-item"
-                                            key={`ann-hist-${item.id}-${item.validated_at}`}
-                                        >
-                                            <div
-                                                className={`hist-icon-box atype-${t?.color}`}
-                                                style={{ fontSize: 18 }}
-                                            >
-                                                {t?.emoji || "📢"}
-                                            </div>
-                                            <div className="hist-info">
-                                                <div className="hist-name">
-                                                    {t?.label ||
-                                                        item.type_annonce}{" "}
-                                                    {item.membre &&
-                                                        `— ${item.membre.prenom} ${item.membre.nom}`}
-                                                </div>
-                                                <div className="hist-detail">
-                                                    {item.classe?.nom && (
-                                                        <>
-                                                            <svg
-                                                                width="10"
-                                                                height="10"
-                                                                fill="none"
-                                                                viewBox="0 0 24 24"
-                                                                stroke="currentColor"
-                                                                strokeWidth="2"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"
-                                                                />
-                                                            </svg>
-                                                            Classe{" "}
-                                                            {item.classe.nom}{" "}
-                                                            ·{" "}
-                                                        </>
-                                                    )}
-                                                    {item.note_pastorale && (
-                                                        <em>
-                                                            {
-                                                                item.note_pastorale
-                                                            }
-                                                        </em>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="hist-right">
-                                                <span
-                                                    className={`badge ${isRefuse ? "badge-refuse" : "badge-valide"}`}
-                                                >
-                                                    <span className="badge-dot" />
-                                                    {isRefuse
-                                                        ? "REFUSÉE"
-                                                        : "PUBLIÉE"}
-                                                </span>
-                                                <div className="hist-date">
-                                                    {formatDate(
-                                                        item.validated_at,
-                                                    )}
-                                                </div>
-                                                {!isRefuse && (
-                                                    <button
-                                                        className="btn-pdf"
-                                                        onClick={() =>
-                                                            window.open(
-                                                                `/pasteur/annonces/${item.id}/fiche`,
-                                                                "_blank",
-                                                            )
-                                                        }
-                                                    >
-                                                        Télécharger fiche
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                {annHistFiltered.length > 0 &&
-                                    annHistTotalPages > 1 && (
-                                        <div className="pager">
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    setAnnHistPage(
-                                                        annHistPage - 1,
-                                                    )
-                                                }
-                                                disabled={annHistPage === 1}
-                                            >
-                                                Précédent
-                                            </button>
-                                            <div className="pager-info">
-                                                Page {annHistPage} /{" "}
-                                                {annHistTotalPages}
-                                            </div>
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    setAnnHistPage(
-                                                        annHistPage + 1,
-                                                    )
-                                                }
-                                                disabled={
-                                                    annHistPage ===
-                                                    annHistTotalPages
-                                                }
-                                            >
-                                                Suivant
-                                            </button>
-                                        </div>
-                                    )}
-                            </div>
-                        </div>
-                    )}
                 </div>
             </main>
 
@@ -4693,44 +3691,7 @@ export default function Index({
                                     ).toLowerCase() === "mariage";
                                 return (
                                     <>
-                                        <div className="detail-tabs">
-                                            <button
-                                                type="button"
-                                                className={`detail-tab ${detailTab === "infos" ? "active" : ""}`}
-                                                onClick={() =>
-                                                    setDetailTab("infos")
-                                                }
-                                            >
-                                                Informations
-                                            </button>
-                                            {isMariage && (
-                                                <>
-                                                    <button
-                                                        type="button"
-                                                        className={`detail-tab ${detailTab === "celebration" ? "active" : ""}`}
-                                                        onClick={() =>
-                                                            setDetailTab(
-                                                                "celebration",
-                                                            )
-                                                        }
-                                                    >
-                                                        Date choisie
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className={`detail-tab ${detailTab === "calendar" ? "active" : ""}`}
-                                                        onClick={() =>
-                                                            setDetailTab(
-                                                                "calendar",
-                                                            )
-                                                        }
-                                                    >
-                                                        Calendrier
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                        {detailTab === "infos" && (
+                                        {true && (
                                             <>
                                                 <DetailRow
                                                     label="Référence"
@@ -4744,31 +3705,82 @@ export default function Index({
                                                     )}
                                                 />
                                                 <DetailRow
-                                                    label="Membre"
-                                                    value={`${activeActe.membre?.prenom || ""} ${activeActe.membre?.nom || ""}`}
+                                                    label="Membre concerné"
+                                                    value={`${activeActe.membre?.prenom || ""} ${activeActe.membre?.nom || ""}`.trim() || "—"}
                                                 />
                                                 <DetailRow
                                                     label="Classe"
-                                                    value={
-                                                        activeActe.classe
-                                                            ?.nom ||
-                                                        activeActe.classe_id ||
-                                                        "—"
-                                                    }
+                                                    value={activeActe.classe?.nom || activeActe.classe_id || "—"}
                                                 />
+                                                {activeActe.createur && (
+                                                    <DetailRow
+                                                        label="Soumis par"
+                                                        value={
+                                                            <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                                                {activeActe.createur.prenom} {activeActe.createur.nom}
+                                                                {activeActe.createur.role && (
+                                                                    <span style={{ fontSize:11, fontWeight:600, padding:'2px 8px', borderRadius:20, background:'rgba(99,102,241,0.12)', color:'#4f46e5' }}>
+                                                                        {{responsable_famille:'Responsable de famille',conducteur:'Conducteur',pasteur:'Pasteur',membre:'Membre'}[activeActe.createur.role] || activeActe.createur.role}
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                        }
+                                                    />
+                                                )}
+                                                <DetailRow
+                                                    label="Soumis le"
+                                                    value={formatDateTime(activeActe.created_at)}
+                                                />
+                                                {(() => {
+                                                    const hist = Array.isArray(activeActe.historiques)
+                                                        ? activeActe.historiques.find(h => h.statut_nouveau === 'TRANSMISE_AU_PASTEUR')
+                                                        : null;
+                                                    const conducteurActeur = hist?.acteur || activeActe.conducteur;
+                                                    const validatedAt = hist?.created_at || activeActe.updated_at;
+                                                    return (<>
+                                                        {conducteurActeur && (
+                                                            <DetailRow
+                                                                label="Validé par (conducteur)"
+                                                                value={`${conducteurActeur.prenom} ${conducteurActeur.nom}`}
+                                                            />
+                                                        )}
+                                                        {conducteurActeur?.telephone && (
+                                                            <DetailRow
+                                                                label="Tél. conducteur"
+                                                                value={
+                                                                    <a href={`tel:${conducteurActeur.telephone}`} style={{ color:'#2563eb', fontWeight:600, textDecoration:'none' }}>
+                                                                        📞 {conducteurActeur.telephone}
+                                                                    </a>
+                                                                }
+                                                            />
+                                                        )}
+                                                        {conducteurActeur?.email && (
+                                                            <DetailRow
+                                                                label="Email conducteur"
+                                                                value={
+                                                                    <a href={`mailto:${conducteurActeur.email}`} style={{ color:'#2563eb', fontWeight:600, textDecoration:'none' }}>
+                                                                        ✉️ {conducteurActeur.email}
+                                                                    </a>
+                                                                }
+                                                            />
+                                                        )}
+                                                        {validatedAt && (
+                                                            <DetailRow
+                                                                label="Transmis au pasteur le"
+                                                                value={formatDateTime(validatedAt)}
+                                                            />
+                                                        )}
+                                                    </>);
+                                                })()}
                                                 <DetailRow
                                                     label="Date souhaitée"
                                                     value={formatDate(
                                                         activeActe.date_souhaitee ||
-                                                            activeActe.details
-                                                                ?.date_souhaitee ||
-                                                            activeActe.details
-                                                                ?.date_presentation ||
-                                                            activeActe.details
-                                                                ?.date_deces ||
-                                                            activeActe.details
-                                                                ?.date_naissance ||
-                                                            activeActe.date_annonce,
+                                                        activeActe.details?.date_souhaitee ||
+                                                        activeActe.details?.date_presentation ||
+                                                        activeActe.details?.date_deces ||
+                                                        activeActe.details?.date_naissance ||
+                                                        activeActe.date_annonce,
                                                     )}
                                                 />
                                                 <div className="modal-sep">
@@ -4784,9 +3796,14 @@ export default function Index({
                                                         </span>
                                                     )}
                                                     {Object.entries(
-                                                        activeActe.details ||
-                                                            {},
-                                                    ).map(([k, v]) => (
+                                                        activeActe.details || {},
+                                                    ).filter(([k, v]) => {
+                                                        // Exclure les champs techniques, booléens internes et valeurs vides
+                                                        const SKIP = ['decl1','decl2','decl3','contenu','titre','message','heure_culte','temoignage_public','motif','ceremonie_statut','ceremonie_transmise_pasteur_at','fiche_conducteur_envoye','fiche_pasteur_envoyee','fiche_bapteme_envoyee'];
+                                                        if (SKIP.includes(k)) return false;
+                                                        if (v === null || v === undefined || v === '' || v === false) return false;
+                                                        return true;
+                                                    }).map(([k, v]) => (
                                                         <div
                                                             key={k}
                                                             className="modal-detail-row"
@@ -4795,142 +3812,13 @@ export default function Index({
                                                                 {prettyKey(k)}
                                                             </span>
                                                             <span className="modal-val">
-                                                                {String(
-                                                                    v || "—",
-                                                                )}
+                                                                {String(v)}
                                                             </span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             </>
                                         )}
-                                        {isMariage &&
-                                            detailTab === "celebration" && (
-                                                <div className="celebration-tab">
-                                                    <div className="celebration-summary">
-                                                        <div>
-                                                            <strong>
-                                                                Date choisie
-                                                            </strong>
-                                                            <span className="celebration-value">
-                                                                {formatDate(
-                                                                    activeActe
-                                                                        .details
-                                                                        ?.date_souhaitee,
-                                                                ) || "—"}
-                                                            </span>
-                                                        </div>
-                                                        <div>
-                                                            <strong>
-                                                                Créneau
-                                                            </strong>
-                                                            <span className="celebration-value">
-                                                                {activeActe
-                                                                    .details
-                                                                    ?.ceremonie_creneau ===
-                                                                "matin"
-                                                                    ? "Matin 09h-10h"
-                                                                    : activeActe
-                                                                            .details
-                                                                            ?.ceremonie_creneau ===
-                                                                        "apres_midi"
-                                                                      ? "Après-midi 15h-16h"
-                                                                      : "—"}
-                                                            </span>
-                                                        </div>
-                                                        <div>
-                                                            <strong>
-                                                                Statut
-                                                            </strong>
-                                                            <span className="celebration-value">
-                                                                {ceremonyDecisionLabel?.(
-                                                                    activeActe
-                                                                        .details
-                                                                        ?.ceremonie_statut,
-                                                                )}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <DetailRow
-                                                        label="Lieu"
-                                                        value={
-                                                            activeActe.details
-                                                                ?.lieu_ceremonie ||
-                                                            "—"
-                                                        }
-                                                    />
-                                                    <DetailRow
-                                                        label="Témoins"
-                                                        value={
-                                                            activeActe.details
-                                                                ?.temoins || "—"
-                                                        }
-                                                    />
-                                                    {activeActe.details
-                                                        ?.ceremonie_commentaire_conducteur && (
-                                                        <DetailRow
-                                                            label="Commentaire conducteur"
-                                                            value={
-                                                                activeActe
-                                                                    .details
-                                                                    ?.ceremonie_commentaire_conducteur
-                                                            }
-                                                        />
-                                                    )}
-                                                    {activeActe.details
-                                                        ?.ceremonie_commentaire_pasteur && (
-                                                        <DetailRow
-                                                            label="Commentaire pasteur"
-                                                            value={
-                                                                activeActe
-                                                                    .details
-                                                                    ?.ceremonie_commentaire_pasteur
-                                                            }
-                                                        />
-                                                    )}
-                                                    {activeActe.details
-                                                        ?.ceremonie_soumise_at && (
-                                                        <DetailRow
-                                                            label="Soumise le"
-                                                            value={formatDateTime(
-                                                                activeActe
-                                                                    .details
-                                                                    ?.ceremonie_soumise_at,
-                                                            )}
-                                                        />
-                                                    )}
-                                                    {activeActe.details
-                                                        ?.ceremonie_transmise_pasteur_at && (
-                                                        <DetailRow
-                                                            label="Transmise au pasteur"
-                                                            value={formatDateTime(
-                                                                activeActe
-                                                                    .details
-                                                                    ?.ceremonie_transmise_pasteur_at,
-                                                            )}
-                                                        />
-                                                    )}
-                                                    {activeActe.details
-                                                        ?.ceremonie_validee_pasteur_at && (
-                                                        <DetailRow
-                                                            label="Validée par le pasteur"
-                                                            value={formatDateTime(
-                                                                activeActe
-                                                                    .details
-                                                                    ?.ceremonie_validee_pasteur_at,
-                                                            )}
-                                                        />
-                                                    )}
-                                                </div>
-                                            )}
-                                        {isMariage &&
-                                            detailTab === "calendar" && (
-                                                <MiniCalendar
-                                                    events={calendarEvents}
-                                                    highlightId={activeActe?.id}
-                                                    title="Calendrier des dates choisies"
-                                                />
-                                            )}
                                     </>
                                 );
                             })()}
@@ -6173,6 +5061,41 @@ export default function Index({
                                     </div>
                                 );
                             })()}
+                            {activeAnnonce.createur && (
+                                <DetailRow
+                                    label="Soumis par"
+                                    value={
+                                        <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                            <span style={{ fontWeight: 700 }}>
+                                                {activeAnnonce.createur.prenom} {activeAnnonce.createur.nom}
+                                            </span>
+                                            {activeAnnonce.createur.role && (
+                                                <span style={{
+                                                    fontSize: 11,
+                                                    fontWeight: 600,
+                                                    padding: "2px 8px",
+                                                    borderRadius: 20,
+                                                    background: "rgba(99,102,241,0.12)",
+                                                    color: "#4f46e5",
+                                                    border: "1px solid rgba(99,102,241,0.25)",
+                                                }}>
+                                                    {{
+                                                        responsable_famille: "Responsable de famille",
+                                                        conducteur: "Conducteur",
+                                                        pasteur: "Pasteur",
+                                                        admin: "Administrateur",
+                                                        membre: "Membre",
+                                                    }[activeAnnonce.createur.role] || activeAnnonce.createur.role}
+                                                </span>
+                                            )}
+                                        </span>
+                                    }
+                                />
+                            )}
+                            <DetailRow
+                                label="Soumise le"
+                                value={formatDateTime(activeAnnonce.created_at)}
+                            />
                             <DetailRow
                                 label="Statut"
                                 value={activeAnnonce.statut}
@@ -6182,6 +5105,10 @@ export default function Index({
                                 value={activeAnnonce.classe?.nom || "—"}
                             />
                             <DetailRow
+                                label="Transmis au pasteur le"
+                                value={formatDateTime(activeAnnonce.updated_at || activeAnnonce.validated_at)}
+                            />
+                            <DetailRow
                                 label="Validé par (conducteur)"
                                 value={
                                     activeAnnonce.conducteur
@@ -6189,16 +5116,66 @@ export default function Index({
                                         : "—"
                                 }
                             />
-                            <DetailRow
-                                label="Soumise le"
-                                value={formatDate(activeAnnonce.created_at)}
-                            />
+                            {activeAnnonce.conducteur?.telephone && (
+                                <DetailRow
+                                    label="Tél. conducteur"
+                                    value={
+                                        <a
+                                            href={`tel:${activeAnnonce.conducteur.telephone}`}
+                                            style={{ color: "#2563eb", fontWeight: 600, textDecoration: "none" }}
+                                        >
+                                            📞 {activeAnnonce.conducteur.telephone}
+                                        </a>
+                                    }
+                                />
+                            )}
+                            {activeAnnonce.conducteur?.email && (
+                                <DetailRow
+                                    label="Email conducteur"
+                                    value={
+                                        <a
+                                            href={`mailto:${activeAnnonce.conducteur.email}`}
+                                            style={{ color: "#2563eb", fontWeight: 600, textDecoration: "none" }}
+                                        >
+                                            ✉️ {activeAnnonce.conducteur.email}
+                                        </a>
+                                    }
+                                />
+                            )}
                             {activeAnnonce.date_annonce && (
                                 <DetailRow
                                     label="Date événement"
                                     value={formatDate(
                                         activeAnnonce.date_annonce,
                                     )}
+                                />
+                            )}
+                            {(() => {
+                                const motifVal = activeAnnonce.details?.motif;
+                                const motifLabel = motifVal
+                                    ? ([...MOTIFS_GRACE, ...MOTIFS_INTERCESSION].find(m => m.value === motifVal)?.label || motifVal)
+                                    : null;
+                                return motifLabel ? (
+                                    <DetailRow
+                                        label="Motif"
+                                        value={
+                                            <span style={{ fontWeight: 700, color: '#7c3aed' }}>
+                                                {motifLabel}
+                                            </span>
+                                        }
+                                    />
+                                ) : null;
+                            })()}
+                            {activeAnnonce.details?.heure_culte && (
+                                <DetailRow
+                                    label="Heure du culte"
+                                    value={activeAnnonce.details.heure_culte}
+                                />
+                            )}
+                            {activeAnnonce.details?.temoignage_public !== undefined && activeAnnonce.details?.temoignage_public !== null && (
+                                <DetailRow
+                                    label="Témoignage public"
+                                    value={activeAnnonce.details.temoignage_public ? '✅ Oui' : '❌ Non'}
                                 />
                             )}
                             <div className="modal-sep">Message</div>
@@ -7124,6 +6101,17 @@ function DetailRow({ label, value, mono }) {
         </div>
     );
 }
+function ceremonyDecisionLabel(v) {
+    const labels = {
+        CEREMONIE_SOUMISE_AU_CONDUCTEUR:  "Date soumise au conducteur",
+        CEREMONIE_TRANSMISE_AU_PASTEUR:   "Date transmise au pasteur",
+        CEREMONIE_VALIDEE_PAR_PASTEUR:    "Date validée par le pasteur",
+        CEREMONIE_REFUSEE_PAR_CONDUCTEUR: "Date refusée par le conducteur",
+        CEREMONIE_REFUSEE_PAR_PASTEUR:    "Date refusée par le pasteur",
+    };
+    return labels[v] || v || "—";
+}
+
 function prettyType(type) {
     const m = {
         bapteme: "Baptême",
@@ -7154,6 +6142,13 @@ function historyStatusLabel(status) {
     if (status === "CELEBRE") return "CÉLÉBRÉ";
     if (status === "TERMINE") return "TERMINÉ";
     return status || "-";
+}
+function ceremonyStatusLabel(status) {
+    if (status === "CEREMONIE_TRANSMISE_AU_PASTEUR") return "DATE TRANSMISE";
+    if (status === "CEREMONIE_VALIDEE_PAR_PASTEUR") return "DATE ACCEPTÉE";
+    if (status === "CEREMONIE_VALIDE_PAR_PASTEUR") return "DATE VALIDÉE";
+    if (status === "CEREMONIE_REFUSEE_PAR_PASTEUR") return "DATE REFUSÉE";
+    return historyStatusLabel(status);
 }
 function iconEmoji(type) {
     const m = {
@@ -7471,7 +6466,7 @@ h1.hero-title{
    MODAL SHARED
 ════════════════════════════════════ */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(10px)}.modal-overlay.open{display:flex}
-.modal{background:var(--surface-solid);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:520px;margin:20px;overflow:hidden;box-shadow:0 28px 80px rgba(0,0,0,.6);animation:mIn .3s cubic-bezier(.34,1.56,.64,1) both}
+.modal{background:var(--surface-solid);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:520px;margin:20px;overflow:hidden;box-shadow:0 28px 80px rgba(0,0,0,.6);animation:mIn .3s cubic-bezier(.34,1.56,.64,1) both;display:flex;flex-direction:column;max-height:90vh}
 @keyframes mIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .modal-head{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .modal-head-left{display:flex;align-items:center;gap:12px}
@@ -7481,7 +6476,7 @@ h1.hero-title{
 .modal-sub{font-size:11.5px;color:var(--text2);margin-top:3px}
 .modal-close{width:30px;height:30px;border-radius:8px;background:var(--surface3);border:1px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-family:inherit}
 .modal-close:hover{background:rgba(255,255,255,.2);color:var(--text)}
-.modal-body{padding:22px 24px}
+.modal-body{padding:22px 24px;overflow-y:auto;flex:1}
 .modal-acte-recap{display:flex;align-items:center;gap:12px;background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:10px;padding:13px 16px;margin-bottom:16px}
 .modal-acte-emoji{font-size:22px;flex-shrink:0}.modal-acte-name{font-size:13.5px;font-weight:600;color:var(--text)}.modal-acte-ref{font-size:11px;color:var(--text3);margin-top:2px;font-family:monospace}
 .modal-sep{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-weight:800;margin:16px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)}

@@ -39,6 +39,7 @@ import {
 import Select2Fonction from "../../../Components/Select2Fonction";
 import { withBasePath } from "../../../Utils/urlHelper";
 import Select2Single from "../../../Components/Select2Single";
+import { ToastContainer, useToast } from "../../../Components/Toast";
 import ProfilePhoto from "../../../Components/ProfilePhoto";
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
@@ -938,6 +939,16 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
     const [fonctions, setFonctions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [fieldErrors, setFieldErrors] = useState({});
+    const [toast, setToast] = useState(null);
+
+    const showToast = (message, type = "error") => {
+        setToast({ message, type });
+        if (type === "success") {
+            setTimeout(() => { setToast(null); onClose(); }, 1800);
+        } else {
+            setTimeout(() => setToast(null), 4500);
+        }
+    };
     const [data, setData] = useState({
         nom: "",
         prenom: "",
@@ -1155,7 +1166,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
         const file = e.target.files && e.target.files[0];
         if (file) {
             if (file.size > 5 * 1024 * 1024) {
-                alert("Le fichier est trop volumineux (max 5MB).");
+                showToast("Le fichier est trop volumineux (max 5MB).");
                 return;
             }
             const preview = URL.createObjectURL(file);
@@ -1210,7 +1221,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
         }
 
         if (Object.keys(newErrors).length > 0) {
-            alert(`Erreurs:\n${Object.values(newErrors).join("\n")}`);
+            showToast(Object.values(newErrors).join(" · "));
             return;
         }
 
@@ -1293,14 +1304,9 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
             const res = await axios.post(
                 withBasePath("", `/admin/membres/${memberData.id}?_method=PUT`),
                 formData,
-                {
-                    headers: { "Content-Type": "multipart/form-data" },
-                },
             );
 
-            alert("✅ Membre mis à jour avec succès !");
-            onClose();
-            // Eviter un second update cote parent (appel sans payload) qui declenche une fausse erreur apres succes.
+            showToast("Membre mis à jour avec succès !", "success");
             router.reload({ only: ["membres", "dataByType"] });
         } catch (err) {
             console.error("Erreur complète:", err);
@@ -1315,12 +1321,12 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                             `${field}: ${Array.isArray(messages) ? messages.join(", ") : messages}`,
                     )
                     .join("\n");
-                alert(`Erreurs:\n${errorMessages}`);
+                showToast(errorMessages);
             } else {
                 const message =
                     err?.response?.data?.message ||
                     "Une erreur est survenue lors de la mise à jour.";
-                alert(`Erreur: ${message}`);
+                showToast(message);
             }
         } finally {
             setLoading(false);
@@ -1332,6 +1338,17 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
     return (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in-up overflow-y-auto">
             <div className="bg-white w-full max-w-6xl rounded-2xl shadow-2xl border border-white/50 my-8">
+                {/* Toast local */}
+                {toast && (
+                    <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl text-sm font-semibold transition-all ${
+                        toast.type === "success"
+                            ? "bg-green-600 text-white"
+                            : "bg-red-600 text-white"
+                    }`}>
+                        {toast.type === "success" ? "✅" : "⚠️"} {toast.message}
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="px-6 py-5 border-b border-gray-200 bg-gray-50/50 flex justify-between items-center sticky top-0 z-10">
                     <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
@@ -2043,7 +2060,10 @@ const TabUtilisateurs = ({
     const [viewingMember, setViewingMember] = useState(null);
     const [showToggleAlert, setShowToggleAlert] = useState(false);
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+    const [showPresidentAlert, setShowPresidentAlert] = useState(false);
     const [selectedMember, setSelectedMember] = useState(null);
+    const [toasts, setToasts] = useState([]);
+    const toast = useToast({ toasts, setToasts });
     const [classesList, setClassesList] = useState(availableClasses);
     const [fonctionsList, setFonctionsList] = useState(availableFonctions);
 
@@ -2232,6 +2252,45 @@ const TabUtilisateurs = ({
     const openDeleteAlert = (member) => {
         setSelectedMember(member);
         setShowDeleteAlert(true);
+    };
+
+    const isPresidentConducteurs = (member) =>
+        String(member?.fonction || "")
+            .trim()
+            .toLowerCase() === "président des conducteurs";
+
+    const openPresidentAlert = (member) => {
+        setSelectedMember(member);
+        setShowPresidentAlert(true);
+    };
+
+    const handlePresidentConfirm = () => {
+        if (!selectedMember) return;
+        const member = selectedMember;
+        const isPresident = isPresidentConducteurs(member);
+        const url = withBasePath("", `/admin/membres/${member.id}/president-conducteurs`);
+
+        const options = {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(
+                    isPresident
+                        ? `${member.prenom} ${member.nom} n'est plus président des conducteurs.`
+                        : `${member.prenom} ${member.nom} a été désigné président des conducteurs.`,
+                );
+                router.reload({ only: ["membres", "dataByType"] });
+            },
+            onError: () => toast.error("Une erreur est survenue, veuillez réessayer."),
+        };
+
+        if (isPresident) {
+            router.delete(url, options);
+        } else {
+            router.post(url, {}, options);
+        }
+
+        setShowPresidentAlert(false);
+        setSelectedMember(null);
     };
 
     const handleToggleConfirm = () => {
@@ -3003,6 +3062,35 @@ const TabUtilisateurs = ({
                                                             <LockOpen className="w-5 h-5 text-red-600" />
                                                         )}
                                                     </button>
+                                                    {m.role === "conducteur" && (
+                                                        <button
+                                                            onClick={() =>
+                                                                openPresidentAlert(m)
+                                                            }
+                                                            className="p-2 rounded-lg transition-all"
+                                                            style={{
+                                                                backgroundColor: isPresidentConducteurs(m)
+                                                                    ? "rgba(217, 119, 6, 0.15)"
+                                                                    : "rgba(217, 119, 6, 0.1)",
+                                                                border:
+                                                                    "2px solid rgba(217, 119, 6, 0.2)",
+                                                                filter: "none",
+                                                            }}
+                                                            title={
+                                                                isPresidentConducteurs(m)
+                                                                    ? "Retirer la fonction de président des conducteurs"
+                                                                    : "Désigner comme président des conducteurs"
+                                                            }
+                                                        >
+                                                            <Award
+                                                                className={`w-5 h-5 ${
+                                                                    isPresidentConducteurs(m)
+                                                                        ? "text-amber-600 fill-amber-500"
+                                                                        : "text-amber-600"
+                                                                }`}
+                                                            />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => openDeleteAlert(m)}
                                                         className="p-2 rounded-lg transition-all"
@@ -3095,6 +3183,32 @@ const TabUtilisateurs = ({
                     confirmText="Supprimer définitivement"
                     type="danger"
                 />
+                <AlertModal
+                    isOpen={showPresidentAlert}
+                    onClose={() => setShowPresidentAlert(false)}
+                    onConfirm={handlePresidentConfirm}
+                    title={
+                        isPresidentConducteurs(selectedMember)
+                            ? "Retirer le président des conducteurs"
+                            : "Désigner le président des conducteurs"
+                    }
+                    message={
+                        isPresidentConducteurs(selectedMember)
+                            ? `Retirer "${selectedMember?.prenom} ${selectedMember?.nom}" de la fonction de président des conducteurs ?`
+                            : `Désigner "${selectedMember?.prenom} ${selectedMember?.nom}" comme président des conducteurs ?`
+                    }
+                    confirmText={
+                        isPresidentConducteurs(selectedMember)
+                            ? "Retirer"
+                            : "Désigner"
+                    }
+                    type={
+                        isPresidentConducteurs(selectedMember)
+                            ? "warning"
+                            : "success"
+                    }
+                />
+                <ToastContainer toasts={toasts} onRemoveToast={toast.removeToast} />
             </div>
         </>
     );

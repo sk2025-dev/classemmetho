@@ -34,7 +34,7 @@ import {
     Briefcase,
 } from "lucide-react";
 import axios from "axios";
-import { Inertia } from "@inertiajs/inertia";
+import { router as Inertia } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
 
 // --- Form Field Component ---
@@ -346,9 +346,6 @@ export default function CreateMember({ family, errors }) {
             const res = await axios.post(
                 withBasePath("", `/responsable-famille/members/store?family_id=${family.id}`),
                 formData,
-                {
-                    headers: { "Content-Type": "multipart/form-data" },
-                },
             );
 
             // Succès - Afficher toast avec bouton Modifier

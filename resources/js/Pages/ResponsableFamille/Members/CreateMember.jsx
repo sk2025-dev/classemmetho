@@ -35,7 +35,7 @@ import {
     Briefcase,
 } from "lucide-react";
 import axios from "axios";
-import { Inertia } from "@inertiajs/inertia";
+import { router as Inertia } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
 
 // --- Form Field Component ---
@@ -207,8 +207,7 @@ export default function CreateMember({ family, errors }) {
                 if (!value) error = "Le prénom est obligatoire";
                 break;
             case "email":
-                if (!value) error = "L'email est obligatoire";
-                else if (!/^\S+@\S+\.\S+$/.test(value))
+                if (value && !/^\S+@\S+\.\S+$/.test(value))
                     error = "Email invalide";
                 break;
             case "genre":
@@ -287,8 +286,7 @@ export default function CreateMember({ family, errors }) {
         const newErrors = {};
         if (!data.nom) newErrors.nom = "Le nom est obligatoire";
         if (!data.prenom) newErrors.prenom = "Le prénom est obligatoire";
-        if (!data.email) newErrors.email = "L'email est obligatoire";
-        else if (!/^\S+@\S+\.\S+$/.test(data.email))
+        if (data.email && !/^\S+@\S+\.\S+$/.test(data.email))
             newErrors.email = "Email invalide";
         if (!data.genre) newErrors.genre = "Le genre est obligatoire";
         if (!data.date_naissance)
@@ -378,9 +376,6 @@ export default function CreateMember({ family, errors }) {
                     `/responsable-famille/members/store?family_id=${family.id}`,
                 ),
                 formData,
-                {
-                    headers: { "Content-Type": "multipart/form-data" },
-                },
             );
 
             // Succès - Afficher toast avec bouton Modifier

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import axios from "axios";
 import { Link, router, usePage } from "@inertiajs/react";
 import { withBasePath } from "../../Utils/urlHelper";
 import Select2Single from "../../Components/Select2Single";
@@ -124,10 +125,11 @@ const transferTypeOptions = [
 ];
 
 const statusCfg = {
-    EN_ATTENTE_SOURCE: { label: "Attente source", bg: "#fff7ed", color: "#c2410c", dot: "#f97316" },
+    EN_ATTENTE_SOURCE:  { label: "Attente source",  bg: "#fff7ed", color: "#c2410c", dot: "#f97316" },
     EN_ATTENTE_ACCUEIL: { label: "Attente accueil", bg: "#ecfeff", color: "#155e75", dot: "#06b6d4" },
-    TERMINEE: { label: "Terminee", bg: "#f0fdf4", color: "#166534", dot: "#22c55e" },
-    REFUSEE: { label: "Refusee", bg: "#fff1f2", color: "#9f1239", dot: "#f43f5e" },
+    EN_ATTENTE_PASTEUR: { label: "Attente pasteur", bg: "#f5f3ff", color: "#6d28d9", dot: "#7c3aed" },
+    TERMINEE:           { label: "Terminée",        bg: "#f0fdf4", color: "#166534", dot: "#22c55e" },
+    REFUSEE:            { label: "Refusée",         bg: "#fff1f2", color: "#9f1239", dot: "#f43f5e" },
 };
 
 const inputLabel = { display: "grid", gap: 8 };
@@ -246,7 +248,7 @@ function SummaryRow({ label, value, strong = false }) {
     );
 }
 
-function TransferCard({ transfer, onApprove, onRefuse }) {
+function TransferDetailModal({ transfer, onApprove, onRefuse, onClose }) {
     const [showRefuse, setShowRefuse] = useState(false);
     const [reason, setReason] = useState("");
     const [processing, setProcessing] = useState(false);
@@ -257,80 +259,177 @@ function TransferCard({ transfer, onApprove, onRefuse }) {
     const family = transfer.famille_source?.nom || transfer.family?.name || "-";
     const target = transfer.external_destination || transfer.classe_cible?.nom || "-";
 
-    const approve = () => {
-        setProcessing(true);
-        onApprove(transfer.id);
-    };
-
-    const refuse = () => {
-        if (!reason.trim()) return;
-        setProcessing(true);
-        onRefuse(transfer.id, reason);
-    };
+    const approve = () => { setProcessing(true); onApprove(transfer.id); };
+    const refuse = () => { if (!reason.trim()) return; setProcessing(true); onRefuse(transfer.id, reason); };
 
     return (
-        <div className="card" style={{ overflow: "hidden", width: "100%", maxWidth: 460, justifySelf: "start" }}>
-            <div style={{ padding: "18px 20px", background: soft, borderBottom: `1px solid ${border}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-                    <div style={{ display: "flex", gap: 12, minWidth: 0, flex: "1 1 240px" }}>
-                        <div style={{ width: 46, height: 46, borderRadius: 14, background: accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div className="modal-backdrop" onClick={onClose}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+                {/* En-tête modal */}
+                <div style={{ padding: "20px 24px", background: soft, borderBottom: `1px solid ${border}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center", minWidth: 0 }}>
+                        <div style={{ width: 42, height: 42, borderRadius: 12, background: accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             {transfer.type === "member" ? <User size={18} /> : <Users size={18} />}
                         </div>
-                        <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginBottom: 4, lineHeight: 1.25 }}>{name}</div>
-                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                <span style={{ borderRadius: 999, padding: "4px 9px", background: "#fff", border: `1px solid ${border}`, color: accent, fontSize: 11, fontWeight: 700 }}>
+                        <div>
+                            <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", lineHeight: 1.2 }}>{name}</div>
+                            <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap", alignItems: "center" }}>
+                                <span style={{ borderRadius: 999, padding: "3px 8px", background: "#fff", border: `1px solid ${border}`, color: accent, fontSize: 11, fontWeight: 700 }}>
                                     {transfer.type === "member" ? "Membre" : transfer.type === "external" ? "Sortie" : "Famille"}
                                 </span>
                                 <span className="mono" style={{ color: "#64748b", fontSize: 11 }}>{transfer.reference}</span>
+                                <StatusPill status={transfer.status} />
                             </div>
                         </div>
                     </div>
-                    <StatusPill status={transfer.status} />
+                    <button onClick={onClose} style={{ border: "none", background: "rgba(0,0,0,.08)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                        <XCircle size={16} style={{ color: "#64748b" }} />
+                    </button>
                 </div>
-            </div>
-            <div style={{ padding: 20, display: "grid", gap: 14 }}>
-                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))" }}>
-                    <Info icon={Clock} label="Date" value={transfer.created_at || "-"} />
-                    <Info icon={User} label="Demandeur" value={transfer.created_by || "-"} />
-                    <Info icon={Users} label="Famille" value={family} />
-                </div>
-                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
-                    <RouteBox label="Depuis" value={transfer.classe_source?.nom || "-"} />
-                    <div style={{ width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: soft, border: `1px solid ${border}`, color: accent, justifySelf: "center" }}>
-                        <ArrowRight size={16} />
+
+                {/* Corps */}
+                <div style={{ padding: "20px 24px", display: "grid", gap: 16 }}>
+                    {/* Infos */}
+                    <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))" }}>
+                        <Info icon={Clock} label="Date" value={transfer.created_at || "-"} />
+                        <Info icon={User} label="Demandeur" value={transfer.created_by || "-"} />
+                        <Info icon={Users} label="Famille" value={family} />
                     </div>
-                    <RouteBox label="Vers" value={target} />
-                </div>
-                {transfer.reason && <div style={{ borderRadius: 14, border: "1px dashed #d9e2ef", padding: "12px 14px", background: "#f8fafc", color: "#334155", lineHeight: 1.5 }}>{transfer.reason}</div>}
-                {transfer.requires_action ? (
-                    !showRefuse ? (
-                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                            <button type="button" className="btn btn-primary" onClick={approve} disabled={processing} style={{ flex: 1 }}>
-                                <CheckCircle size={16} />
-                                {processing ? "Traitement..." : "Approuver"}
-                            </button>
-                            <button type="button" className="btn btn-danger" onClick={() => setShowRefuse(true)} disabled={processing} style={{ flex: 1 }}>
-                                <XCircle size={16} />
-                                Refuser
-                            </button>
+
+                    {/* Trajet */}
+                    <div style={{ display: "grid", gap: 10, gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
+                        <RouteBox label="Depuis" value={transfer.classe_source?.nom || "-"} />
+                        <div style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: soft, border: `1px solid ${border}`, color: accent, justifySelf: "center" }}>
+                            <ArrowRight size={14} />
                         </div>
+                        <RouteBox label="Vers" value={target} />
+                    </div>
+
+                    {/* Motif */}
+                    {transfer.reason && (
+                        <div style={{ borderRadius: 12, border: "1px dashed #d9e2ef", padding: "12px 14px", background: "#f8fafc", color: "#334155", lineHeight: 1.5, fontSize: 14 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 6 }}>Motif</div>
+                            {transfer.reason}
+                        </div>
+                    )}
+
+                    {/* Actions */}
+                    {transfer.requires_action ? (
+                        !showRefuse ? (
+                            <div style={{ display: "flex", gap: 10 }}>
+                                <button type="button" className="btn btn-primary" onClick={approve} disabled={processing} style={{ flex: 1 }}>
+                                    <CheckCircle size={15} />
+                                    {processing ? "Traitement..." : "Approuver"}
+                                </button>
+                                <button type="button" className="btn btn-danger" onClick={() => setShowRefuse(true)} disabled={processing} style={{ flex: 1 }}>
+                                    <XCircle size={15} />
+                                    Refuser
+                                </button>
+                            </div>
+                        ) : (
+                            <div style={{ borderRadius: 14, background: "#fff1f2", border: "1px solid #fecdd3", padding: 14 }}>
+                                <textarea className="field" rows={3} value={reason} onChange={e => setReason(e.target.value)} placeholder="Motif du refus (obligatoire)" style={{ resize: "vertical", marginBottom: 10 }} />
+                                <div style={{ display: "flex", gap: 10 }}>
+                                    <button type="button" className="btn btn-ghost" onClick={() => { setShowRefuse(false); setReason(""); }} style={{ flex: 1 }}>Annuler</button>
+                                    <button type="button" className="btn btn-danger" onClick={refuse} disabled={!reason.trim() || processing} style={{ flex: 1 }}>Confirmer le refus</button>
+                                </div>
+                            </div>
+                        )
                     ) : (
-                        <div style={{ borderRadius: 16, background: "#fff1f2", border: "1px solid #fecdd3", padding: 14 }}>
-                            <textarea className="field" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Motif du refus" style={{ resize: "vertical", marginBottom: 10 }} />
-                            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                                <button type="button" className="btn btn-ghost" onClick={() => { setShowRefuse(false); setReason(""); }} style={{ flex: 1 }}>Annuler</button>
-                                <button type="button" className="btn btn-danger" onClick={refuse} disabled={!reason.trim() || processing} style={{ flex: 1 }}>Confirmer</button>
-                            </div>
+                        <div style={{ borderRadius: 12, background: "#eff6ff", border: "1px solid #bfdbfe", padding: "12px 14px", color: "#334155", fontSize: 14, lineHeight: 1.5 }}>
+                            <strong style={{ color: "#1d4ed8" }}>En attente du conducteur d'accueil.</strong>{" "}
+                            Votre validation est enregistrée. La demande attend la classe <strong>{transfer.classe_cible?.nom || "d'accueil"}</strong>.
                         </div>
-                    )
-                ) : (
-                    <div style={{ borderRadius: 16, background: "#eff6ff", border: "1px solid #bfdbfe", padding: 14, color: "#334155", lineHeight: 1.5 }}>
-                        <strong style={{ color: "#1d4ed8" }}>En attente du conducteur d'accueil.</strong> Votre validation source est deja enregistree. La demande attend maintenant la classe <strong>{transfer.classe_cible?.nom || "d'accueil"}</strong>.
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
+    );
+}
+
+function TransferCard({ transfer, onApprove, onRefuse, selected = false, onToggle = null }) {
+    const [showDetail, setShowDetail] = useState(false);
+    const accent = transfer.approval_stage === "source" ? "#f97316" : "#06b6d4";
+    const soft = transfer.approval_stage === "source" ? "#fff7ed" : "#ecfeff";
+    const border = transfer.approval_stage === "source" ? "#fed7aa" : "#a5f3fc";
+    const name = transfer.member?.name || transfer.family?.name || "-";
+    const from = transfer.classe_source?.nom || "-";
+    const target = transfer.external_destination || transfer.classe_cible?.nom || "-";
+    const canSelect = transfer.requires_action && onToggle;
+
+    return (
+        <>
+            <div
+                className="card"
+                style={{
+                    padding: "14px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    width: "100%",
+                    outline: selected ? `2px solid ${accent}` : "none",
+                    outlineOffset: -2,
+                    transition: "outline 0.15s",
+                }}
+            >
+                {/* Checkbox */}
+                {canSelect && (
+                    <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => onToggle(transfer.id)}
+                        style={{ width: 16, height: 16, accentColor: accent, cursor: "pointer", flexShrink: 0 }}
+                    />
+                )}
+
+                {/* Icône */}
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: soft, border: `1px solid ${border}`, color: accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {transfer.type === "member" ? <User size={16} /> : <Users size={16} />}
+                </div>
+
+                {/* Nom + badges */}
+                <div style={{ flex: "1 1 0", minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+                    <div style={{ display: "flex", gap: 6, marginTop: 4, alignItems: "center", flexWrap: "wrap" }}>
+                        <span style={{ borderRadius: 999, padding: "2px 7px", background: soft, color: accent, fontSize: 10, fontWeight: 700, border: `1px solid ${border}` }}>
+                            {transfer.type === "member" ? "Membre" : transfer.type === "external" ? "Sortie" : "Famille"}
+                        </span>
+                        <span className="mono" style={{ color: "#94a3b8", fontSize: 10 }}>{transfer.reference}</span>
+                    </div>
+                </div>
+
+                {/* Trajet compact */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#475569", background: "#f1f5f9", borderRadius: 8, padding: "4px 8px", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{from}</span>
+                    <ArrowRight size={12} style={{ color: accent, flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#475569", background: "#f1f5f9", borderRadius: 8, padding: "4px 8px", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{target}</span>
+                </div>
+
+                {/* Status */}
+                <div style={{ flexShrink: 0 }}>
+                    <StatusPill status={transfer.status} />
+                </div>
+
+                {/* Bouton voir plus */}
+                <button
+                    type="button"
+                    onClick={() => setShowDetail(true)}
+                    style={{ flexShrink: 0, border: "1px solid #e2e8f0", borderRadius: 10, padding: "7px 12px", background: "#f8fafc", color: "#334155", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
+                >
+                    <ArrowRight size={12} />
+                    Voir plus
+                </button>
+            </div>
+
+            {showDetail && (
+                <TransferDetailModal
+                    transfer={transfer}
+                    onApprove={onApprove}
+                    onRefuse={onRefuse}
+                    onClose={() => setShowDetail(false)}
+                />
+            )}
+        </>
     );
 }
 
@@ -357,6 +456,10 @@ function RouteBox({ label, value }) {
 
 export default function TransfersWorkflow() {
     const { pendingTransfers = [], processedTransfers = [], classes = [], families = [], members = [], userClass = {}, flash = {}, errors = {} } = usePage().props;
+
+    // Séparer les transferts externes en attente pasteur des transferts clôturés
+    const externalPasteurPending = processedTransfers.filter(t => t.status === "EN_ATTENTE_PASTEUR");
+    const closedTransfers = processedTransfers.filter(t => t.status !== "EN_ATTENTE_PASTEUR");
     const [tab, setTab] = useState("pending");
     const [open, setOpen] = useState(false);
     const [step, setStep] = useState(1);
@@ -577,25 +680,91 @@ export default function TransfersWorkflow() {
                             <div className="glass" style={{ borderRadius: 22, padding: "56px 22px", textAlign: "center", color: "#fff" }}>Aucune demande en attente.</div>
                         ) : (
                             <div style={{ display: "grid", gap: 30 }}>
-                                {grouped.source.length > 0 && <Section title="Validation source" desc="Demandes qui attendent votre accord dans votre classe." count={grouped.source.length} color="#f97316"><div className="grid">{grouped.source.map((t) => <TransferCard key={t.id} transfer={t} onApprove={approve} onRefuse={refuse} />)}</div></Section>}
-                                {grouped.accueil.length > 0 && <Section title="Validation accueil" desc="Demandes recues d'une autre classe." count={grouped.accueil.length} color="#06b6d4"><div className="grid">{grouped.accueil.map((t) => <TransferCard key={t.id} transfer={t} onApprove={approve} onRefuse={refuse} />)}</div></Section>}
-                                {grouped.outgoing.length > 0 && <Section title="Demandes envoyees" desc="Demandes deja validees cote source et en attente ailleurs." count={grouped.outgoing.length} color="#2563eb"><div className="grid">{grouped.outgoing.map((t) => <TransferCard key={t.id} transfer={t} onApprove={approve} onRefuse={refuse} />)}</div></Section>}
+                                {grouped.source.length > 0 && <Section title="Validation source" desc="Demandes qui attendent votre accord dans votre classe." count={grouped.source.length} color="#f97316"><PaginatedTransferList transfers={grouped.source} onApprove={approve} onRefuse={refuse} /></Section>}
+                                {grouped.accueil.length > 0 && <Section title="Validation accueil" desc="Demandes recues d'une autre classe." count={grouped.accueil.length} color="#06b6d4"><PaginatedTransferList transfers={grouped.accueil} onApprove={approve} onRefuse={refuse} /></Section>}
+                                {grouped.outgoing.length > 0 && <Section title="Demandes envoyees" desc="Demandes deja validees cote source et en attente ailleurs." count={grouped.outgoing.length} color="#2563eb"><PaginatedTransferList transfers={grouped.outgoing} onApprove={approve} onRefuse={refuse} /></Section>}
                             </div>
                         )
                     ) : (
-                        <div className="card" style={{ overflow: "hidden" }}>
-                            <div style={{ padding: "18px 20px", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 800, color: "#0f172a" }}><History size={18} />Historique des transferts</div>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>{processedTransfers.length} entree(s)</div>
-                            </div>
-                            {processedTransfers.length === 0 ? <div style={{ padding: 40, color: "#64748b", textAlign: "center" }}>Aucun transfert cloture pour le moment.</div> : (
-                                <div style={{ overflowX: "auto" }}>
-                                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                        <thead><tr style={{ background: "#f8fafc" }}><th style={head}>Beneficiaire</th><th style={head}>Trajet</th><th style={head}>Date</th><th style={{ ...head, textAlign: "right" }}>Statut</th></tr></thead>
-                                        <tbody>{processedTransfers.map((t) => <tr key={t.id} style={{ borderTop: "1px solid #e2e8f0" }}><td style={cell}><div style={{ fontWeight: 700, color: "#0f172a" }}>{t.member?.name || t.family?.name || "-"}</div><div className="mono" style={{ fontSize: 11, color: "#64748b" }}>{t.reference}</div></td><td style={cell}><div style={{ display: "flex", gap: 8, alignItems: "center", minWidth: 220 }}><span>{t.classe_source?.nom || "-"}</span><ArrowRight size={14} style={{ color: "#94a3b8" }} /><strong style={{ color: "#0f172a" }}>{t.external_destination || t.classe_cible?.nom || "-"}</strong></div></td><td style={cell}>{t.created_at || "-"}</td><td style={{ ...cell, textAlign: "right" }}><StatusPill status={t.status} /></td></tr>)}</tbody>
-                                    </table>
-                                </div>
+                        <div style={{ display: "grid", gap: 20 }}>
+
+                            {/* Transferts externes en attente du pasteur */}
+                            {externalPasteurPending.length > 0 && (
+                                <Section title="Sorties externes — en attente du pasteur" desc="Ces demandes ont été transmises au pasteur pour validation finale." count={externalPasteurPending.length} color="#7c3aed">
+                                    <div style={{ overflowX: "auto" }}>
+                                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                            <thead><tr style={{ background: "#f8fafc" }}>
+                                                <th style={head}>Bénéficiaire</th>
+                                                <th style={head}>Destination</th>
+                                                <th style={head}>Demandé le</th>
+                                                <th style={{ ...head, textAlign: "right" }}>Statut</th>
+                                            </tr></thead>
+                                            <tbody>
+                                                {externalPasteurPending.map(t => (
+                                                    <tr key={t.id} style={{ borderTop: "1px solid #e2e8f0" }}>
+                                                        <td style={cell}>
+                                                            <div style={{ fontWeight: 700, color: "#0f172a" }}>{t.member?.name || t.family?.name || "-"}</div>
+                                                            <div className="mono" style={{ fontSize: 11, color: "#64748b" }}>{t.reference}</div>
+                                                        </td>
+                                                        <td style={cell}>
+                                                            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                                                <span style={{ color: "#64748b" }}>{t.classe_source?.nom || "-"}</span>
+                                                                <ArrowRight size={13} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                                                                <strong style={{ color: "#7c3aed" }}>{t.external_destination || "—"}</strong>
+                                                            </div>
+                                                            {t.reason && <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 3 }}>{t.reason}</div>}
+                                                        </td>
+                                                        <td style={cell}>{t.created_at || "-"}</td>
+                                                        <td style={{ ...cell, textAlign: "right" }}><StatusPill status={t.status} /></td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </Section>
                             )}
+
+                            {/* Historique clôturé */}
+                            <div className="card" style={{ overflow: "hidden" }}>
+                                <div style={{ padding: "18px 20px", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 800, color: "#0f172a" }}><History size={18} />Historique des transferts</div>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>{closedTransfers.length} entrée(s)</div>
+                                </div>
+                                {closedTransfers.length === 0
+                                    ? <div style={{ padding: 40, color: "#64748b", textAlign: "center" }}>Aucun transfert clôturé pour le moment.</div>
+                                    : (
+                                        <div style={{ overflowX: "auto" }}>
+                                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                                <thead><tr style={{ background: "#f8fafc" }}>
+                                                    <th style={head}>Bénéficiaire</th>
+                                                    <th style={head}>Trajet</th>
+                                                    <th style={head}>Date</th>
+                                                    <th style={{ ...head, textAlign: "right" }}>Statut</th>
+                                                </tr></thead>
+                                                <tbody>
+                                                    {closedTransfers.map(t => (
+                                                        <tr key={t.id} style={{ borderTop: "1px solid #e2e8f0" }}>
+                                                            <td style={cell}>
+                                                                <div style={{ fontWeight: 700, color: "#0f172a" }}>{t.member?.name || t.family?.name || "-"}</div>
+                                                                <div className="mono" style={{ fontSize: 11, color: "#64748b" }}>{t.reference}</div>
+                                                            </td>
+                                                            <td style={cell}>
+                                                                <div style={{ display: "flex", gap: 8, alignItems: "center", minWidth: 220 }}>
+                                                                    <span>{t.classe_source?.nom || "-"}</span>
+                                                                    <ArrowRight size={14} style={{ color: "#94a3b8" }} />
+                                                                    <strong style={{ color: "#0f172a" }}>{t.external_destination || t.classe_cible?.nom || "-"}</strong>
+                                                                </div>
+                                                            </td>
+                                                            <td style={cell}>{t.created_at || "-"}</td>
+                                                            <td style={{ ...cell, textAlign: "right" }}><StatusPill status={t.status} /></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )
+                                }
+                            </div>
                         </div>
                     )}
                 </div>
@@ -743,6 +912,211 @@ export default function TransfersWorkflow() {
                 </div>
             )}
         </>
+    );
+}
+
+const PER_PAGE = 5;
+
+function PaginatedTransferList({ transfers, onApprove, onRefuse }) {
+    const [page, setPage] = useState(1);
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [bulkProcessing, setBulkProcessing] = useState(false);
+    const [showBulkRefuse, setShowBulkRefuse] = useState(false);
+    const [bulkRefuseReason, setBulkRefuseReason] = useState("");
+
+    const total = transfers.length;
+    const totalPages = Math.ceil(total / PER_PAGE);
+    const start = (page - 1) * PER_PAGE;
+    const visible = transfers.slice(start, start + PER_PAGE);
+    const actionable = visible.filter(t => t.requires_action);
+    const allPageSelected = actionable.length > 0 && actionable.every(t => selectedIds.has(t.id));
+    const selectedCount = selectedIds.size;
+
+    React.useEffect(() => { setPage(1); setSelectedIds(new Set()); }, [transfers.length]);
+
+    const toggleSelect = (id) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (allPageSelected) {
+                actionable.forEach(t => next.delete(t.id));
+            } else {
+                actionable.forEach(t => next.add(t.id));
+            }
+            return next;
+        });
+    };
+
+    const handleBulkApprove = async () => {
+        if (selectedCount === 0 || bulkProcessing) return;
+        setBulkProcessing(true);
+        try {
+            await Promise.all([...selectedIds].map(id => {
+                const t = transfers.find(x => x.id === id);
+                if (!t) return Promise.resolve();
+                const url = t.approval_stage === "source"
+                    ? withBasePath("", `/conducteur/transferts/${id}/approve-source`)
+                    : withBasePath("", `/conducteur/transferts/${id}/approve-accueil`);
+                return axios.post(url);
+            }));
+            setSelectedIds(new Set());
+            router.reload({ preserveScroll: true });
+        } catch (e) {
+            console.error("Erreur approbation groupée", e);
+        } finally {
+            setBulkProcessing(false);
+        }
+    };
+
+    const handleBulkRefuse = async () => {
+        if (!bulkRefuseReason.trim() || selectedCount === 0 || bulkProcessing) return;
+        setBulkProcessing(true);
+        try {
+            await Promise.all([...selectedIds].map(id =>
+                axios.post(withBasePath("", `/conducteur/transferts/${id}/refuse`), { reason: bulkRefuseReason })
+            ));
+            setSelectedIds(new Set());
+            setShowBulkRefuse(false);
+            setBulkRefuseReason("");
+            router.reload({ preserveScroll: true });
+        } catch (e) {
+            console.error("Erreur refus groupé", e);
+        } finally {
+            setBulkProcessing(false);
+        }
+    };
+
+    return (
+        <div>
+            {/* Barre d'actions groupées */}
+            {actionable.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, padding: "10px 14px", background: "rgba(255,255,255,.08)", borderRadius: 12, border: "1px solid rgba(255,255,255,.14)", flexWrap: "wrap" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#fff", fontSize: 13, fontWeight: 600, userSelect: "none" }}>
+                        <input
+                            type="checkbox"
+                            checked={allPageSelected}
+                            onChange={toggleSelectAll}
+                            style={{ width: 16, height: 16, accentColor: "#0f766e", cursor: "pointer" }}
+                        />
+                        Tout sélectionner ({actionable.length})
+                    </label>
+
+                    {selectedCount > 0 && (
+                        <>
+                            <span style={{ fontSize: 12, color: "rgba(255,255,255,.6)" }}>
+                                {selectedCount} sélectionné{selectedCount > 1 ? "s" : ""}
+                            </span>
+                            <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+                                <button
+                                    type="button"
+                                    onClick={handleBulkApprove}
+                                    disabled={bulkProcessing}
+                                    style={{ display: "flex", alignItems: "center", gap: 7, border: "none", borderRadius: 10, padding: "8px 16px", background: "#0f766e", color: "#fff", fontSize: 13, fontWeight: 700, cursor: bulkProcessing ? "not-allowed" : "pointer", opacity: bulkProcessing ? 0.7 : 1 }}
+                                >
+                                    <CheckCircle size={15} />
+                                    {bulkProcessing ? "Traitement..." : `Approuver (${selectedCount})`}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBulkRefuse(true)}
+                                    disabled={bulkProcessing}
+                                    style={{ display: "flex", alignItems: "center", gap: 7, border: "1px solid #fecdd3", borderRadius: 10, padding: "8px 16px", background: "#fff1f2", color: "#9f1239", fontSize: 13, fontWeight: 700, cursor: bulkProcessing ? "not-allowed" : "pointer", opacity: bulkProcessing ? 0.7 : 1 }}
+                                >
+                                    <XCircle size={15} />
+                                    Refuser ({selectedCount})
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
+
+            {/* Mini-modale refus groupé */}
+            {showBulkRefuse && (
+                <div className="modal-backdrop" onClick={() => { setShowBulkRefuse(false); setBulkRefuseReason(""); }}>
+                    <div style={{ width: "min(480px,100%)", background: "#fff", borderRadius: 20, boxShadow: "0 30px 60px rgba(15,23,42,.25)", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+                        <div style={{ padding: "18px 22px", background: "#fff1f2", borderBottom: "1px solid #fecdd3", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div>
+                                <div style={{ fontSize: 15, fontWeight: 800, color: "#9f1239" }}>Refus groupé</div>
+                                <div style={{ fontSize: 12, color: "#e11d48", marginTop: 2 }}>{selectedCount} demande{selectedCount > 1 ? "s" : ""} sélectionnée{selectedCount > 1 ? "s" : ""}</div>
+                            </div>
+                            <button onClick={() => { setShowBulkRefuse(false); setBulkRefuseReason(""); }} style={{ border: "none", background: "rgba(0,0,0,.06)", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                                <XCircle size={15} style={{ color: "#64748b" }} />
+                            </button>
+                        </div>
+                        <div style={{ padding: "18px 22px", display: "grid", gap: 14 }}>
+                            <div style={{ fontSize: 13, color: "#334155" }}>
+                                Ce motif sera appliqué à toutes les demandes sélectionnées.
+                            </div>
+                            <textarea
+                                className="field"
+                                rows={4}
+                                value={bulkRefuseReason}
+                                onChange={e => setBulkRefuseReason(e.target.value)}
+                                placeholder="Motif du refus (obligatoire)…"
+                                style={{ resize: "vertical" }}
+                            />
+                            <div style={{ display: "flex", gap: 10 }}>
+                                <button type="button" className="btn btn-ghost" onClick={() => { setShowBulkRefuse(false); setBulkRefuseReason(""); }} style={{ flex: 1 }}>
+                                    Annuler
+                                </button>
+                                <button type="button" className="btn btn-danger" onClick={handleBulkRefuse} disabled={!bulkRefuseReason.trim() || bulkProcessing} style={{ flex: 1 }}>
+                                    <XCircle size={15} />
+                                    {bulkProcessing ? "Traitement..." : "Confirmer le refus"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
+            {/* Liste */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {visible.map((t) => (
+                    <TransferCard
+                        key={t.id}
+                        transfer={t}
+                        onApprove={onApprove}
+                        onRefuse={onRefuse}
+                        selected={selectedIds.has(t.id)}
+                        onToggle={t.requires_action ? toggleSelect : null}
+                    />
+                ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, flexWrap: "wrap", gap: 8 }}>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,.6)", fontWeight: 600 }}>
+                        {start + 1}–{Math.min(start + PER_PAGE, total)} sur {total}
+                    </span>
+                    <div style={{ display: "flex", gap: 6 }}>
+                        <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                            style={{ border: "1px solid rgba(255,255,255,.2)", borderRadius: 8, padding: "5px 12px", background: page === 1 ? "rgba(255,255,255,.05)" : "rgba(255,255,255,.12)", color: page === 1 ? "rgba(255,255,255,.3)" : "#fff", fontSize: 12, fontWeight: 700, cursor: page === 1 ? "default" : "pointer" }}>
+                            ‹ Préc.
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                            <button key={p} type="button" onClick={() => setPage(p)}
+                                style={{ border: "1px solid rgba(255,255,255,.2)", borderRadius: 8, padding: "5px 10px", background: p === page ? "#fff" : "rgba(255,255,255,.12)", color: p === page ? "#0f172a" : "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", minWidth: 32 }}>
+                                {p}
+                            </button>
+                        ))}
+                        <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                            style={{ border: "1px solid rgba(255,255,255,.2)", borderRadius: 8, padding: "5px 12px", background: page === totalPages ? "rgba(255,255,255,.05)" : "rgba(255,255,255,.12)", color: page === totalPages ? "rgba(255,255,255,.3)" : "#fff", fontSize: 12, fontWeight: 700, cursor: page === totalPages ? "default" : "pointer" }}>
+                            Suiv. ›
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
 

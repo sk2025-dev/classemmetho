@@ -644,11 +644,13 @@ export default function RespoFamilleDashboard(props) {
     };
     const activites = props.activites ?? [];
     const presencesByActivity = props.presences ?? {};
+    const toActivityKey = (id) =>
+        id === null || id === undefined ? null : String(id);
 
     const [activeTab, setActiveTab] = useState("presences");
     const [selectedEvt, setSelectedEvt] = useState(null);
     const [selectedActiviteId, setSelectedActiviteId] = useState(
-        activites[0]?.id ?? null,
+        toActivityKey(activites[0]?.id),
     );
     const [apiActivites, setApiActivites] = useState([]);
     const [loadingApiActivites, setLoadingApiActivites] = useState(false);
@@ -760,9 +762,11 @@ export default function RespoFamilleDashboard(props) {
     // Données Marquer (état présences en cours)
     const initialForSelected = useMemo(() => {
         const initial = {};
+        const key = toActivityKey(selectedActiviteId);
         (famille.membres ?? []).forEach((m) => {
-            initial[m.id] =
-                presencesByActivity[selectedActiviteId]?.[m.id] ?? null;
+            initial[m.id] = key
+                ? presencesByActivity[key]?.[m.id] ?? null
+                : null;
         });
         return initial;
     }, [famille.membres, presencesByActivity, selectedActiviteId]);
@@ -836,16 +840,17 @@ export default function RespoFamilleDashboard(props) {
     };
 
     const handleSelectActivite = (id) => {
-        if (!id) {
+        const key = toActivityKey(id);
+        if (!key) {
             setSelectedActiviteId(null);
             setPresences({});
             return;
         }
 
-        setSelectedActiviteId(id);
+        setSelectedActiviteId(key);
         const refreshed = {};
         (famille.membres ?? []).forEach((m) => {
-            refreshed[m.id] = presencesByActivity[id]?.[m.id] ?? null;
+            refreshed[m.id] = presencesByActivity[key]?.[m.id] ?? null;
         });
         setPresences(refreshed);
     };
@@ -857,10 +862,10 @@ export default function RespoFamilleDashboard(props) {
         }
 
         const stillVisible = activitesAffichables.some(
-            (a) => a.id === selectedActiviteId,
+            (a) => toActivityKey(a.id) === toActivityKey(selectedActiviteId),
         );
         if (!stillVisible) {
-            handleSelectActivite(activitesAffichables[0].id);
+            handleSelectActivite(toActivityKey(activitesAffichables[0].id));
         }
     }, [activitesAffichables, selectedActiviteId]);
 
@@ -1157,12 +1162,12 @@ export default function RespoFamilleDashboard(props) {
                             }}
                             value={selectedActiviteId ?? ""}
                             onChange={(e) =>
-                                handleSelectActivite(e.target.value ? Number(e.target.value) : null)
+                                handleSelectActivite(e.target.value || null)
                             }
                         >
                             <option value="">— Choisir une activité —</option>
                             {(activitesAffichables ?? []).map((a) => (
-                                <option key={a.id} value={a.id}>
+                                <option key={a.id} value={toActivityKey(a.id)}>
                                     {`${a.titre} · ${a.heure ?? toHour(a.date_heure_debut)}`}
                                 </option>
                             ))}
@@ -1173,7 +1178,7 @@ export default function RespoFamilleDashboard(props) {
                             <>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                                     <div style={{ fontSize: 14, fontWeight: 600, color: "#1e2070" }}>
-                                        Membres — {activitesAffichables.find(a => a.id === selectedActiviteId)?.titre}
+                                        Membres — {activitesAffichables.find((a) => toActivityKey(a.id) === toActivityKey(selectedActiviteId))?.titre}
                                     </div>
                                     <div style={{ display: "flex", gap: 8 }}>
                                         {[
@@ -1305,16 +1310,12 @@ export default function RespoFamilleDashboard(props) {
                             }}
                             value={selectedActiviteId ?? ""}
                             onChange={(e) =>
-                                handleSelectActivite(
-                                    e.target.value
-                                        ? Number(e.target.value)
-                                        : null,
-                                )
+                                handleSelectActivite(e.target.value || null)
                             }
                         >
                             <option value="">Choisir une activité...</option>
                             {(activitesAffichables ?? []).map((a) => (
-                                <option key={a.id} value={a.id}>
+                                <option key={a.id} value={toActivityKey(a.id)}>
                                     {`${a.titre} · ${a.heure ?? toHour(a.date_heure_debut)}`}
                                 </option>
                             ))}

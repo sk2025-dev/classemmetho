@@ -613,6 +613,13 @@ function TabMembres({ membres, cotisations }) {
                                     selectedCotisation.amounts_par_membre?.[m.id];
                                 const isCible = amountRaw !== null && amountRaw !== undefined;
                                 const amount = isCible ? amountRaw : 0;
+                                const remainingRaw =
+                                    selectedCotisation.remaining_par_membre?.[m.id];
+                                const remaining =
+                                    remainingRaw !== null && remainingRaw !== undefined
+                                        ? Number(remainingRaw)
+                                        : null;
+                                const isFullyPaid = isCible && remaining === 0;
 
                                 return (
                                     <tr
@@ -645,9 +652,15 @@ function TabMembres({ membres, cotisations }) {
                                             }}
                                         >
                                             {isCible ? (
-                                                <span style={{ color: amount === 0 ? "#1d9e75" : "#e24b4a" }}>
-                                                    {fmtCurrency(amount)}
-                                                </span>
+                                                isFullyPaid ? (
+                                                    <span style={{ color: "#1d9e75" }}>
+                                                        Déjà payé
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ color: amount === 0 ? "#1d9e75" : "#e24b4a" }}>
+                                                        {fmtCurrency(remaining ?? amount)}
+                                                    </span>
+                                                )
                                             ) : (
                                                 <span
                                                     style={{
@@ -2109,6 +2122,11 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
                 color: "#3b6d11",
                 label: "Payé",
             },
+            PARTIEL: {
+                bg: "#fff8e1",
+                color: "#b45309",
+                label: "Partiel",
+            },
             ECHEC: {
                 bg: "#fcebeb",
                 color: "#a32d2d",
@@ -2125,9 +2143,9 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
                 label: "En attente",
             },
             INITIE: {
-                bg: "#f0effc",
-                color: "#3b2a8a",
-                label: "Initié",
+                bg: "#e6f1fb",
+                color: "#185fa5",
+                label: "En attente",
             },
             EXPIRE: {
                 bg: "#f5f5f5",
@@ -2197,8 +2215,11 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
                     onChange={(e) => setFilterStatus(e.target.value)}
                 >
                     <option value="">Tous les statuts</option>
-                    <option value="PAYE">Effectué</option>
+                    <option value="PAYE">Payé</option>
+                    <option value="PARTIEL">Partiel</option>
+                    <option value="INITIE">En cours</option>
                     <option value="ECHEC">Échoué</option>
+                    <option value="ANNULE">Annulé</option>
                 </select>
             </div>
 
@@ -2216,7 +2237,6 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
                             {[
                                 "Membre",
                                 "Type",
-                                "Année",
                                 "Montant",
                                 "Mode",
                                 "Date",
@@ -2266,15 +2286,6 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
                                         }}
                                     >
                                         {p.type}
-                                    </td>
-                                    <td
-                                        style={{
-                                            padding: "9px 10px",
-                                            color: "#888",
-                                            fontSize: 12,
-                                        }}
-                                    >
-                                        {p.year || "-"}
                                     </td>
                                     <td
                                         style={{

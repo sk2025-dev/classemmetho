@@ -63,9 +63,7 @@ export default function BaseActeForm({
         form.pieces_jointes.forEach((file) => payload.append("pieces_jointes[]", file));
 
         try {
-            const res = await axios.post(submitUrl, payload, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
+            const res = await axios.post(submitUrl, payload);
             setSuccessMsg(res.data?.message || "Demande soumise avec succes.");
             setForm({
                 membre_id: defaultMemberId,

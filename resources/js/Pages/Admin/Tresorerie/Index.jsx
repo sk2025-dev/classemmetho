@@ -31,6 +31,7 @@ export default function AdminTresorerie({
     const COTISATIONS_PER_PAGE = 10;
     const [paiementsPage, setPaiementsPage] = useState(1);
     const PAIEMENTS_PER_PAGE = 10;
+    const [donSearch, setDonSearch] = useState("");
 
     const emptyStats = {
         cotisationsTotales: 0,
@@ -45,6 +46,17 @@ export default function AdminTresorerie({
     const cotisations = Array.isArray(cotisationsProp) ? cotisationsProp : [];
     const paiementsRecents = Array.isArray(paiementsRecentsProp) ? paiementsRecentsProp : [];
     const dons = Array.isArray(donsProp) ? donsProp : [];
+    const donsFiltres = donSearch.trim() === "" ? dons : dons.filter((d) => {
+        const q = donSearch.toLowerCase();
+        return (
+            (d.donor_name || "").toLowerCase().includes(q) ||
+            (d.numero_donateur || "").includes(q) ||
+            (d.reference_recu || "").toLowerCase().includes(q) ||
+            (d.mode_paiement || "").toLowerCase().includes(q) ||
+            (d.donation_date || "").includes(q) ||
+            (d.note || "").toLowerCase().includes(q)
+        );
+    });
     const reportDate = new Date();
     const currentMonthValue = `${reportDate.getFullYear()}-${String(
         reportDate.getMonth() + 1,
@@ -560,65 +572,77 @@ export default function AdminTresorerie({
                                 </div>
 
                                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-200">
-                                        <h4 className="text-lg font-bold text-gray-900">
-                                            Liste des dons
-                                        </h4>
-                                        <p className="text-sm text-gray-600 mt-1">
-                                            Dons enregistrés par les trésoriers de classe
-                                        </p>
+                                    <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                        <div>
+                                            <h4 className="text-lg font-bold text-gray-900">
+                                                Liste des dons
+                                            </h4>
+                                            <p className="text-sm text-gray-500 mt-0.5">
+                                                {donsFiltres.length} / {dons.length} don{dons.length > 1 ? "s" : ""}
+                                            </p>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={donSearch}
+                                            onChange={(e) => setDonSearch(e.target.value)}
+                                            placeholder="Rechercher par nom, numéro, référence, réseau..."
+                                            className="w-full sm:w-80 px-4 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400"
+                                        />
                                     </div>
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full divide-y divide-gray-200">
                                             <thead className="bg-gray-50">
                                                 <tr>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Donateur
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Montant
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Date
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Trésorier
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Classe
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Motif
-                                                    </th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Donateur</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Numéro</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Réseau</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Référence</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Heure</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motif</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="bg-white divide-y divide-gray-200">
-                                                {dons.length === 0 ? (
+                                                {donsFiltres.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
-                                                            Aucun don enregistré pour le moment
+                                                        <td colSpan="7" className="px-4 py-8 text-center text-sm text-gray-500">
+                                                            {donSearch ? "Aucun résultat pour cette recherche." : "Aucun don enregistré pour le moment."}
                                                         </td>
                                                     </tr>
                                                 ) : (
-                                                    dons.map((don) => (
+                                                    donsFiltres.map((don) => (
                                                         <tr key={don.id} className="hover:bg-gray-50">
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                            <td className="px-4 py-3 text-sm font-medium text-gray-900">
                                                                 {don.donor_name}
                                                             </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            <td className="px-4 py-3 text-sm text-gray-600 font-mono">
+                                                                {don.numero_donateur || <span className="text-gray-300">—</span>}
+                                                            </td>
+                                                            <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">
                                                                 {fmtCurrency(don.amount)}
                                                             </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                                {don.donation_date}
+                                                            <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                                                {don.is_online ? (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                                                        {don.mode_paiement}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                                                                        {don.mode_paiement}
+                                                                    </span>
+                                                                )}
                                                             </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                                {don.treasurer_name}
+                                                            <td className="px-4 py-3 text-xs font-mono text-gray-500">
+                                                                {don.reference_recu || <span className="text-gray-300">—</span>}
                                                             </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                                {don.class_name}
+                                                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                                                                <div className="font-medium">{don.donation_date}</div>
+                                                                <div className="text-xs text-gray-500 mt-0.5">
+                                                                    {don.donation_time || '—'}
+                                                                </div>
                                                             </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                                {don.note || ''}
+                                                            <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">
+                                                                {don.note || <span className="text-gray-300">—</span>}
                                                             </td>
                                                         </tr>
                                                     ))

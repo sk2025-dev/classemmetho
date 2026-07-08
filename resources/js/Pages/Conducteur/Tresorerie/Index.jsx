@@ -682,7 +682,6 @@ export default function ConducteurTresorerie({
     const [modalMembresFamille, setModalMembresFamille] = useState(null);
     const [modalCotisation, setModalCotisation] = useState(false);
     const [modalCollecte, setModalCollecte] = useState(false);
-    const [modalRappelGlobal, setModalRappelGlobal] = useState(false);
     const [modalTresorier, setModalTresorier] = useState(false);
     const [modalVoirCotisation, setModalVoirCotisation] = useState(null);
     const [modalEditCotisation, setModalEditCotisation] = useState(false);
@@ -729,7 +728,6 @@ export default function ConducteurTresorerie({
     });
     const [rappelMsg, setRappelMsg] = useState("");
     const [recentPage, setRecentPage] = useState(1);
-    const [retardsPage, setRetardsPage] = useState(1);
     const [fimecoPage, setFimecoPage] = useState(1);
     const [famillesPage, setFamillesPage] = useState(1);
     const [donsPage, setDonsPage] = useState(1);
@@ -1206,7 +1204,7 @@ export default function ConducteurTresorerie({
 
     const handleAssignTresorier = async () => {
         if (!selectedMemberTresorier) {
-            alert("Veuillez selectionner un membre.");
+            showToast("Veuillez selectionner un membre.", "warning");
             return;
         }
 
@@ -1222,8 +1220,9 @@ export default function ConducteurTresorerie({
             setModalTresorier(false);
             setSelectedMemberTresorier("");
         } catch (error) {
-            alert(
+            showToast(
                 "Erreur lors de l'assignation du tresorier: " + error.message,
+                "error",
             );
         } finally {
             setLoading(false);
@@ -1261,7 +1260,10 @@ export default function ConducteurTresorerie({
             setSelectedMemberTresorier("");
             setMotifRetraitTresorier("");
         } catch (error) {
-            alert("Erreur lors du retrait du tresorier: " + error.message);
+            showToast(
+                "Erreur lors du retrait du tresorier: " + error.message,
+                "error",
+            );
         } finally {
             setLoading(false);
         }
@@ -1283,17 +1285,12 @@ export default function ConducteurTresorerie({
         1,
         Math.ceil(paiementsRecents.length / 10),
     );
-    const retardsTotalPages = Math.max(
-        1,
-        Math.ceil(famillesEnRetard.length / 10),
-    );
     const fimecoTotalPages = Math.max(1, Math.ceil(fimecoSuivi.length / 20));
     const famillesTotalPages = Math.max(
         1,
         Math.ceil(famillesSuivi.length / 10),
     );
     const recentRows = paginate(paiementsRecents, recentPage, 10);
-    const retardsRows = paginate(famillesEnRetard, retardsPage, 10);
     const fimecoRows = paginate(fimecoSuivi, fimecoPage, 20);
     const famillesRows = paginate(famillesSuivi, famillesPage, 10);
     const donsTotalPages = Math.max(1, Math.ceil(donsClasse.length / 10));
@@ -1384,12 +1381,6 @@ export default function ConducteurTresorerie({
     const tabs = [
         { id: "dashboard", emoji: "📊", label: "Vue d'ensemble" },
         { id: "rapports", emoji: "🧾", label: "Rapports" },
-        {
-            id: "retards",
-            emoji: "🔴",
-            label: " Rappels",
-            badge: famillesEnRetard.length,
-        },
         { id: "cotisations", emoji: "💰", label: "Cotisations" },
         { id: "dons", emoji: "🎁", label: "Dons" },
         { id: "fimeco", emoji: "📌", label: "FIMECO" },
@@ -1831,25 +1822,6 @@ export default function ConducteurTresorerie({
                                                     </button>
                                                 </div>
                                             ))}
-                                        {famillesEnRetard.length > 3 && (
-                                            <button
-                                                onClick={() =>
-                                                    setActiveTab("retards")
-                                                }
-                                                style={{
-                                                    marginTop: 8,
-                                                    fontSize: 11,
-                                                    color: "#A32D2D",
-                                                    fontWeight: 700,
-                                                    background: "none",
-                                                    border: "none",
-                                                    cursor: "pointer",
-                                                }}
-                                            >
-                                                Voir tout (
-                                                {famillesEnRetard.length}) →
-                                            </button>
-                                        )}
                                     </div>
                                 )}
                                 <Card style={{ flex: 1 }}>
@@ -2258,200 +2230,6 @@ export default function ConducteurTresorerie({
                                 />
                             </Card>
                         </div>
-                    </div>
-                )}
-
-                {/* RETARDS */}
-                {activeTab === "retards" && (
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 20,
-                        }}
-                    >
-                        <Card>
-                            <SecTitle
-                                accent="red"
-                                right={
-                                    <div style={{ display: "flex", gap: 8 }}>
-                                        <GradBtn
-                                            color="red"
-                                            icon={Send}
-                                            sm
-                                            onClick={() =>
-                                                setModalRappelGlobal(true)
-                                            }
-                                        >
-                                            Relancer tout le monde
-                                        </GradBtn>
-                                    </div>
-                                }
-                            >
-                                Familles en retard de cotisation
-                            </SecTitle>
-                            {famillesEnRetard.length === 0 ? (
-                                <div
-                                    style={{
-                                        textAlign: "center",
-                                        padding: "40px 20px",
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            fontSize: 40,
-                                            marginBottom: 12,
-                                        }}
-                                    >
-                                        🎉
-                                    </div>
-                                    <p
-                                        style={{
-                                            fontWeight: 700,
-                                            fontSize: 15,
-                                            color: "#2C2C2A",
-                                            marginBottom: 4,
-                                        }}
-                                    >
-                                        Toutes les familles sont à jour !
-                                    </p>
-                                    <p
-                                        style={{
-                                            fontSize: 13,
-                                            color: "#888780",
-                                        }}
-                                    >
-                                        Aucun retard détecté.
-                                    </p>
-                                </div>
-                            ) : (
-                                <>
-                                    <Table
-                                        heads={[
-                                            { label: "Famille" },
-                                            {
-                                                label: "Montant dû",
-                                                right: true,
-                                            },
-                                            { label: "Actions", center: true },
-                                        ]}
-                                        rows={retardsRows.map((f) => (
-                                            <Tr key={f.id} highlight>
-                                                <Td bold>{f.nom}</Td>
-                                                <Td right bold color="red">
-                                                    {fmt(f.montantDu)}
-                                                </Td>
-                                                <Td center>
-                                                    <div
-                                                        style={{
-                                                            display: "flex",
-                                                            gap: 6,
-                                                            justifyContent:
-                                                                "center",
-                                                        }}
-                                                    >
-                                                        <button
-                                                            onClick={() =>
-                                                                setModalMembresFamille(
-                                                                    f,
-                                                                )
-                                                            }
-                                                            style={{
-                                                                display: "flex",
-                                                                alignItems:
-                                                                    "center",
-                                                                gap: 5,
-                                                                background:
-                                                                    "linear-gradient(135deg,#1E3A8A,#2563EB)",
-                                                                color: "#fff",
-                                                                border: "none",
-                                                                borderRadius: 8,
-                                                                padding:
-                                                                    "5px 11px",
-                                                                fontSize: 11,
-                                                                fontWeight: 700,
-                                                                cursor: "pointer",
-                                                            }}
-                                                        >
-                                                            Voir
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setModalRappel(
-                                                                    f,
-                                                                );
-                                                                setRappelMsg(
-                                                                    "",
-                                                                );
-                                                            }}
-                                                            style={{
-                                                                display: "flex",
-                                                                alignItems:
-                                                                    "center",
-                                                                gap: 5,
-                                                                background:
-                                                                    "linear-gradient(135deg,#501313,#A32D2D)",
-                                                                color: "#fff",
-                                                                border: "none",
-                                                                borderRadius: 8,
-                                                                padding:
-                                                                    "5px 11px",
-                                                                fontSize: 11,
-                                                                fontWeight: 700,
-                                                                cursor: "pointer",
-                                                            }}
-                                                        >
-                                                            <Send size={11} />{" "}
-                                                            Relancer
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setModalPaiement(
-                                                                    f,
-                                                                );
-                                                                setPaymentForm(
-                                                                    (p) => ({
-                                                                        ...p,
-                                                                        user_id:
-                                                                            "",
-                                                                    }),
-                                                                );
-                                                            }}
-                                                            style={{
-                                                                display: "flex",
-                                                                alignItems:
-                                                                    "center",
-                                                                gap: 5,
-                                                                background:
-                                                                    "linear-gradient(135deg,#0F6E56,#1D9E75)",
-                                                                color: "#fff",
-                                                                border: "none",
-                                                                borderRadius: 8,
-                                                                padding:
-                                                                    "5px 11px",
-                                                                fontSize: 11,
-                                                                fontWeight: 700,
-                                                                cursor: "pointer",
-                                                            }}
-                                                        >
-                                                            <CreditCard
-                                                                size={11}
-                                                            />{" "}
-                                                            Paiement
-                                                        </button>
-                                                    </div>
-                                                </Td>
-                                            </Tr>
-                                        ))}
-                                    />
-                                    <Pagination
-                                        page={retardsPage}
-                                        total={retardsTotalPages}
-                                        onChange={setRetardsPage}
-                                    />
-                                </>
-                            )}
-                        </Card>
                     </div>
                 )}
 
@@ -3300,60 +3078,6 @@ export default function ConducteurTresorerie({
                         icon={Send}
                     >
                         Envoyer le rappel
-                    </GradBtn>
-                </div>
-            </Modal>
-
-            {/* PANNEAU RAPPEL GLOBAL */}
-            <Modal
-                open={modalRappelGlobal}
-                onClose={() => setModalRappelGlobal(false)}
-                title="Relancer toutes les familles en retard"
-            >
-                <FTextarea
-                    label="Note de relance"
-                    value={rappelMsg}
-                    onChange={(e) => setRappelMsg(e.target.value)}
-                    placeholder="Saisissez la note de relance groupée..."
-                    rows={5}
-                />
-                <p
-                    style={{
-                        fontSize: 11,
-                        color: "#888780",
-                        marginTop: 6,
-                        marginBottom: 20,
-                    }}
-                >
-                    Cette relance sera envoyée à toutes les familles en retard.
-                </p>
-                <div
-                    style={{
-                        display: "flex",
-                        gap: 10,
-                        justifyContent: "flex-end",
-                    }}
-                >
-                    <OutlineBtn
-                        color="gray"
-                        onClick={() => setModalRappelGlobal(false)}
-                    >
-                        Annuler
-                    </OutlineBtn>
-                    <GradBtn
-                        onClick={async () => {
-                            await handleEnvoyerRappel({
-                                id: "ALL",
-                                nom: "toutes les familles en retard",
-                            });
-                            setModalRappelGlobal(false);
-                        }}
-                        disabled={loading}
-                        loading={loading}
-                        color="red"
-                        icon={Send}
-                    >
-                        Envoyer
                     </GradBtn>
                 </div>
             </Modal>

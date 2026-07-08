@@ -2713,7 +2713,6 @@ const TabClasses = ({
             withBasePath("", `/admin/membres/${updatedMember.id}`),
             formData,
             {
-                headers: { "Content-Type": "multipart/form-data" },
                 preserveScroll: true,
                 onSuccess: () => {
                     toast.success(`Membre "${memberName}" modifié avec succès`);

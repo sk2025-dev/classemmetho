@@ -18,8 +18,6 @@ const styles = `
     --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-
 body {
     margin: 0;
     padding: 0;
@@ -217,6 +215,113 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
+}
+.conducteurs-title-row {
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 6px;
+}
+.conducteurs-count-bubble {
+    min-width: 30px;
+    height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: white;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    flex-shrink: 0;
+}
+.conducteurs-count-bubble:hover {
+    transform: scale(1.07);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.5);
+}
+.conducteurs-count-bubble:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+.conducteurs-card-teaser {
+    font-size: 0.72rem;
+    color: #6b7280;
+    line-height: 1.35;
+    margin: 0 0 4px 0;
+}
+.conducteurs-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: fadeIn 0.2s ease-out;
+}
+.conducteurs-modal-panel {
+    width: 100%;
+    max-width: 480px;
+    max-height: min(85vh, 640px);
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: fade-in-up 0.25s ease-out;
+}
+.conducteurs-modal-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #fafafa;
+}
+.conducteurs-modal-header h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.3;
+}
+.conducteurs-modal-close {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.conducteurs-modal-close:hover {
+    background: #d1d5db;
+    color: #111827;
+}
+.conducteurs-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.1rem 1.25rem;
+    -webkit-overflow-scrolling: touch;
+}
+.conducteurs-modal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .conducteur-item {
@@ -1606,60 +1711,171 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
   );
 };
 
+// Conducteurs uniques : désigné sur la fiche classe en premier, puis comptes rôle conducteur (même classe), sans doublon d'id.
+function getUniqueConducteursForClasse(classe) {
+  if (!classe) return [];
+  const seen = new Set();
+  const out = [];
+  const push = (u) => {
+    if (!u || u.id == null || seen.has(u.id)) return;
+    seen.add(u.id);
+    out.push(u);
+  };
+  push(classe.conducteur);
+  (classe.conducteurs || []).forEach(push);
+  return out;
+}
+
+const conducteurMatchesTerm = (u, term) => {
+  if (!u || !term) return false;
+  return (
+    u.nom?.toLowerCase().includes(term) ||
+    u.prenom?.toLowerCase().includes(term) ||
+    u.email?.toLowerCase().includes(term) ||
+    u.telephone?.toLowerCase().includes(term)
+  );
+};
+
+const conducteurDisplayInitials = (u) =>
+  `${(u.prenom?.charAt(0) || '').toUpperCase()}${(u.nom?.charAt(0) || '').toUpperCase()}` || '?';
+
+// --- MODAL DÉTAIL CONDUCTEURS (plusieurs par classe) — panneau centré ---
+const ConducteursListModal = ({ isOpen, onClose, classe, conducteurs }) => {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !classe) return null;
+
+  return (
+    <div
+      className="conducteurs-modal-backdrop"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="conducteurs-modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="conducteurs-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="conducteurs-modal-header">
+          <h2 id="conducteurs-modal-title">Conducteurs — {classe.nom}</h2>
+          <button type="button" className="conducteurs-modal-close" onClick={onClose} aria-label="Fermer">
+            <IconX />
+          </button>
+        </div>
+        <div className="conducteurs-modal-body">
+          <div className="conducteurs-modal-list">
+            {(conducteurs || []).map((conducteur) => (
+              <div className="conducteur-item" key={conducteur.id}>
+                <div className="conducteur-avatar">
+                  {conducteur.profile_photo_url ? (
+                    <img src={conducteur.profile_photo_url} alt={`${conducteur.prenom} ${conducteur.nom}`} />
+                  ) : (
+                    <div className="avatar-placeholder">{conducteurDisplayInitials(conducteur)}</div>
+                  )}
+                </div>
+                <div className="conducteur-info">
+                  <div className="conducteur-nom">
+                    {conducteur.prenom} {conducteur.nom}
+                    {classe.conducteur?.id === conducteur.id ? (
+                      <span style={{ marginLeft: '0.35rem', fontSize: '0.72rem', opacity: 0.85 }}>(désigné)</span>
+                    ) : null}
+                  </div>
+                  {conducteur.email && (
+                    <div className="conducteur-email">{conducteur.email}</div>
+                  )}
+                  {conducteur.telephone && (
+                    <div className="conducteur-telephone">
+                      <IconPhone /> {conducteur.telephone}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- COMPOSANT CARTE DE CLASSE ---
-const ClassCard = ({ conducteur, onViewProgrammes }) => {
-  const classe = conducteur.classe;
+const ClassCard = ({ classe, onViewProgrammes }) => {
   const programmes = classe?.programmes || [];
-  
+  const conducteursUniques = useMemo(() => getUniqueConducteursForClasse(classe), [classe]);
+  const [conducteursModalOpen, setConducteursModalOpen] = useState(false);
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const isToday = (eventDate) => {
     const eventDateObj = new Date(eventDate);
     eventDateObj.setHours(0, 0, 0, 0);
     return eventDateObj.getTime() === today.getTime();
   };
-  
+
   const totalProgrammes = programmes.length;
   const currentProgrammes = programmes.filter(p => new Date(p.start_date) >= today).length;
   const pastProgrammes = programmes.filter(p => new Date(p.start_date) < today).length;
   const todayProgrammes = programmes.filter(p => isToday(p.start_date)).length;
 
-  const getAvatarUrl = () => {
-    if (conducteur.profile_photo_url) {
-      return conducteur.profile_photo_url;
+  const getInitials = (u) => conducteurDisplayInitials(u);
+
+  const renderConducteursBlock = () => {
+    if (conducteursUniques.length > 1) {
+      const n = conducteursUniques.length;
+      return (
+        <div className="conducteurs-list">
+          <div className="conducteurs-title conducteurs-title-row">
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <IconConducteur /> Conducteurs
+            </span>
+            <button
+              type="button"
+              className="conducteurs-count-bubble"
+              onClick={() => setConducteursModalOpen(true)}
+              title="Voir le détail des conducteurs"
+              aria-label={`Voir le détail des ${n} conducteurs`}
+            >
+              {n}
+            </button>
+          </div>
+          <p className="conducteurs-card-teaser">
+            Cliquez sur le badge pour afficher les noms et coordonnées de chaque conducteur.
+          </p>
+        </div>
+      );
     }
-    return null;
-  };
 
-  const getInitials = () => {
-    return `${(conducteur.prenom?.charAt(0) || '').toUpperCase()}${(conducteur.nom?.charAt(0) || '').toUpperCase()}`;
-  };
-
-  return (
-    <div className="class-card">
-      <div className="class-card-header">
-        <h3 className="class-name">{classe?.nom || 'Classe sans nom'}</h3>
-        {classe?.code && <span className="class-code">Code: {classe.code}</span>}
-      </div>
-      <div className="class-card-body">
+    if (conducteursUniques.length === 1) {
+      const conducteur = conducteursUniques[0];
+      return (
         <div className="conducteurs-list">
           <div className="conducteurs-title">
             <IconConducteur /> Conducteur
           </div>
           <div className="conducteur-item">
             <div className="conducteur-avatar">
-              {getAvatarUrl() ? (
-                <img src={getAvatarUrl()} alt={`${conducteur.prenom} ${conducteur.nom}`} />
+              {conducteur.profile_photo_url ? (
+                <img src={conducteur.profile_photo_url} alt={`${conducteur.prenom} ${conducteur.nom}`} />
               ) : (
-                <div className="avatar-placeholder">
-                  {getInitials()}
-                </div>
+                <div className="avatar-placeholder">{getInitials(conducteur)}</div>
               )}
             </div>
             <div className="conducteur-info">
               <div className="conducteur-nom">
                 {conducteur.prenom} {conducteur.nom}
+                {classe.conducteur?.id === conducteur.id ? (
+                  <span style={{ marginLeft: '0.35rem', fontSize: '0.72rem', opacity: 0.85 }}>(désigné)</span>
+                ) : null}
               </div>
               {conducteur.email && (
                 <div className="conducteur-email">{conducteur.email}</div>
@@ -1672,6 +1888,32 @@ const ClassCard = ({ conducteur, onViewProgrammes }) => {
             </div>
           </div>
         </div>
+      );
+    }
+
+    return (
+      <div className="conducteurs-list">
+        <div className="conducteurs-title">
+          <IconConducteur /> Conducteurs
+        </div>
+        <div className="conducteur-item" style={{ opacity: 0.85 }}>
+          <div className="conducteur-info">
+            <div className="conducteur-nom">Aucun conducteur rattaché à cette classe</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <div className="class-card">
+        <div className="class-card-header">
+          <h3 className="class-name">{classe?.nom || 'Classe sans nom'}</h3>
+          {classe?.code && <span className="class-code">Code: {classe.code}</span>}
+        </div>
+        <div className="class-card-body">
+          {renderConducteursBlock()}
 
         <div className="class-stats">
           <div className="stat-item">
@@ -1697,18 +1939,26 @@ const ClassCard = ({ conducteur, onViewProgrammes }) => {
         </div>
       </div>
       <div className="class-card-footer">
-        <button className="btn-view-programmes" onClick={() => onViewProgrammes(classe, programmes)}>
+        <button type="button" className="btn-view-programmes" onClick={() => onViewProgrammes(classe, programmes)}>
           <IconEye /> Voir les programmes
         </button>
       </div>
-    </div>
+      </div>
+
+      <ConducteursListModal
+        isOpen={conducteursModalOpen}
+        onClose={() => setConducteursModalOpen(false)}
+        classe={classe}
+        conducteurs={conducteursUniques}
+      />
+    </>
   );
 };
 
 // --- PAGE PRINCIPALE ---
 export default function Programmes() {
   const { props } = usePage();
-  const { conducteurs = [], userRole = null } = props;
+  const { classes: classesList = [], userRole = null } = props;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClasseId, setSelectedClasseId] = useState('all');
@@ -1717,38 +1967,31 @@ export default function Programmes() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const classOptions = useMemo(() => {
-    const classes = new Map();
-    conducteurs.forEach(conducteur => {
-      if (conducteur.classe) {
-        classes.set(conducteur.classe.id, conducteur.classe.nom);
-      }
-    });
-    return Array.from(classes.entries()).map(([id, nom]) => ({ id, nom }));
-  }, [conducteurs]);
+    return classesList.map((c) => ({ id: c.id, nom: c.nom }));
+  }, [classesList]);
 
-  const filteredConducteurs = useMemo(() => {
-    let filtered = [...conducteurs];
-    
+  const filteredClasses = useMemo(() => {
+    let filtered = [...classesList];
+
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(conducteur =>
-        conducteur.nom?.toLowerCase().includes(term) ||
-        conducteur.prenom?.toLowerCase().includes(term) ||
-        conducteur.email?.toLowerCase().includes(term) ||
-        conducteur.telephone?.toLowerCase().includes(term) ||
-        conducteur.classe?.nom?.toLowerCase().includes(term) ||
-        conducteur.classe?.code?.toLowerCase().includes(term)
-      );
+      filtered = filtered.filter((classe) => {
+        if (
+          classe.nom?.toLowerCase().includes(term) ||
+          classe.code?.toLowerCase().includes(term)
+        ) {
+          return true;
+        }
+        return getUniqueConducteursForClasse(classe).some((u) => conducteurMatchesTerm(u, term));
+      });
     }
-    
+
     if (selectedClasseId !== 'all') {
-      filtered = filtered.filter(conducteur => 
-        conducteur.classe?.id === parseInt(selectedClasseId)
-      );
+      filtered = filtered.filter((classe) => classe.id === parseInt(selectedClasseId, 10));
     }
-    
+
     return filtered;
-  }, [conducteurs, searchTerm, selectedClasseId]);
+  }, [classesList, searchTerm, selectedClasseId]);
 
   const handleViewProgrammes = (classe, programmes) => {
     setSelectedClasse(classe);
@@ -1770,9 +2013,8 @@ export default function Programmes() {
     }
   };
 
-  const totalConducteurs = conducteurs.length;
-  const totalClasses = classOptions.length;
-  const filteredCount = filteredConducteurs.length;
+  const totalClasses = classesList.length;
+  const filteredCount = filteredClasses.length;
 
   return (
     <>
@@ -1793,7 +2035,7 @@ export default function Programmes() {
           </button>
           <h1>📋 Gestion des programmes d'activités des classes</h1>
           <div className="stats-badge">
-            {totalClasses} classe(s) • {totalConducteurs} conducteur(s)
+            {totalClasses} classe(s) active(s)
           </div>
         </div>
 
@@ -1801,7 +2043,7 @@ export default function Programmes() {
           <input
             type="text"
             className="search-input"
-            placeholder="🔍 Rechercher (nom, prénom, email, téléphone, classe...)"
+            placeholder="🔍 Rechercher (classe, conducteur, email, téléphone...)"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -1822,12 +2064,12 @@ export default function Programmes() {
           </div>
         </div>
 
-        {filteredConducteurs.length > 0 ? (
+        {filteredClasses.length > 0 ? (
           <div className="classes-grid">
-            {filteredConducteurs.map(conducteur => (
-              <ClassCard 
-                key={conducteur.id} 
-                conducteur={conducteur} 
+            {filteredClasses.map((classe) => (
+              <ClassCard
+                key={classe.id}
+                classe={classe}
                 onViewProgrammes={handleViewProgrammes}
               />
             ))}
@@ -1835,9 +2077,9 @@ export default function Programmes() {
         ) : (
           <div className="empty-state">
             <div className="empty-icon"></div>
-            <div className="empty-title">Aucun conducteur trouvé</div>
+            <div className="empty-title">Aucune classe trouvée</div>
             <div className="empty-message">
-              {searchTerm || selectedClasseId !== 'all' ? 'Aucun résultat ne correspond à vos critères.' : 'Aucun conducteur n\'est disponible pour le moment.'}
+              {searchTerm || selectedClasseId !== 'all' ? 'Aucun résultat ne correspond à vos critères.' : 'Aucune classe active n\'est disponible pour le moment.'}
             </div>
           </div>
         )}

@@ -7,8 +7,8 @@ const ACTE_TYPES = [
     { value: "bapteme", label: "Baptême", icon: "BT" },
     { value: "premiere_communion", label: "Première Communion", icon: "PC" },
     { value: "mariage", label: "Mariage", icon: "MG" },
-    { value: "naissance", label: "Déclaration de naissance", icon: "NS" },
-    { value: "deces", label: "Déclaration de décès", icon: "DC" },
+    { value: "naissance", label: "Présentation Enfant", icon: "NS" },
+    { value: "deces", label: "Annonce Décès", icon: "DC" },
 ];
 
 const TYPE_FIELDS = {
@@ -265,9 +265,7 @@ export default function ActeLiturgiqueRequestWizard({
         form.pieces_jointes.forEach((file) => payload.append("pieces_jointes[]", file));
 
         try {
-            const res = await axios.post(submitUrl, payload, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
+            const res = await axios.post(submitUrl, payload);
             if (res.data?.acte) setLocalActes((prev) => [res.data.acte, ...prev]);
             setSuccessMsg(res.data?.message || "Demande soumise avec succes.");
             resetForm();

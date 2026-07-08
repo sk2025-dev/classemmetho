@@ -145,7 +145,7 @@ export default function EditMember({ member, family }) {
         employment_status: member.employment_status || "",
         profession: member.profession || "",
         niveau_etude: member.niveau_etude || "",
-        fonction_id: member.fonction_id || "",
+        fonction_ids: Array.isArray(member.fonction_ids) ? member.fonction_ids : (member.fonction_id ? [member.fonction_id] : []),
         relation: member.relation || "",
         photo: null,
         photoPreview: initialPhotoUrl,
@@ -183,7 +183,7 @@ export default function EditMember({ member, family }) {
             employment_status: member.employment_status || "",
             profession: member.profession || "",
             niveau_etude: member.niveau_etude || "",
-            fonction_id: member.fonction_id || "",
+            fonction_ids: Array.isArray(member.fonction_ids) ? member.fonction_ids : (member.fonction_id ? [member.fonction_id] : []),
             relation: member.relation || "",
             photo: null,
             photoPreview: resolveMemberPhotoUrl(member) || null,
@@ -682,24 +682,10 @@ export default function EditMember({ member, family }) {
                                 icon={Award}
                             >
                                 <Select2Fonction
-                                    value={
-                                        data.fonction_id
-                                            ? [data.fonction_id]
-                                            : []
-                                    }
-                                    onChange={(e) => {
-                                        const value =
-                                            e.target.value &&
-                                            e.target.value.length > 0
-                                                ? e.target.value[0]
-                                                : "";
-                                        setData({
-                                            ...data,
-                                            fonction_id: value,
-                                        });
-                                    }}
+                                    value={data.fonction_ids}
+                                    onChange={(e) => setData({ ...data, fonction_ids: e.target.value })}
                                     options={fonctionsState}
-                                    placeholder="S\u00e9lectionner une fonction..."
+                                    placeholder="S\u00e9lectionner une ou plusieurs fonctions..."
                                 />
                             </FormField>
 

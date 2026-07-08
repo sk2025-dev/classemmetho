@@ -469,99 +469,98 @@ const GLOBAL_STYLES = `
 
 // ==================== FONCTIONS UTILITAIRES ====================
 const toText = (value, fallback = "-") => {
-    if (value === null || value === undefined) return fallback;
-    if (typeof value === "string" || typeof value === "number")
-        return String(value);
-    if (typeof value === "object") {
-        return String(
-            value.nom ?? value.label ?? value.name ?? value.code ?? fallback,
-        );
-    }
-    return fallback;
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "string" || typeof value === "number")
+    return String(value);
+  if (typeof value === "object") {
+    return String(
+      value.nom ?? value.label ?? value.name ?? value.code ?? fallback,
+    );
+  }
+  return fallback;
 };
 
 const normalizeMember = (member) => {
-    if (!member) return null;
-    const prenoms = toText(
-        member?.prenoms || member?.prenom || member?.full_name,
-        "",
-    );
-    const classeName = toText(
-        member?.classe?.nom || member?.classeMethodiste || member?.classe,
-        "-",
-    );
-    const familleName = toText(
-        member?.famille ||
-            member?.family?.nom ||
-            member?.family?.code_famille ||
-            member?.family_code,
-        "-",
-    );
-    return {
-        ...member,
-        prenoms,
-        classeMethodiste: classeName,
-        famille: familleName,
-        codeFamille:
-            member?.code_famille || member?.family?.code_famille || null,
-        codeMembre: member?.numMembre || member?.code_membre || null,
-        photo: member?.photo || member?.profile_photo_url || "",
-        sexe: toText(member?.sexe || member?.genre, ""),
-        dateNaissance: member?.dateNaissance || member?.date_naissance || null,
-        telephone: toText(member?.telephone, "-"),
-        email: toText(member?.email, "-"),
-        fonction: toText(member?.fonction, "-"),
-        profession: toText(member?.profession, "-"),
-        relation: toText(member?.relation, "-"),
-        adresse: toText(
-            member?.adresse || member?.family?.adresse || member?.address,
-            "-",
-        ),
-        quartier: toText(member?.quartier || member?.family?.quartier, "-"),
-    };
+  if (!member) return null;
+  const prenoms = toText(
+    member?.prenoms || member?.prenom || member?.full_name,
+    "",
+  );
+  const classeName = toText(
+    member?.classe?.nom || member?.classeMethodiste || member?.classe,
+    "-",
+  );
+  const familleName = toText(
+    member?.famille ||
+      member?.family?.nom ||
+      member?.family?.code_famille ||
+      member?.family_code,
+    "-",
+  );
+  return {
+    ...member,
+    prenoms,
+    classeMethodiste: classeName,
+    famille: familleName,
+    codeFamille: member?.code_famille || member?.family?.code_famille || null,
+    codeMembre: member?.numMembre || member?.code_membre || null,
+    photo: member?.photo || member?.profile_photo_url || "",
+    sexe: toText(member?.sexe || member?.genre, ""),
+    dateNaissance: member?.dateNaissance || member?.date_naissance || null,
+    telephone: toText(member?.telephone, "-"),
+    email: toText(member?.email, "-"),
+    fonction: toText(member?.fonction, "-"),
+    profession: toText(member?.profession, "-"),
+    relation: toText(member?.relation, "-"),
+    adresse: toText(
+      member?.adresse || member?.family?.adresse || member?.address,
+      "-",
+    ),
+    quartier: toText(member?.quartier || member?.family?.quartier, "-"),
+  };
 };
 
 // --- Composant Badge (non utilisé, mais conservé) ---
 const MemberStatusBadge = ({ member }) => {
-    const isBaptized = member.baptise;
-    const className = isBaptized
-        ? "status-badge bg-green-100 text-green-800 border-green-200"
-        : "status-badge bg-gray-100 text-gray-800 border-gray-200";
-    const icon = isBaptized ? (
-        <svg
-            className="w-3 h-3 mr-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-        >
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-            />
-        </svg>
-    ) : (
-        <svg
-            className="w-3 h-3 mr-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-        >
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-            />
-        </svg>
-    );
-    return (
-        <span className={`${className} items-center`}>
-            {icon}
-            {isBaptized ? "Baptisé" : "Non baptisé"}
-        </span>
-    );
+  const isBaptized = member.baptise;
+  const className = isBaptized
+    ? "status-badge bg-green-100 text-green-800 border-green-200"
+    : "status-badge bg-gray-100 text-gray-800 border-gray-200";
+  const icon = isBaptized ? (
+    <svg
+      className="w-3 h-3 mr-1"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M5 13l4 4L19 7"
+      />
+    </svg>
+  ) : (
+    <svg
+      className="w-3 h-3 mr-1"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M6 18L18 6M6 6l12 12"
+      />
+    </svg>
+  );
+  return (
+    <span className={`${className} items-center`}>
+      {icon}
+      {isBaptized ? "Baptisé" : "Non baptisé"}
+    </span>
+  );
 };
 
 // --- Composant Modal pour les détails du membre (commenté car plus utilisé) ---
@@ -569,462 +568,469 @@ const MemberStatusBadge = ({ member }) => {
 
 // ==================== COMPOSANT PRINCIPAL ====================
 const Annuaire = ({
-    members = null,
-    families = null,
-    classes = null,
-    view = "all",
-    cotisations = {},
-    user = { role: "user" },
-    filters = {},
-    filterOptions = { classes: [], familles: [], professions: [], roles: [] },
+  members = null,
+  families = null,
+  classes = null,
+  view = "all",
+  cotisations = {},
+  user = { role: "user" },
+  filters = {},
+  filterOptions = { classes: [], familles: [], professions: [], roles: [] },
 }) => {
-    const {
-        data: paginatedMembers,
-        links: membersLinks,
-        current_page: membersCurrentPage,
-        per_page: membersPerPage,
-        total: membersTotal,
-    } = members || {
-        data: [],
-        links: [],
-        current_page: 1,
-        per_page: 10,
-        total: 0,
-    };
+  const {
+    data: paginatedMembers,
+    links: membersLinks,
+    current_page: membersCurrentPage,
+    per_page: membersPerPage,
+    total: membersTotal,
+  } = members || {
+    data: [],
+    links: [],
+    current_page: 1,
+    per_page: 10,
+    total: 0,
+  };
 
-    const [searchTerm, setSearchTerm] = useState(filters.search || "");
-    // Filtre classe supprimé
-    const [familleFilter, setFamilleFilter] = useState(filters.famille || "");
-    const [professionFilter, setProfessionFilter] = useState(
-        filters.profession || "",
-    );
-    const [roleFilter, setRoleFilter] = useState(filters.role || "");
-    const [itemsPerPage, setItemsPerPage] = useState(filters.perPage || 10);
+  const [searchTerm, setSearchTerm] = useState(filters.search || "");
+  const [searchInput, setSearchInput] = useState(filters.search || "");
+  // Filtre classe supprimé
+  const [familleFilter, setFamilleFilter] = useState(filters.famille || "");
+  const [professionFilter, setProfessionFilter] = useState(
+    filters.profession || "",
+  );
+  const [roleFilter, setRoleFilter] = useState(filters.role || "");
+  const [itemsPerPage, setItemsPerPage] = useState(filters.perPage || 10);
 
-    const [currentView, setCurrentView] = useState(view);
-    const [selectedMember, setSelectedMember] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isExiting, setIsExiting] = useState(false);
-    const [photoPopup, setPhotoPopup] = useState({
-        visible: false,
-        src: "",
-        x: 0,
-        y: 0,
-        exiting: false,
+  const [currentView, setCurrentView] = useState(view);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const [photoPopup, setPhotoPopup] = useState({
+    visible: false,
+    src: "",
+    x: 0,
+    y: 0,
+    exiting: false,
+  });
+  const popupRef = useRef(null);
+  // Pagination interne des classes supprimée
+  // const [classMemberPages, setClassMemberPages] = useState({});
+
+  const applyFilters = useCallback(() => {
+    const params = { view: currentView, page: 1 };
+    if (searchTerm) params.search = searchTerm;
+    if (familleFilter) params.famille = familleFilter;
+    if (professionFilter) params.profession = professionFilter;
+    if (roleFilter) params.role = roleFilter;
+    if (itemsPerPage !== 10) params.perPage = itemsPerPage;
+
+    router.get(window.location.pathname, params, {
+      preserveState: true,
+      preserveScroll: true,
+      replace: true,
+      showProgress: false,
+      only: ["members", "families", "filters"],
     });
-    const popupRef = useRef(null);
-    // Pagination interne des classes supprimée
-    // const [classMemberPages, setClassMemberPages] = useState({});
+  }, [
+    searchTerm,
+    familleFilter,
+    professionFilter,
+    roleFilter,
+    itemsPerPage,
+    currentView,
+  ]);
 
-    const applyFilters = useCallback(() => {
-        router.get(
-            window.location.pathname,
-            {
-                search: searchTerm,
-                // classe: classeFilter, // supprimé
-                famille: familleFilter,
-                profession: professionFilter,
-                role: roleFilter,
-                perPage: itemsPerPage,
-                view: currentView,
-                page: 1,
-            },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }, [
-        searchTerm,
-        familleFilter,
-        professionFilter,
-        roleFilter,
-        itemsPerPage,
-        currentView,
-    ]);
+  const submitSearch = () => {
+    const nextSearch = searchInput.trim();
+    setSearchInput(nextSearch);
+    setSearchTerm(nextSearch);
+  };
 
-    useEffect(() => {
-        const handler = setTimeout(() => applyFilters(), 500);
-        return () => clearTimeout(handler);
-    }, [applyFilters]);
+  useEffect(() => {
+    const handler = setTimeout(() => applyFilters(), 500);
+    return () => clearTimeout(handler);
+  }, [applyFilters]);
 
-    const switchView = (newView) => {
-        setCurrentView(newView);
-        router.get(
-            window.location.pathname,
-            {
-                search: searchTerm,
-                // classe: classeFilter, // supprimé
-                famille: familleFilter,
-                profession: professionFilter,
-                role: roleFilter,
-                view: newView,
-                page: 1,
-                familiesPerPage: 5,
-                // classesPerPage: 1, // supprimé
-            },
-            { preserveState: true, preserveScroll: true },
-        );
-        // setClassMemberPages({}); // supprimé
+  const switchView = (newView) => {
+    setCurrentView(newView);
+    router.get(
+      window.location.pathname,
+      {
+        search: searchTerm,
+        // classe: classeFilter, // supprimé
+        famille: familleFilter,
+        profession: professionFilter,
+        role: roleFilter,
+        view: newView,
+        page: 1,
+        familiesPerPage: 5,
+        // classesPerPage: 1, // supprimé
+      },
+      { preserveState: true, preserveScroll: true },
+    );
+    // setClassMemberPages({}); // supprimé
+  };
+
+  const handlePageChange = (url) => {
+    if (url) router.get(url, {}, { preserveState: true, preserveScroll: true });
+  };
+  const handleFamilyPageChange = (url) => {
+    if (url) router.get(url, {}, { preserveState: true, preserveScroll: true });
+  };
+  // const handleClassPageChange = (url) => { ... }; // supprimé
+  const handlePerPageChange = (newPerPage) => setItemsPerPage(newPerPage);
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setSearchInput("");
+    // setClasseFilter(""); // supprimé
+    setFamilleFilter("");
+    setProfessionFilter("");
+    setRoleFilter("");
+    setItemsPerPage(10);
+  };
+
+  const openModal = (member) => {
+    const normalized = normalizeMember(member);
+    if (!normalized) return;
+    setSelectedMember(normalized);
+    setIsExiting(false);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      setIsExiting(false);
+      setIsModalOpen(false);
+      setSelectedMember(null);
+    }, 200);
+  };
+
+  const openPhotoPopup = (src, event) => {
+    event.stopPropagation();
+    const x = event.clientX;
+    const y = event.clientY;
+    setPhotoPopup({ visible: true, src, x, y, exiting: false });
+  };
+
+  const closePhotoPopup = () => {
+    setPhotoPopup((prev) => ({ ...prev, exiting: true }));
+    setTimeout(
+      () =>
+        setPhotoPopup({
+          visible: false,
+          src: "",
+          x: 0,
+          y: 0,
+          exiting: false,
+        }),
+      150,
+    );
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        photoPopup.visible &&
+        popupRef.current &&
+        !popupRef.current.contains(event.target)
+      ) {
+        closePhotoPopup();
+      }
     };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [photoPopup.visible]);
 
-    const handlePageChange = (url) => {
-        if (url)
-            router.get(url, {}, { preserveState: true, preserveScroll: true });
-    };
-    const handleFamilyPageChange = (url) => {
-        if (url)
-            router.get(url, {}, { preserveState: true, preserveScroll: true });
-    };
-    // const handleClassPageChange = (url) => { ... }; // supprimé
-    const handlePerPageChange = (newPerPage) => setItemsPerPage(newPerPage);
+  const getFallbackImage = (member) => {
+    const initial = (member.prenoms || member.nom || "?")
+      .charAt(0)
+      .toUpperCase();
+    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#2563eb"/><text x="50" y="65" font-size="40" text-anchor="middle" fill="white" font-weight="bold">${initial}</text></svg>`)}`;
+  };
 
-    const resetFilters = () => {
-        setSearchTerm("");
-        // setClasseFilter(""); // supprimé
-        setFamilleFilter("");
-        setProfessionFilter("");
-        setRoleFilter("");
-        setItemsPerPage(10);
-    };
+  const getPopupStyle = () => {
+    if (!photoPopup.visible) return {};
+    const popupWidth = 260,
+      popupHeight = 260;
+    let left = photoPopup.x + 10,
+      top = photoPopup.y - popupHeight / 2;
+    if (left + popupWidth > window.innerWidth)
+      left = photoPopup.x - popupWidth - 10;
+    if (top < 0) top = 10;
+    if (top + popupHeight > window.innerHeight)
+      top = window.innerHeight - popupHeight - 10;
+    return { left, top };
+  };
 
-    const openModal = (member) => {
-        const normalized = normalizeMember(member);
-        if (!normalized) return;
-        setSelectedMember(normalized);
-        setIsExiting(false);
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setIsExiting(true);
-        setTimeout(() => {
-            setIsExiting(false);
-            setIsModalOpen(false);
-            setSelectedMember(null);
-        }, 200);
-    };
-
-    const openPhotoPopup = (src, event) => {
-        event.stopPropagation();
-        const x = event.clientX;
-        const y = event.clientY;
-        setPhotoPopup({ visible: true, src, x, y, exiting: false });
-    };
-
-    const closePhotoPopup = () => {
-        setPhotoPopup((prev) => ({ ...prev, exiting: true }));
-        setTimeout(
-            () =>
-                setPhotoPopup({
-                    visible: false,
-                    src: "",
-                    x: 0,
-                    y: 0,
-                    exiting: false,
-                }),
-            150,
-        );
-    };
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (
-                photoPopup.visible &&
-                popupRef.current &&
-                !popupRef.current.contains(event.target)
-            ) {
-                closePhotoPopup();
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () =>
-            document.removeEventListener("mousedown", handleClickOutside);
-    }, [photoPopup.visible]);
-
-    const getFallbackImage = (member) => {
-        const initial = (member.prenoms || member.nom || "?")
-            .charAt(0)
-            .toUpperCase();
-        return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#2563eb"/><text x="50" y="65" font-size="40" text-anchor="middle" fill="white" font-weight="bold">${initial}</text></svg>`)}`;
-    };
-
-    const getPopupStyle = () => {
-        if (!photoPopup.visible) return {};
-        const popupWidth = 260,
-            popupHeight = 260;
-        let left = photoPopup.x + 10,
-            top = photoPopup.y - popupHeight / 2;
-        if (left + popupWidth > window.innerWidth)
-            left = photoPopup.x - popupWidth - 10;
-        if (top < 0) top = 10;
-        if (top + popupHeight > window.innerHeight)
-            top = window.innerHeight - popupHeight - 10;
-        return { left, top };
-    };
-
-    const Pagination = ({
-        links,
-        currentPage,
-        perPage,
-        total,
-        onPageChange,
-    }) => {
-        if (!links || links.length <= 3) return null;
-        return (
-            <div className="flex items-center justify-between px-4 py-3 bg-white/50 backdrop-blur-sm border-t border-white/50">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-700">
-                        Affichage de {(currentPage - 1) * perPage + 1} à{" "}
-                        {Math.min(currentPage * perPage, total)} sur {total}{" "}
-                        membres
-                    </span>
-                    {currentView === "all" && (
-                        <select
-                            value={perPage}
-                            onChange={(e) =>
-                                onPageChange(null, parseInt(e.target.value))
-                            }
-                            className="input-control !py-1 !px-2 text-sm"
-                        >
-                            <option value={10}>10 par page</option>
-                            <option value={20}>20 par page</option>
-                            <option value={50}>50 par page</option>
-                            <option value={100}>100 par page</option>
-                        </select>
-                    )}
-                </div>
-                <div className="flex gap-2">
-                    {links.map((link, index) =>
-                        link.url === null ? (
-                            <span
-                                key={index}
-                                className="btn btn-secondary !py-1 !px-3 disabled opacity-50"
-                                dangerouslySetInnerHTML={{ __html: link.label }}
-                            />
-                        ) : (
-                            <button
-                                key={index}
-                                onClick={() => onPageChange(link.url)}
-                                className={`btn !py-1 !px-3 ${link.active ? "btn-primary" : "btn-secondary"}`}
-                                dangerouslySetInnerHTML={{ __html: link.label }}
-                            />
-                        ),
-                    )}
-                </div>
-            </div>
-        );
-    };
-
-    const renderGridView = () => {
-        const normalizedMembers = paginatedMembers
-            .map(normalizeMember)
-            .filter(Boolean);
-        return (
-            <>
-                <div className="grid-view">
-                    {normalizedMembers.length > 0 ? (
-                        normalizedMembers.map((member) => (
-                            <div key={member.id} className="grid-card">
-                                <div className="grid-cover"></div>
-                                <div className="grid-profile-container">
-                                    <div
-                                        className="grid-profile-photo"
-                                        onClick={(e) =>
-                                            openPhotoPopup(
-                                                member.photo ||
-                                                    getFallbackImage(member),
-                                                e,
-                                            )
-                                        }
-                                    >
-                                        <img
-                                            src={
-                                                member.photo ||
-                                                getFallbackImage(member)
-                                            }
-                                            onError={(e) =>
-                                                (e.target.src =
-                                                    getFallbackImage(member))
-                                            }
-                                            alt={member.prenoms}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="grid-card-info">
-                                    <h4>
-                                        {member.prenoms} {member.nom}
-                                    </h4>
-                                    <div className="grid-card-famille">
-                                        {member.famille || "-"}
-                                    </div>
-                                    <div className="grid-card-classe">
-                                        {member.classeMethodiste || "-"}
-                                    </div>
-                                    <div className="grid-card-contact">
-                                        <svg
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                                            />
-                                        </svg>
-                                        {member.telephone || "-"}
-                                    </div>
-                                    <div className="grid-card-contact">
-                                        <svg
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                            />
-                                        </svg>
-                                        {member.email || "-"}
-                                    </div>
-                                    {member.profession && member.profession !== "-" && (
-                                        <div className="grid-card-profession">
-                                            💼 {member.profession}
-                                        </div>
-                                    )}
-                                    {/* Bouton Voir profil commenté */}
-                                    {/* <button onClick={() => openModal(member)} className="btn btn-view mt-3 w-full">Voir profil</button> */}
-                                </div>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="col-span-full text-center py-12 text-gray-400 italic">
-                            Aucun membre trouvé.
-                        </p>
-                    )}
-                </div>
-                <Pagination
-                    links={membersLinks}
-                    currentPage={membersCurrentPage}
-                    perPage={membersPerPage}
-                    total={membersTotal}
-                    onPageChange={(url, newPerPage) =>
-                        newPerPage
-                            ? handlePerPageChange(newPerPage)
-                            : handlePageChange(url)
-                    }
-                />
-            </>
-        );
-    };
-
-    const renderFamiliesView = () => {
-        const familyData =
-            Array.isArray(families?.data) && families.data.length > 0
-                ? families.data
-                : Array.isArray(families)
-                  ? families
-                  : [];
-
-        if (familyData.length === 0)
-            return (
-                <p className="text-center py-12 text-gray-400 italic">
-                    Aucune famille trouvée.
-                </p>
-            );
-        return (
-            <div className="families-list">
-                {familyData.map((family) => {
-                    const normalizedFamilyMembers = (family.members || [])
-                        .map(normalizeMember)
-                        .filter(Boolean);
-                    return (
-                        <div key={family.id} className="family-group">
-                            <div className="family-header">
-                                <h3>{family.nom}</h3>
-                                <span className="family-count">
-                                    {family.count}
-                                </span>
-                            </div>
-                            <div className="family-members">
-                                {normalizedFamilyMembers.map((member) => (
-                                    <div
-                                        key={member.id}
-                                        className="family-member-item"
-                                    >
-                                        <img
-                                            src={
-                                                member.photo ||
-                                                getFallbackImage(member)
-                                            }
-                                            onClick={(e) =>
-                                                openPhotoPopup(
-                                                    member.photo ||
-                                                        getFallbackImage(
-                                                            member,
-                                                        ),
-                                                    e,
-                                                )
-                                            }
-                                            onError={(e) =>
-                                                (e.target.src =
-                                                    getFallbackImage(member))
-                                            }
-                                            alt={member.prenoms}
-                                        />
-                                        {/* onClick du membre commenté */}
-                                        <div
-                                            className="member-info" /* onClick={() => openModal(member)} */
-                                        >
-                                            <strong>
-                                                {member.prenoms} {member.nom}
-                                            </strong>
-                                            <p>
-                                                {member.classeMethodiste || "-"}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                {member.telephone || "-"}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    );
-                })}
-                {families?.links && (
-                    <Pagination
-                        links={families.links}
-                        currentPage={families.current_page}
-                        perPage={families.per_page}
-                        total={families.total}
-                        onPageChange={handleFamilyPageChange}
-                    />
-                )}
-            </div>
-        );
-    };
-
-    // La vue Classes a été supprimée
-    const renderActiveView = () => {
-        switch (currentView) {
-            case "all":
-                return renderGridView();
-            case "families":
-                return renderFamiliesView();
-            default:
-                return renderGridView();
-        }
-    };
-
+  const Pagination = ({ links, currentPage, perPage, total, onPageChange }) => {
+    if (!links || links.length <= 3) return null;
     return (
-        <>
-            <Head title="Annuaire des membres" />
-            <style>{GLOBAL_STYLES}</style>
+      <div className="flex items-center justify-between px-4 py-3 bg-white/50 backdrop-blur-sm border-t border-white/50">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-700">
+            Affichage de {(currentPage - 1) * perPage + 1} à{" "}
+            {Math.min(currentPage * perPage, total)} sur {total} membres
+          </span>
+          {currentView === "all" && (
+            <select
+              value={perPage}
+              onChange={(e) => onPageChange(null, parseInt(e.target.value))}
+              className="input-control !py-1 !px-2 text-sm"
+            >
+              <option value={10}>10 par page</option>
+              <option value={20}>20 par page</option>
+              <option value={50}>50 par page</option>
+              <option value={100}>100 par page</option>
+            </select>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {links.map((link, index) =>
+            link.url === null ? (
+              <span
+                key={index}
+                className="btn btn-secondary !py-1 !px-3 disabled opacity-50"
+                dangerouslySetInnerHTML={{ __html: link.label }}
+              />
+            ) : (
+              <button
+                key={index}
+                onClick={() => onPageChange(link.url)}
+                className={`btn !py-1 !px-3 ${link.active ? "btn-primary" : "btn-secondary"}`}
+                dangerouslySetInnerHTML={{ __html: link.label }}
+              />
+            ),
+          )}
+        </div>
+      </div>
+    );
+  };
 
-            {/* MODAL FICHE MEMBRE - COMMENTÉ POUR NE PLUS S'AFFICHER */}
-            {/* {isModalOpen && (
+  const localSearchQuery = searchInput.trim().toLowerCase();
+  const matchesLocalSearch = (member) => {
+    if (!localSearchQuery) return true;
+    const haystack = [
+      member.nom,
+      member.prenoms,
+      member.telephone,
+      member.profession,
+      member.codeMembre,
+      member.codeFamille,
+      member.famille,
+      member.classeMethodiste,
+      member.email,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(localSearchQuery);
+  };
+  const filterMembersBySearch = (members) => members.filter(matchesLocalSearch);
+
+  const renderGridView = () => {
+    const normalizedMembers = paginatedMembers
+      .map(normalizeMember)
+      .filter(Boolean);
+    const visibleMembers = filterMembersBySearch(normalizedMembers);
+    return (
+      <>
+        <div className="grid-view">
+          {visibleMembers.length > 0 ? (
+            visibleMembers.map((member) => (
+              <div key={member.id} className="grid-card">
+                <div className="grid-cover"></div>
+                <div className="grid-profile-container">
+                  <div
+                    className="grid-profile-photo"
+                    onClick={(e) =>
+                      openPhotoPopup(
+                        member.photo || getFallbackImage(member),
+                        e,
+                      )
+                    }
+                  >
+                    <img
+                      src={member.photo || getFallbackImage(member)}
+                      onError={(e) => (e.target.src = getFallbackImage(member))}
+                      alt={member.prenoms}
+                    />
+                  </div>
+                </div>
+                <div className="grid-card-info">
+                  <h4>
+                    {member.prenoms} {member.nom}
+                  </h4>
+                  <div className="grid-card-famille">
+                    {member.famille || "-"}
+                  </div>
+                  <div className="grid-card-classe">
+                    {member.classeMethodiste || "-"}
+                  </div>
+                  <div className="grid-card-contact">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                      />
+                    </svg>
+                    {member.telephone || "-"}
+                  </div>
+                  <div className="grid-card-contact">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                    {member.email || "-"}
+                  </div>
+                  {member.profession && member.profession !== "-" && (
+                    <div className="grid-card-profession">
+                      💼 {member.profession}
+                    </div>
+                  )}
+                  {/* Bouton Voir profil commenté */}
+                  {/* <button onClick={() => openModal(member)} className="btn btn-view mt-3 w-full">Voir profil</button> */}
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="col-span-full text-center py-12 text-gray-400 italic">
+              Aucun membre trouvé.
+            </p>
+          )}
+        </div>
+        <Pagination
+          links={membersLinks}
+          currentPage={membersCurrentPage}
+          perPage={membersPerPage}
+          total={membersTotal}
+          onPageChange={(url, newPerPage) =>
+            newPerPage ? handlePerPageChange(newPerPage) : handlePageChange(url)
+          }
+        />
+      </>
+    );
+  };
+
+  const renderFamiliesView = () => {
+    const familyData =
+      Array.isArray(families?.data) && families.data.length > 0
+        ? families.data
+        : Array.isArray(families)
+          ? families
+          : [];
+
+    if (familyData.length === 0)
+      return (
+        <p className="text-center py-12 text-gray-400 italic">
+          Aucune famille trouvée.
+        </p>
+      );
+
+    const hasLocalSearch = localSearchQuery.length > 0;
+    const visibleFamilies = familyData
+      .map((family) => {
+        const normalizedFamilyMembers = (family.members || [])
+          .map(normalizeMember)
+          .filter(Boolean);
+        const visibleMembers = filterMembersBySearch(normalizedFamilyMembers);
+        if (hasLocalSearch && visibleMembers.length === 0) {
+          return null;
+        }
+        return {
+          family,
+          members: visibleMembers,
+          count: hasLocalSearch ? visibleMembers.length : family.count,
+        };
+      })
+      .filter(Boolean);
+
+    if (visibleFamilies.length === 0)
+      return (
+        <p className="text-center py-12 text-gray-400 italic">
+          Aucun membre trouvé.
+        </p>
+      );
+    return (
+      <div className="families-list">
+        {visibleFamilies.map(({ family, members, count }) => {
+          return (
+            <div key={family.id} className="family-group">
+              <div className="family-header">
+                <h3>{family.nom}</h3>
+                <span className="family-count">{count}</span>
+              </div>
+              <div className="family-members">
+                {members.map((member) => (
+                  <div key={member.id} className="family-member-item">
+                    <img
+                      src={member.photo || getFallbackImage(member)}
+                      onClick={(e) =>
+                        openPhotoPopup(
+                          member.photo || getFallbackImage(member),
+                          e,
+                        )
+                      }
+                      onError={(e) => (e.target.src = getFallbackImage(member))}
+                      alt={member.prenoms}
+                    />
+                    {/* onClick du membre commenté */}
+                    <div
+                      className="member-info" /* onClick={() => openModal(member)} */
+                    >
+                      <strong>
+                        {member.prenoms} {member.nom}
+                      </strong>
+                      <p>{member.classeMethodiste || "-"}</p>
+                      <p className="text-sm text-gray-600">
+                        {member.telephone || "-"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        {families?.links && (
+          <Pagination
+            links={families.links}
+            currentPage={families.current_page}
+            perPage={families.per_page}
+            total={families.total}
+            onPageChange={handleFamilyPageChange}
+          />
+        )}
+      </div>
+    );
+  };
+
+  // La vue Classes a été supprimée
+  const renderActiveView = () => {
+    switch (currentView) {
+      case "all":
+        return renderGridView();
+      case "families":
+        return renderFamiliesView();
+      default:
+        return renderGridView();
+    }
+  };
+
+  return (
+    <>
+      <Head title="Annuaire des membres" />
+      <style>{GLOBAL_STYLES}</style>
+
+      {/* MODAL FICHE MEMBRE - COMMENTÉ POUR NE PLUS S'AFFICHER */}
+      {/* {isModalOpen && (
                 <div className={`modal-overlay ${isExiting ? 'closing' : ''}`} onClick={closeModal}>
                     <div className={`modal-content ${isExiting ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
@@ -1039,178 +1045,181 @@ const Annuaire = ({
                 </div>
             )} */}
 
-            {/* POPUP PHOTO - toujours actif */}
-            {photoPopup.visible && (
-                <div
-                    ref={popupRef}
-                    className={`photo-popup ${photoPopup.exiting ? "closing" : ""}`}
-                    style={getPopupStyle()}
+      {/* POPUP PHOTO - toujours actif */}
+      {photoPopup.visible && (
+        <div
+          ref={popupRef}
+          className={`photo-popup ${photoPopup.exiting ? "closing" : ""}`}
+          style={getPopupStyle()}
+        >
+          <img src={photoPopup.src} alt="Agrandissement" />
+          <button className="photo-popup-close" onClick={closePhotoPopup}>
+            ×
+          </button>
+        </div>
+      )}
+
+      <div
+        className="min-h-screen py-8 px-4 animate-fade-in-up"
+        style={{
+          background:
+            "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
+        }}
+      >
+        <div className="w-full">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 w-full">
+            <div className="w-full md:w-auto flex-shrink-0">
+              <Link
+                href={withBasePath("", "/responsable-famille/dashboard")}
+                className="btn btn-secondary gap-2 w-full md:w-auto justify-center"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                    <img src={photoPopup.src} alt="Agrandissement" />
-                    <button
-                        className="photo-popup-close"
-                        onClick={closePhotoPopup}
-                    >
-                        ×
-                    </button>
-                </div>
-            )}
-
-            <div
-                className="min-h-screen py-8 px-4 animate-fade-in-up"
-                style={{
-                    background:
-                        "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
-                }}
-            >
-                <div className="w-full">
-                    <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 w-full">
-                        <div className="w-full md:w-auto flex-shrink-0">
-                            <Link
-                                href={withBasePath(
-                                    "",
-                                    "/responsable-famille/dashboard",
-                                )}
-                                className="btn btn-secondary gap-2 w-full md:w-auto justify-center"
-                            >
-                                <svg
-                                    className="w-5 h-5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                                    />
-                                </svg>
-                                Retour
-                            </Link>
-                        </div>
-                        <h1 className="text-xl md:text-2xl font-bold text-white text-center flex-1 order-first md:order-none">
-                            Annuaire des membres
-                        </h1>
-                        <div className="w-full md:w-auto flex-shrink-0"></div>
-                    </div>
-
-                    <div className="glass-panel filters-bar">
-                        <div className="filter-group">
-                            <div className="input-search-wrapper">
-                                <svg
-                                    className="input-search-icon"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                    />
-                                </svg>
-                                <input
-                                    type="text"
-                                    placeholder="Rechercher (nom, prénom, téléphone, profession, code membre, code famille)..."
-                                    className="input-control input-search"
-                                    value={searchTerm}
-                                    onChange={(e) =>
-                                        setSearchTerm(e.target.value)
-                                    }
-                                />
-                            </div>
-                            {/* Filtre classe supprimé */}
-                            <select
-                                value={familleFilter}
-                                onChange={(e) =>
-                                    setFamilleFilter(e.target.value)
-                                }
-                                className="input-control"
-                                style={{ minWidth: "140px" }}
-                            >
-                                <option value="">Toutes familles</option>
-                                {filterOptions.familles.map((f) => (
-                                    <option key={f.id} value={f.id}>
-                                        {f.nom}
-                                    </option>
-                                ))}
-                            </select>
-                            <select
-                                value={professionFilter}
-                                onChange={(e) =>
-                                    setProfessionFilter(e.target.value)
-                                }
-                                className="input-control"
-                                style={{ minWidth: "140px" }}
-                            >
-                                <option value="">Toutes professions</option>
-                                {filterOptions.professions.map((p) => (
-                                    <option key={p.value} value={p.value}>
-                                        {p.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <select
-                                value={roleFilter}
-                                onChange={(e) => setRoleFilter(e.target.value)}
-                                className="input-control"
-                                style={{ minWidth: "140px" }}
-                            >
-                                <option value="">Tous rôles</option>
-                                {filterOptions.roles.map((r) => (
-                                    <option key={r.value} value={r.value}>
-                                        {r.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <button
-                                onClick={resetFilters}
-                                className="btn btn-success"
-                            >
-                                <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                                Réinitialiser
-                            </button>
-                        </div>
-
-                        <div className="filter-second-row">
-                            <div className="filter-nav">
-                                {["all", "families"].map((viewKey) => (
-                                    <button
-                                        key={viewKey}
-                                        className={`filter-nav-btn ${currentView === viewKey ? "active" : ""}`}
-                                        onClick={() => switchView(viewKey)}
-                                    >
-                                        {viewKey === "all"
-                                            ? "Tous"
-                                            : "Familles"}
-                                    </button>
-                                ))}
-                            </div>
-                            {/* Pas de boutons Excel/PDF dans cette version */}
-                        </div>
-                    </div>
-
-                    <div className="table-container mt-6">
-                        {renderActiveView()}
-                    </div>
-                </div>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
+                </svg>
+                Retour
+              </Link>
             </div>
-        </>
-    );
+            <h1 className="text-xl md:text-2xl font-bold text-white text-center flex-1 order-first md:order-none">
+              Annuaire des membres
+            </h1>
+            <div className="w-full md:w-auto flex-shrink-0"></div>
+          </div>
+
+          <div className="glass-panel filters-bar">
+            <div className="filter-group">
+              <div className="input-search-wrapper">
+                <svg
+                  className="input-search-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Rechercher (nom, prénom, téléphone, profession, code membre, code famille)..."
+                  className="input-control input-search"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      submitSearch();
+                    }
+                  }}
+                />
+              </div>
+              {/* Filtre classe supprimé */}
+              <select
+                value={familleFilter}
+                onChange={(e) => setFamilleFilter(e.target.value)}
+                className="input-control"
+                style={{ minWidth: "140px" }}
+              >
+                <option value="">Toutes familles</option>
+                {filterOptions.familles.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.nom}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={professionFilter}
+                onChange={(e) => setProfessionFilter(e.target.value)}
+                className="input-control"
+                style={{ minWidth: "140px" }}
+              >
+                <option value="">Toutes professions</option>
+                {filterOptions.professions.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="input-control"
+                style={{ minWidth: "140px" }}
+              >
+                <option value="">Tous rôles</option>
+                {filterOptions.roles.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+              <button onClick={submitSearch} className="btn btn-primary">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                Rechercher
+              </button>
+              <button onClick={resetFilters} className="btn btn-success">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+                Réinitialiser
+              </button>
+            </div>
+
+            <div className="filter-second-row">
+              <div className="filter-nav">
+                {["all", "families"].map((viewKey) => (
+                  <button
+                    key={viewKey}
+                    className={`filter-nav-btn ${currentView === viewKey ? "active" : ""}`}
+                    onClick={() => switchView(viewKey)}
+                  >
+                    {viewKey === "all" ? "Tous" : "Familles"}
+                  </button>
+                ))}
+              </div>
+              {/* Pas de boutons Excel/PDF dans cette version */}
+            </div>
+          </div>
+
+          <div className="table-container mt-6">{renderActiveView()}</div>
+        </div>
+      </div>
+    </>
+  );
 };
 
 export default Annuaire;

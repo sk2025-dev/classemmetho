@@ -1037,9 +1037,109 @@ const StepDots = ({ current, total }) => (
 
 // ─────────────────────────────────────────
 // MAIN
+// ── Carte transfert externe en attente pasteur ──────────────────────────────
+function ExternalPendingCard({ transfer }) {
+    const [showRefuse, setShowRefuse] = useState(false);
+    const [reason, setReason] = useState("");
+    const [processing, setProcessing] = useState(false);
+
+    const approve = () => {
+        setProcessing(true);
+        router.post(withBasePath("", `/pasteur/transferts/${transfer.id}/approve`), {}, {
+            preserveScroll: true,
+            onFinish: () => setProcessing(false),
+        });
+    };
+
+    const refuse = () => {
+        if (!reason.trim()) return;
+        setProcessing(true);
+        router.post(withBasePath("", `/pasteur/transferts/${transfer.id}/refuse`), { reason }, {
+            preserveScroll: true,
+            onFinish: () => { setProcessing(false); setShowRefuse(false); setReason(""); },
+        });
+    };
+
+    const name   = transfer.member?.name || transfer.family?.name || "-";
+    const dest   = transfer.external_destination || [transfer.destination_church, transfer.destination_city].filter(Boolean).join(" — ") || "-";
+
+    return (
+        <div style={{ background: "#fff", border: "2px solid #e9d5ff", borderRadius: 16, overflow: "hidden" }}>
+            {/* En-tête */}
+            <div style={{ padding: "14px 18px", background: "#f5f3ff", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: "#7c3aed", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {transfer.type === "member" ? <User size={16} /> : <UsersRound size={16} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#1e1b4b" }}>{name}</div>
+                    <div style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600, marginTop: 2 }}>
+                        {transfer.type === "member" ? "Membre" : "Famille"} · <span style={{ fontFamily: "monospace" }}>{transfer.reference}</span>
+                    </div>
+                </div>
+                {/* Trajet */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#475569", background: "#f1f5f9", borderRadius: 8, padding: "4px 8px" }}>{transfer.classe_source?.nom || "-"}</span>
+                    <MapPin size={14} style={{ color: "#7c3aed" }} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#7c3aed", background: "#ede9fe", borderRadius: 8, padding: "4px 8px" }}>{dest}</span>
+                </div>
+            </div>
+
+            {/* Corps */}
+            <div style={{ padding: "12px 18px", display: "grid", gap: 10 }}>
+                <div style={{ display: "flex", gap: 20, flexWrap: "wrap", fontSize: 13, color: "#475569" }}>
+                    {transfer.created_by && <span>Demandé par <strong style={{ color: "#1e1b4b" }}>{transfer.created_by}</strong></span>}
+                    {transfer.created_at && <span>le <strong style={{ color: "#1e1b4b" }}>{transfer.created_at}</strong></span>}
+                </div>
+                {transfer.reason && (
+                    <div style={{ fontSize: 13, color: "#334155", background: "#f8fafc", borderRadius: 10, padding: "8px 12px", borderLeft: "3px solid #c4b5fd" }}>
+                        {transfer.reason}
+                    </div>
+                )}
+
+                {/* Actions */}
+                {!showRefuse ? (
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                        <button type="button" onClick={approve} disabled={processing}
+                            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, border: "none", borderRadius: 10, padding: "9px 16px", background: "#0f766e", color: "#fff", fontSize: 13, fontWeight: 700, cursor: processing ? "not-allowed" : "pointer", opacity: processing ? 0.7 : 1 }}>
+                            <CheckCircle size={15} />
+                            {processing ? "Traitement..." : "Approuver — Clôturer"}
+                        </button>
+                        <button type="button" onClick={() => setShowRefuse(true)} disabled={processing}
+                            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, border: "1px solid #fecdd3", borderRadius: 10, padding: "9px 16px", background: "#fff1f2", color: "#9f1239", fontSize: 13, fontWeight: 700, cursor: processing ? "not-allowed" : "pointer", opacity: processing ? 0.7 : 1 }}>
+                            <XCircle size={15} />
+                            Refuser
+                        </button>
+                    </div>
+                ) : (
+                    <div style={{ background: "#fff1f2", border: "1px solid #fecdd3", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
+                        <textarea
+                            rows={3}
+                            value={reason}
+                            onChange={e => setReason(e.target.value)}
+                            placeholder="Motif du refus (obligatoire)…"
+                            style={{ width: "100%", borderRadius: 10, border: "1px solid #fca5a5", padding: "10px 12px", fontSize: 13, resize: "vertical", outline: "none" }}
+                        />
+                        <div style={{ display: "flex", gap: 10 }}>
+                            <button type="button" onClick={() => { setShowRefuse(false); setReason(""); }}
+                                style={{ flex: 1, border: "1px solid #d9e2ef", borderRadius: 10, padding: "8px 14px", background: "#fff", color: "#334155", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                                Annuler
+                            </button>
+                            <button type="button" onClick={refuse} disabled={!reason.trim() || processing}
+                                style={{ flex: 1, border: "none", borderRadius: 10, padding: "8px 14px", background: "#dc2626", color: "#fff", fontSize: 13, fontWeight: 700, cursor: !reason.trim() || processing ? "not-allowed" : "pointer", opacity: !reason.trim() || processing ? 0.6 : 1 }}>
+                                {processing ? "Traitement..." : "Confirmer le refus"}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // ─────────────────────────────────────────
 export default function Index({
     transfers = [],
+    externalPending = [],
     classes = [],
     family = {},
     members = [],
@@ -1418,6 +1518,25 @@ export default function Index({
                             delay={180}
                         />
                     </div>
+
+                    {/* ── Transferts externes en attente de validation pastorale ── */}
+                    {externalPending.length > 0 && (
+                        <div className="card-enter" style={{ marginBottom: 28 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                                <div style={{ width: 4, height: 28, borderRadius: 999, background: "#7c3aed", boxShadow: "0 0 14px #7c3aed55" }} />
+                                <div>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>Sorties hors communauté — validation requise</div>
+                                    <div style={{ fontSize: 12, color: "rgba(255,255,255,.7)", marginTop: 2 }}>Ces demandes attendent votre approbation finale avant clôture.</div>
+                                </div>
+                                <span style={{ marginLeft: "auto", borderRadius: 999, padding: "4px 10px", background: "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 700 }}>{externalPending.length}</span>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                {externalPending.map(t => (
+                                    <ExternalPendingCard key={t.id} transfer={t} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Barre de recherche */}
                     {transfers.length > 0 && (

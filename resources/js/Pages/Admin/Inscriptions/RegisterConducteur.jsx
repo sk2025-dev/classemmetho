@@ -396,7 +396,7 @@ export default function RegisterConducteur({
         usePersistentState("registerConducteur_selectedRolesResponsable", []);
     const [selectedMembresRoles, setSelectedMembresRoles] = usePersistentState(
         "registerConducteur_selectedMembresRoles",
-        new Set(),
+        [],
     );
     const [selectedCity, setSelectedCity] = usePersistentState(
         "registerConducteur_selectedCity",
@@ -489,6 +489,23 @@ export default function RegisterConducteur({
         };
         fetchData();
     }, []);
+
+    // Purger les IDs de fonctions obsolètes (ex: fonctions combinées supprimées par migration)
+    useEffect(() => {
+        if (churchRoles.length > 0) {
+            const validIds = new Set(churchRoles.map((r) => String(r.id)));
+            setSelectedRolesResponsable((prev) =>
+                (Array.isArray(prev) ? prev : []).filter((id) =>
+                    validIds.has(String(id)),
+                ),
+            );
+            setSelectedMembresRoles((prev) =>
+                (Array.isArray(prev) ? prev : []).filter((id) =>
+                    validIds.has(String(id)),
+                ),
+            );
+        }
+    }, [churchRoles]);
 
     // Pré-remplir la classe du conducteur si authentifié
     useEffect(() => {
@@ -1023,10 +1040,13 @@ export default function RegisterConducteur({
             }
         });
 
-        // Envoyer les fonctions du responsable comme tableau
-        selectedRolesResponsable.forEach((id) => {
-            formData.append("responsable[fonction_ids][]", id);
-        });
+        // Envoyer les fonctions du responsable (uniquement IDs valides)
+        const validFonctionIds = new Set(churchRoles.map((r) => String(r.id)));
+        (Array.isArray(selectedRolesResponsable) ? selectedRolesResponsable : [])
+            .filter((id) => validFonctionIds.has(String(id)))
+            .forEach((id) => {
+                formData.append("responsable[fonction_ids][]", id);
+            });
 
         // --- 3. Membres ---
         if (membres.length > 0) {
@@ -1049,9 +1069,10 @@ export default function RegisterConducteur({
                             formData.append(`membres[${i}][photo]`, photoValue);
                         }
                     } else if (k === "fonction_ids" && Array.isArray(v)) {
-                        v.forEach((id) => {
-                            formData.append(`membres[${i}][fonction_ids][]`, id);
-                        });
+                        v.filter((id) => validFonctionIds.has(String(id)))
+                            .forEach((id) => {
+                                formData.append(`membres[${i}][fonction_ids][]`, id);
+                            });
                     } else if (k !== "photoPreview" && k !== "fonction") {
                         let valueToSend = v ?? "";
 
@@ -1204,7 +1225,6 @@ export default function RegisterConducteur({
         } catch (err) {
             const apiErrors = err?.response?.data?.errors || {};
             const apiMessage = err?.response?.data?.message;
-
             if (Object.keys(apiErrors).length > 0) {
                 // Construire un message d'erreur clair et lisible pour le toast
                 const errorList = Object.entries(apiErrors).flatMap(

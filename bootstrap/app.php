@@ -8,7 +8,15 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
-return Application::configure(basePath: dirname(__DIR__))
+$basePath = dirname(__DIR__);
+$publicPath = $basePath.'/public';
+
+// Hébergement mutualisé : Laravel dans demo/classemetho/, racine web = demo/
+if (! is_file($publicPath.'/index.php') && is_file(dirname($basePath).'/index.php')) {
+    $publicPath = dirname($basePath);
+}
+
+return Application::configure(basePath: $basePath)
     ->withRouting(
         web: __DIR__ . '/../routes/web.php',
         api: __DIR__ . '/../routes/api.php',
@@ -39,4 +47,6 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->create()
+    ->usePublicPath($publicPath);

@@ -61,11 +61,11 @@ export default function SelectionTypeInscription() {
                             "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
                     }}
                 >
-                    <div className="max-w-5xl mx-auto w-full relative z-10">
+                    <div className="max-w-7xl mx-auto w-full relative z-10">
                         {/* Header */}
                         <div className="mb-8 flex justify-between items-center">
                             <Link
-                                href={withBasePath("", "/admin/inscriptions/")}
+                                href={withBasePath("", "/admin/dashboard")}
                                 className="inline-flex items-center gap-2 text-white/80 hover:text-white font-medium transition-all duration-300 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/20 hover:bg-white/20"
                             >
                                 <ArrowLeft size={18} />
@@ -83,7 +83,7 @@ export default function SelectionTypeInscription() {
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
                             {cards.map((card, idx) =>
                                 card.isAction ? (
                                     <button

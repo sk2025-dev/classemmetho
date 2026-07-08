@@ -119,9 +119,7 @@ export default function MariageForm({
         );
 
         try {
-            const res = await axios.post(submitUrl, payload, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
+            const res = await axios.post(submitUrl, payload);
             const msg = res.data?.message || "Inscription de mariage soumise.";
             setSuccessMsg(msg);
             setSuccess(true);

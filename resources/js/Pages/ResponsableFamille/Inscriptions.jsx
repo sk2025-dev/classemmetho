@@ -79,6 +79,7 @@ export default function Inscriptions({
 }) {
     // États principaux
     const [searchTerm, setSearchTerm] = useState("");
+    const [memberToDelete, setMemberToDelete] = useState(null);
 
     // Filtrage pour la liste principale (Tableau)
     const filteredMembers = members.filter(
@@ -129,7 +130,43 @@ export default function Inscriptions({
         document.body.removeChild(link);
     };
 
+    const confirmDelete = () => {
+        if (!memberToDelete) return;
+        router.delete(withBasePath("", `/responsable-famille/members/${memberToDelete.id}`));
+        setMemberToDelete(null);
+    };
+
     return (
+        <>
+        {memberToDelete && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 border border-rose-100">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-rose-100 rounded-full">
+                            <Trash2 className="w-5 h-5 text-rose-600" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800">Supprimer le membre</h3>
+                    </div>
+                    <p className="text-gray-600 mb-6 text-sm">
+                        Voulez-vous vraiment supprimer <span className="font-semibold text-gray-900">{memberToDelete.prenom} {memberToDelete.nom}</span> de la famille ? Cette action est irréversible.
+                    </p>
+                    <div className="flex gap-3 justify-end">
+                        <button
+                            onClick={() => setMemberToDelete(null)}
+                            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors text-sm"
+                        >
+                            Annuler
+                        </button>
+                        <button
+                            onClick={confirmDelete}
+                            className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors text-sm flex items-center gap-2"
+                        >
+                            <Trash2 className="w-4 h-4" /> Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
         <div
             className="min-h-screen"
             style={{
@@ -293,76 +330,58 @@ export default function Inscriptions({
                 </div>
 
                 {/* Members Table */}
-                <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
                     {members.length > 0 ? (
                         <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead
-                                    style={{ backgroundColor: "#B6C01A" }}
-                                    className="text-white font-semibold"
-                                >
-                                    <tr>
-                                        <th className="px-6 py-4 text-left">
-                                            ID
-                                        </th>
-                                        <th className="px-6 py-4 text-left">
-                                            Nom & Photo
-                                        </th>
-                                        <th className="px-6 py-4 text-left">
-                                            Genre
-                                        </th>
-                                        <th className="px-6 py-4 text-left">
-                                            Email
-                                        </th>
-                                        <th className="px-6 py-4 text-left">
-                                            Téléphone
-                                        </th>
-                                        <th className="px-6 py-4 text-left">
-                                            Ville
-                                        </th>
-                                        <th className="px-6 py-4 text-left">
-                                            Profession
-                                        </th>
-                                        <th className="px-6 py-4 text-left">
-                                            Fonction Église
-                                        </th>
-                                        <th className="px-6 py-4 text-left">
-                                            Rôle
-                                        </th>
-                                        <th className="px-6 py-4 text-left">
-                                            Code Famille
-                                        </th>
-                                        <th className="px-6 py-4 text-left">
-                                            Code Membre
-                                        </th>
-                                        <th className="px-6 py-4 text-center">
-                                            Détails
-                                        </th>
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr style={{ background: "linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%)" }}>
+                                        {[
+                                            "ID", "Nom & Photo", "Code Membre", "Code Famille",
+                                            "Genre", "Email", "Téléphone", "Ville",
+                                            "Profession", "Fonction Église", "Rôle", "Actions",
+                                        ].map((label, i) => (
+                                            <th
+                                                key={label}
+                                                className={`px-5 py-4 text-xs font-bold uppercase tracking-wider text-white/90 whitespace-nowrap ${i === 11 ? "text-center" : "text-left"}`}
+                                            >
+                                                {label}
+                                            </th>
+                                        ))}
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="divide-y divide-gray-100">
                                     {filteredMembers.map((member, index) => (
                                         <tr
                                             key={member.id}
-                                            className={`border-b border-gray-200 ${member.is_deceased ? "bg-gray-100 opacity-60" : member.transfer_locked ? "opacity-60" : "hover:bg-gray-50"} ${member.is_deceased ? "" : index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                                            className={`transition-colors duration-150 ${
+                                                member.is_deceased
+                                                    ? "bg-gray-50 opacity-60"
+                                                    : member.transfer_locked
+                                                    ? "bg-amber-50/40 opacity-70"
+                                                    : index % 2 === 0
+                                                    ? "bg-white hover:bg-indigo-50/40"
+                                                    : "bg-slate-50/60 hover:bg-indigo-50/40"
+                                            }`}
                                         >
-                                            <td className="px-6 py-4 text-left text-sm font-medium text-gray-600">
-                                                #{member.id}
+                                            <td className="px-5 py-3.5 text-left">
+                                                <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-bold border border-indigo-100">
+                                                    {member.id}
+                                                </span>
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm font-medium text-gray-900">
+                                            <td className="px-5 py-3.5 text-left">
                                                 <div className="flex items-center gap-3">
                                                     <ProfilePhoto
                                                         user={member}
                                                         size="sm"
                                                         rounded={true}
                                                     />
-                                                    <div className="flex flex-col gap-1">
-                                                        <span>
-                                                            {member.prenom}{" "}
-                                                            {member.nom}
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="text-sm font-semibold text-gray-800 whitespace-nowrap">
+                                                            {member.prenom}{" "}{member.nom}
                                                         </span>
                                                         {member.is_deceased && (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-300 text-gray-600 border border-gray-400">
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-500">
                                                                 ✝ Décédé
                                                             </span>
                                                         )}
@@ -370,49 +389,41 @@ export default function Inscriptions({
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm">
-                                                <GenreBadge
-                                                    genre={member.genre}
-                                                />
+                                            <td className="px-5 py-3.5 text-left">
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-violet-50 border border-violet-200 text-xs font-bold text-violet-700 tracking-wide">
+                                                    {member.code_membre || "—"}
+                                                </span>
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                {member.email || "—"}
+                                            <td className="px-5 py-3.5 text-left">
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-sky-50 border border-sky-200 text-xs font-bold text-sky-700 tracking-wide">
+                                                    {family?.code_famille || "—"}
+                                                </span>
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                {member.telephone || "—"}
+                                            <td className="px-5 py-3.5 text-left">
+                                                <GenreBadge genre={member.genre} />
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                {member.ville_name || "—"}
+                                            <td className="px-5 py-3.5 text-left text-sm text-gray-500 max-w-[160px] truncate">
+                                                {member.email || <span className="text-gray-300">—</span>}
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                {member.profession || "—"}
+                                            <td className="px-5 py-3.5 text-left text-sm text-gray-600 whitespace-nowrap">
+                                                {member.telephone || <span className="text-gray-300">—</span>}
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                {member.fonction_name || "—"}
+                                            <td className="px-5 py-3.5 text-left text-sm text-gray-600">
+                                                {member.ville_name || <span className="text-gray-300">—</span>}
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm">
+                                            <td className="px-5 py-3.5 text-left text-sm text-gray-600">
+                                                {member.profession || <span className="text-gray-300">—</span>}
+                                            </td>
+                                            <td className="px-5 py-3.5 text-left text-sm text-gray-600">
+                                                {member.fonction_name || <span className="text-gray-300">—</span>}
+                                            </td>
+                                            <td className="px-5 py-3.5 text-left">
                                                 <StatusBadge
-                                                    role={
-                                                        member.is_responsable
-                                                            ? "responsable"
-                                                            : "membre"
-                                                    }
+                                                    role={member.is_responsable ? "responsable" : "membre"}
                                                 />
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm">
-                                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
-                                                    {family?.code_famille ||
-                                                        "N/A"}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-left text-sm">
-                                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
-                                                    {member.code_membre ||
-                                                        "N/A"}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-2">
+                                            <td className="px-5 py-3.5 text-center">
+                                                <div className="flex items-center justify-center gap-1">
                                                     <button
                                                         onClick={() =>
                                                             router.get(
@@ -422,7 +433,7 @@ export default function Inscriptions({
                                                                 ),
                                                             )
                                                         }
-                                                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1.5 rounded transition-colors"
+                                                        className="p-2 rounded-lg text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 transition-colors"
                                                         title="Voir détails"
                                                     >
                                                         <Eye className="w-4 h-4" />
@@ -437,7 +448,7 @@ export default function Inscriptions({
                                                             )
                                                         }
                                                         disabled={member.transfer_locked}
-                                                        className="text-green-600 hover:text-green-800 hover:bg-green-50 p-1.5 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                                        className="p-2 rounded-lg text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                                         title="Modifier"
                                                     >
                                                         <Edit className="w-4 h-4" />
@@ -445,24 +456,12 @@ export default function Inscriptions({
                                                     {!member.is_responsable && (
                                                         <button
                                                             onClick={() => {
-                                                                if (member.transfer_locked) {
-                                                                    return;
-                                                                }
-                                                                if (
-                                                                    confirm(
-                                                                        "Êtes-vous sûr de vouloir supprimer ce membre?",
-                                                                    )
-                                                                ) {
-                                                                    router.delete(
-                                                                        withBasePath(
-                                                                            "",
-                                                                            `/members/${member.id}`,
-                                                                        ),
-                                                                    );
+                                                                if (!member.transfer_locked) {
+                                                                    setMemberToDelete(member);
                                                                 }
                                                             }}
                                                             disabled={member.transfer_locked}
-                                                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                                            className="p-2 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                                             title="Supprimer"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
@@ -499,5 +498,6 @@ export default function Inscriptions({
                 </div>
             </div>
         </div>
+        </>
     );
 }

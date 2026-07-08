@@ -12,6 +12,11 @@ const IN_PROGRESS = [
     "TRANSMISE_AU_PASTEUR",
 ];
 const VALID = ["VALIDEE", "PUBLIEE", "ARCHIVEE", "CELEBRE", "TERMINE"];
+const CAN_DOWNLOAD_ANNONCE = [
+    "TRANSMISE_AU_BUREAU_CONDUCTEUR",
+    "TRANSMISE_AU_PASTEUR",
+    "VALIDEE", "PUBLIEE", "ARCHIVEE", "CELEBRE", "TERMINE",
+];
 const DONE = ["CELEBRE", "TERMINE"];
 const ACTE_PER_PAGE = 2;
 const FAMILY_PER_PAGE = 6;
@@ -87,14 +92,14 @@ const normalizeActe = (acte) => {
     const blockedCeremonyStatuts = [
         "CEREMONIE_SOUMISE_AU_CONDUCTEUR",
         "CEREMONIE_TRANSMISE_AU_PASTEUR",
+        "CEREMONIE_VALIDEE_PAR_PASTEUR",
+        "CEREMONIE_VALIDE_PAR_PASTEUR",
     ];
-    const hasFicheEnvoyee = Boolean(details.fiche_pasteur_envoyee);
 
     const canChooseDate =
         type === "mariage" &&
         validStatuts.includes(statut) &&
-        !blockedCeremonyStatuts.includes(ceremonyStatut) &&
-        hasFicheEnvoyee;
+        !blockedCeremonyStatuts.includes(ceremonyStatut);
 
     return {
         ...acte,
@@ -113,6 +118,8 @@ export default function Index({
     familyMembers: rawFamilyMembers = [],
     conducteurs = {},
     annonces: rawAnnonces = [],
+    flashAnnonces = [],
+    flashInfoBadgeCount = 0,
 }) {
     /* ── acte array défensif ── */
     const [localActes, setLocalActes] = useState(() => normalizeActes(actes));
@@ -174,16 +181,10 @@ export default function Index({
     const [selectedAnnonce, setSelectedAnnonce] = useState(null);
     const [annonceStep, setAnnonceStep] = useState(1);
     const [annonceProcessing, setAnnonceProcessing] = useState(false);
-    const [annonceForm, setAnnonceForm] = useState({
-        type_annonce: "",
-        motif: "",
-        temoignage_public: false,
-        membre_id: "",
-        message: "",
-        date_annonce: "",
-        heure_culte: "",
-    });
+    const [annonceForm, setAnnonceForm] = useState({ titre: "", contenu: "" });
+    const [localFlashAnnonces, setLocalFlashAnnonces] = useState(flashAnnonces);
     const [annPage, setAnnPage] = useState(1);
+    const [flashPage, setFlashPage] = useState(1);
     const [annFilter, setAnnFilter] = useState("tous");
 
     /* ── tabs principal ── */
@@ -223,7 +224,7 @@ export default function Index({
             setActiveTab("actes");
         }
         if (quickFilter === "mes_annonces") {
-            setActiveTab("annonces");
+            setActiveTab("actes");
         }
     }, [quickFilter]);
 
@@ -265,6 +266,10 @@ export default function Index({
         ),
     ).length;
     const familyName = guessFamilyName(familyMembers);
+    const isMarriage =
+        String(selectedActe?.type_acte || "")
+            .trim()
+            .toLowerCase() === "mariage";
     const detailRows = useMemo(
         () => formatDetails(selectedActe?.details),
         [selectedActe],
@@ -484,69 +489,41 @@ export default function Index({
     const goToAnn = (n) => setAnnPage(Math.max(1, Math.min(annTotalPages, n)));
 
     const openAnnonce = () => {
-        setAnnonceForm({
-            type_annonce: "",
-            motif: "",
-            temoignage_public: false,
-            membre_id: "",
-            message: "",
-            date_annonce: "",
-        });
-        setAnnonceStep(1);
+        setAnnonceForm({ titre: "", contenu: "" });
         setShowAnnonceModal(true);
     };
     const closeAnnonce = () => {
         if (annonceProcessing) return;
         setShowAnnonceModal(false);
-        setAnnonceStep(1);
-        setAnnonceForm({
-            type_annonce: "",
-            motif: "",
-            temoignage_public: false,
-            membre_id: "",
-            message: "",
-            date_annonce: "",
-        });
+        setAnnonceForm({ titre: "", contenu: "" });
     };
     const submitAnnonce = async () => {
-        if (!annonceForm.type_annonce || !annonceForm.message.trim()) {
-            notify("Veuillez remplir tous les champs obligatoires.", "error");
-            return;
-        }
-        if (
-            (annonceForm.type_annonce === "grace" || annonceForm.type_annonce === "priere") &&
-            !annonceForm.motif
-        ) {
-            notify("Veuillez sélectionner un motif.", "error");
-            return;
-        }
-        if (!annonceForm.membre_id) {
-            notify("Veuillez sélectionner un membre concerné.", "error");
+        if (!annonceForm.titre.trim() || !annonceForm.contenu.trim()) {
+            notify("Veuillez remplir le titre et le contenu.", "error");
             return;
         }
         try {
             setAnnonceProcessing(true);
             const res = await axios.post(
-                withBasePath("", "/responsable-famille/annonces"),
+                withBasePath("", "/responsable-famille/flash-annonces"),
                 annonceForm,
             );
             const newA = res.data?.annonce || {
-                ...annonceForm,
                 id: Date.now(),
                 statut: "SOUMISE",
+                details: { titre: annonceForm.titre, contenu: annonceForm.contenu },
                 created_at: new Date().toISOString(),
+                date_publication: null,
+                date_expiration: null,
+                reference: null,
             };
-            setAnnonces((prev) => [newA, ...prev]);
-            closeAnnonce();
+            setLocalFlashAnnonces((prev) => [newA, ...prev]);
+            setFlashPage(1);
             setActiveTab("annonces");
-            notify(
-                "✅ Demande de prière soumise ! Elle sera traitée par votre conducteur puis le pasteur.",
-            );
+            closeAnnonce();
+            notify("✅ Annonce soumise ! Elle sera publiée après validation par l'administrateur.");
         } catch (e) {
-            notify(
-                e?.response?.data?.message || "Une erreur est survenue.",
-                "error",
-            );
+            notify(e?.response?.data?.message || "Une erreur est survenue.", "error");
         } finally {
             setAnnonceProcessing(false);
         }
@@ -684,17 +661,17 @@ export default function Index({
                             Bonjour, <span>{familyName}</span>
                         </div>
                         <div className="welcome-sub">
-                            {enCours} demande(s) en cours · {valides} acte(s)
+                            {enCours + annStats.enCours} demande(s) en cours · {valides + annStats.validees} acte(s)
                             validé(s) · Certificats disponibles au
                             téléchargement
                         </div>
                     </div>
                     <div className="chips">
                         <span className="chip chip-terra">
-                            {enCours} en cours
+                            {enCours + annStats.enCours} en cours
                         </span>
                         <span className="chip chip-sage">
-                            {valides} validés
+                            {valides + annStats.validees} validés
                         </span>
                         <span className="chip chip-amber">
                             {familyMembers.length} membres
@@ -707,36 +684,53 @@ export default function Index({
                     <Kpi
                         tone="terra"
                         tag="Total"
-                        value={total}
+                        value={total + annStats.total}
                         label="Demandes soumises"
                     />
                     <Kpi
                         tone="amber"
                         tag="En cours"
-                        value={enCours}
+                        value={enCours + annStats.enCours}
                         label="En attente de validation"
                     />
                     <Kpi
                         tone="sage"
                         tag="Validés"
-                        value={valides}
+                        value={valides + annStats.validees}
                         label="Actes validés & certifiés"
                     />
                     <Kpi
                         tone="violet"
-                        tag="Demandes de prière"
-                        value={annStats.total}
-                        label="Demandes de prière envoyées"
+                        tag="Mes annonces"
+                        value={localFlashAnnonces.length}
+                        label="Annonces soumises au flash info"
                         clickable
-                        onClick={() => {
-                            setActiveTab("annonces");
-                        }}
+                        onClick={() => setActiveTab("annonces")}
                     />
                 </div>
 
                 {/* ── TABS PRINCIPAL ── */}
                 <div className="tabs-tools">
                     <div className="main-tabs">
+                        <button
+                            className={`mtab ${activeTab === "annonces" ? "active" : ""}`}
+                            onClick={() => setActiveTab("annonces")}
+                        >
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                            </svg>
+                            Mes annonces
+                            {localFlashAnnonces.filter(a => a.statut === 'SOUMISE').length > 0 && (
+                                <span className="tbadge tbadge-terra">
+                                    {localFlashAnnonces.filter(a => a.statut === 'SOUMISE').length}
+                                </span>
+                            )}
+                            {flashInfoBadgeCount > 0 && (
+                                <span className="tbadge tbadge-sage">
+                                    {flashInfoBadgeCount}
+                                </span>
+                            )}
+                        </button>
                         <button
                             className={`mtab ${activeTab === "actes" ? "active" : ""}`}
                             onClick={() => setActiveTab("actes")}
@@ -756,34 +750,9 @@ export default function Index({
                                 />
                             </svg>
                             Mes actes
-                            {enCours > 0 && (
+                            {(enCours + annStats.enCours) > 0 && (
                                 <span className="tbadge tbadge-terra">
-                                    {enCours}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            className={`mtab mtab-ann ${activeTab === "annonces" ? "active" : ""}`}
-                            onClick={() => setActiveTab("annonces")}
-                        >
-                            <svg
-                                width="13"
-                                height="13"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
-                                />
-                            </svg>
-                            Demandes de prière
-                            {annoncesEnCours > 0 && (
-                                <span className="tbadge tbadge-violet">
-                                    {annoncesEnCours}
+                                    {enCours + annStats.enCours}
                                 </span>
                             )}
                         </button>
@@ -854,7 +823,7 @@ export default function Index({
                                         + Nouvelle demande
                                     </Link>
                                 </div>
-                                {filteredActes.length === 0 && (
+                                {filteredActes.length === 0 && annFiltered.length === 0 && (
                                     <div className="empty">
                                         Aucune demande pour le moment.
                                     </div>
@@ -890,6 +859,8 @@ export default function Index({
                                     });
                                     const refusConducteur =
                                         histMap["REFUSEE_PAR_CONDUCTEUR"];
+                                    const refusBureauConducteur =
+                                        histMap["REFUSEE_PAR_BUREAU_CONDUCTEUR"];
                                     const refusPasteur =
                                         histMap["REFUSEE_PAR_PASTEUR"];
                                     const celebrationEntry =
@@ -934,6 +905,9 @@ export default function Index({
                                         };
                                     };
                                     const etapeConducteur = getEtape(
+                                        "TRANSMISE_AU_BUREAU_CONDUCTEUR",
+                                    );
+                                    const etapeBureauConducteur = getEtape(
                                         "TRANSMISE_AU_PASTEUR",
                                     );
                                     const etapePasteur = getEtape("VALIDEE");
@@ -1058,6 +1032,8 @@ export default function Index({
                                                     label="Validation du conducteur"
                                                     done={
                                                         statut ===
+                                                            "TRANSMISE_AU_BUREAU_CONDUCTEUR" ||
+                                                        statut ===
                                                             "TRANSMISE_AU_PASTEUR" ||
                                                         statut ===
                                                             "REFUSEE_PAR_CONDUCTEUR" ||
@@ -1077,6 +1053,31 @@ export default function Index({
                                                                   refusConducteur.created_at,
                                                               )
                                                             : etapeConducteur?.date
+                                                    }
+                                                />
+                                                <StatusStep
+                                                    label="Bureau des Conducteurs"
+                                                    done={
+                                                        statut ===
+                                                            "TRANSMISE_AU_PASTEUR" ||
+                                                        statut ===
+                                                            "REFUSEE_PAR_BUREAU_CONDUCTEUR" ||
+                                                        VALID.includes(statut)
+                                                    }
+                                                    active={
+                                                        statut ===
+                                                        "TRANSMISE_AU_BUREAU_CONDUCTEUR"
+                                                    }
+                                                    refused={
+                                                        statut ===
+                                                        "REFUSEE_PAR_BUREAU_CONDUCTEUR"
+                                                    }
+                                                    date={
+                                                        refusBureauConducteur
+                                                            ? formatDateTime(
+                                                                  refusBureauConducteur.created_at,
+                                                              )
+                                                            : etapeBureauConducteur?.date
                                                     }
                                                 />
                                                 <StatusStep
@@ -1219,6 +1220,94 @@ export default function Index({
                                         </button>
                                     </div>
                                 )}
+
+                                {/* ── DEMANDES DE PRIÈRE ── */}
+                                {annFiltered.length > 0 && (
+                                    <div style={{ marginTop: 24, borderTop: '2px solid #ede9fe', paddingTop: 16 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingLeft: 4 }}>
+                                            <div>
+                                                <div className="ph-title" style={{ fontSize: 14 }}>🙏 Mes demandes de prière</div>
+                                                <div className="ph-sub">Suivi en temps réel de chaque étape</div>
+                                            </div>
+                                            <span style={{ fontSize: 12, fontWeight: 700, background: '#ede9fe', color: '#7c3aed', borderRadius: 99, padding: '2px 10px' }}>
+                                                {annFiltered.length}
+                                            </span>
+                                        </div>
+
+                                        {pagedAnn.map((ann) => {
+                                            const t = ANNONCE_TYPES.find(
+                                                (x) => x.value === ann.type_annonce || x.value === ann.type_acte,
+                                            );
+                                            const isValid  = VALID.includes(ann.statut);
+                                            const isRefuse = String(ann.statut).startsWith("REFUSEE");
+                                            const msg = ann.details?.contenu || ann.message || "";
+                                            const member = ann.membre ? `${ann.membre.prenom} ${ann.membre.nom}` : null;
+                                            return (
+                                                <div
+                                                    key={ann.id}
+                                                    className={`ann-item-rf ${isRefuse ? "ann-item-refuse" : isValid ? "ann-item-valid" : ""}`}
+                                                    onClick={() => setSelectedAnnonce(ann)}
+                                                >
+                                                    <div className={`ann-item-icon atype-${t?.color}`}>
+                                                        {t?.emoji || "🙏"}
+                                                    </div>
+                                                    <div className="ann-item-body">
+                                                        <div className="ann-item-header">
+                                                            <span className="ann-item-name">{t?.label || ann.type_annonce}</span>
+                                                            {member && <span className="ann-item-who">— {member}</span>}
+                                                        </div>
+                                                        <div className="ann-item-msg">
+                                                            {msg.slice(0, 100)}{msg.length > 100 ? "…" : ""}
+                                                        </div>
+                                                        <div className="ann-item-meta">
+                                                            {ann.created_at && (
+                                                                <span>📅 {formatDate(ann.created_at)}</span>
+                                                            )}
+                                                        </div>
+                                                        <AnnonceDotTrack statut={ann.statut} ann={ann} />
+                                                    </div>
+                                                    <div className="ann-item-right">
+                                                        {/* Badge statut */}
+                                                        {isRefuse && <span className="ann-badge ann-badge-terra">REFUSÉE</span>}
+                                                        {isValid && <span className="ann-badge ann-badge-sage">PUBLIÉE</span>}
+                                                        {!isValid && !isRefuse && ann.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" && (
+                                                            <span className="ann-badge" style={{ background: "#ede9fe", color: "#7c3aed" }}>CHEZ LE BUREAU</span>
+                                                        )}
+                                                        {!isValid && !isRefuse && ann.statut === "TRANSMISE_AU_PASTEUR" && (
+                                                            <span className="ann-badge" style={{ background: "#dbeafe", color: "#1d4ed8" }}>CHEZ LE PASTEUR</span>
+                                                        )}
+                                                        {!isValid && !isRefuse && !["TRANSMISE_AU_BUREAU_CONDUCTEUR", "TRANSMISE_AU_PASTEUR"].includes(ann.statut) && (
+                                                            <span className="ann-badge ann-badge-orange">EN COURS</span>
+                                                        )}
+                                                        {/* Bouton fiche dès la validation conducteur */}
+                                                        {CAN_DOWNLOAD_ANNONCE.includes(ann.statut) && (
+                                                            <button
+                                                                type="button"
+                                                                className="btn-pdf btn-pdf-sm"
+                                                                style={{ marginTop: 4 }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    window.open(`/responsable-famille/annonces/${ann.id}/fiche`, "_blank");
+                                                                }}
+                                                            >
+                                                                📄 Voir la fiche
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+
+                                        {annTotalPages > 1 && (
+                                            <div className="pager">
+                                                <button type="button" className="pager-btn" onClick={() => setAnnPage(p => Math.max(1, p - 1))} disabled={annPage === 1}>Précédent</button>
+                                                <span className="pager-info">Page {annPage} / {annTotalPages}</span>
+                                                <button type="button" className="pager-btn" onClick={() => setAnnPage(p => Math.min(annTotalPages, p + 1))} disabled={annPage === annTotalPages}>Suivant</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                             </section>
 
                             {/* MEMBRES */}
@@ -1366,20 +1455,9 @@ export default function Index({
                                     Faire une annonce
                                 </div>
                                 <div className="cta-ann-sub">
-                                    Partagez une demande de prière, une action
-                                    de grâce, un avis de décès ou des
-                                    félicitations avec toute l'assemblée.
-                                </div>
-                                <div className="cta-ann-types">
-                                    {ANNONCE_TYPES.map((t) => (
-                                        <span
-                                            key={t.value}
-                                            className={`cann-pill cann-${t.color}`}
-                                        >
-                                            {t.emoji}{" "}
-                                            {t.label.split("/")[0].trim()}
-                                        </span>
-                                    ))}
+                                    Partagez une information avec toute
+                                    l'assemblée. Votre annonce sera publiée
+                                    dans le flash info après validation.
                                 </div>
                                 <button
                                     type="button"
@@ -1417,8 +1495,7 @@ export default function Index({
                                             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                                         />
                                     </svg>{" "}
-                                    Validée par conducteur puis pasteur · Fiche
-                                    PDF générée
+                                    Validée par l'administrateur · Publiée dans le flash info
                                 </div>
                             </section>
                             <section className="cta-card">
@@ -1461,23 +1538,144 @@ export default function Index({
                     </div>
                 )}
 
-                {/* ══════════ ★★★ TAB ANNONCES ★★★ ══════════ */}
+                {/* ══════════ TAB MES ANNONCES ══════════ */}
                 {activeTab === "annonces" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                        {/* Header */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                <span style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>Mes annonces</span>
+                                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>({localFlashAnnonces.length})</span>
+                            </div>
+                            <button type="button" className="btn-cta-ann btn-cta-ann-sm" onClick={openAnnonce}>
+                                + Nouvelle annonce
+                            </button>
+                        </div>
+
+                        {/* Liste */}
+                        {localFlashAnnonces.length === 0 ? (
+                            <div style={{ textAlign: "center", padding: "48px 24px", background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(15,23,42,0.06)" }}>
+                                <div style={{ fontSize: 36, marginBottom: 12 }}>📢</div>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 6 }}>Aucune annonce soumise</div>
+                                <div style={{ fontSize: 13, color: "#6b7280" }}>Cliquez sur "+ Nouvelle annonce" pour soumettre une annonce au flash info.</div>
+                            </div>
+                        ) : (() => {
+                            const FLASH_PER_PAGE = 5;
+                            const flashTotalPages = Math.ceil(localFlashAnnonces.length / FLASH_PER_PAGE);
+                            const pagedFlash = localFlashAnnonces.slice((flashPage - 1) * FLASH_PER_PAGE, flashPage * FLASH_PER_PAGE);
+                            return (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                {pagedFlash.map((ann) => {
+                                    const titre = ann.details?.titre || "(Sans titre)";
+                                    const contenu = ann.details?.contenu || "";
+                                    const statut = ann.statut || "SOUMISE";
+                                    const isExpired = ann.date_expiration && new Date(ann.date_expiration) < new Date();
+
+                                    const fmtDate = (val) => {
+                                        if (!val) return null;
+                                        const d = new Date(val);
+                                        return isNaN(d.getTime()) ? null : d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) + " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+                                    };
+
+                                    const statutConfig = {
+                                        SOUMISE:  { label: "En attente", bg: "#fef9c3", color: "#92400e", border: "#fde68a" },
+                                        PUBLIEE:  { label: "Publiée",    bg: "#dcfce7", color: "#166534", border: "#bbf7d0" },
+                                        ARCHIVEE: { label: "Archivée",   bg: "#f3f4f6", color: "#6b7280", border: "#d1d5db" },
+                                    };
+                                    const cfg = statutConfig[statut] || { label: statut, bg: "#f3f4f6", color: "#6b7280", border: "#d1d5db" };
+
+                                    return (
+                                        <div key={ann.id} style={{
+                                            background: "#fff",
+                                            borderRadius: 12,
+                                            border: `1px solid ${statut === "PUBLIEE" ? "#bbf7d0" : "#e5e7eb"}`,
+                                            boxShadow: "0 1px 4px rgba(15,23,42,0.07)",
+                                            padding: "16px 20px",
+                                            display: "flex", flexDirection: "column", gap: 8,
+                                            opacity: isExpired ? 0.6 : 1,
+                                        }}>
+                                            {/* Titre + statut */}
+                                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                                                    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#3b82f6" strokeWidth="2.5" style={{ flexShrink: 0 }}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                                    <span style={{ fontWeight: 700, fontSize: 14, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{titre}</span>
+                                                    {isExpired && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 20, background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa", flexShrink: 0 }}>Expiré</span>}
+                                                </div>
+                                                <span style={{ flexShrink: 0, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
+                                                    {cfg.label}
+                                                </span>
+                                            </div>
+
+                                            {/* Contenu */}
+                                            {contenu && (
+                                                <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, margin: 0, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                                                    {contenu}
+                                                </p>
+                                            )}
+
+                                            {/* Footer méta */}
+                                            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px 16px", fontSize: 12, color: "#9ca3af", borderTop: "1px solid #f3f4f6", paddingTop: 8, marginTop: 2 }}>
+                                                {fmtDate(statut === "PUBLIEE" ? ann.date_publication : ann.created_at) && (
+                                                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                                                        {statut === "PUBLIEE" ? "Publiée le " : "Soumise le "}{fmtDate(statut === "PUBLIEE" ? ann.date_publication : ann.created_at)}
+                                                    </span>
+                                                )}
+                                                {ann.date_expiration && (
+                                                    <span style={{ display: "flex", alignItems: "center", gap: 4, color: isExpired ? "#f97316" : "#9ca3af" }}>
+                                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                                        Expire le {new Date(ann.date_expiration).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                                                    </span>
+                                                )}
+                                                {ann.reference && (
+                                                    <span style={{ color: "#d1d5db" }}>Réf. {ann.reference}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {flashTotalPages > 1 && (
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, paddingTop: 8 }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFlashPage(p => Math.max(1, p - 1))}
+                                            disabled={flashPage === 1}
+                                            style={{ padding: "6px 14px", borderRadius: 8, background: "#fff", border: "1px solid #e5e7eb", fontSize: 13, fontWeight: 600, color: "#374151", cursor: flashPage === 1 ? "not-allowed" : "pointer", opacity: flashPage === 1 ? 0.4 : 1 }}
+                                        >← Précédent</button>
+                                        {Array.from({ length: flashTotalPages }, (_, i) => i + 1).map(n => (
+                                            <button
+                                                key={n}
+                                                type="button"
+                                                onClick={() => setFlashPage(n)}
+                                                style={{ padding: "6px 12px", borderRadius: 8, fontSize: 13, fontWeight: 700, border: "1px solid", background: flashPage === n ? "#2563eb" : "#fff", color: flashPage === n ? "#fff" : "#374151", borderColor: flashPage === n ? "#2563eb" : "#e5e7eb", cursor: "pointer" }}
+                                            >{n}</button>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={() => setFlashPage(p => Math.min(flashTotalPages, p + 1))}
+                                            disabled={flashPage === flashTotalPages}
+                                            style={{ padding: "6px 14px", borderRadius: 8, background: "#fff", border: "1px solid #e5e7eb", fontSize: 13, fontWeight: 600, color: "#374151", cursor: flashPage === flashTotalPages ? "not-allowed" : "pointer", opacity: flashPage === flashTotalPages ? 0.4 : 1 }}
+                                        >Suivant →</button>
+                                    </div>
+                                )}
+                            </div>
+                            );
+                        })()}
+                    </div>
+                )}
+
+                {/* ══════════ PANEL ANNONCES ANCIEN (désactivé) ══════════ */}
+                {false && (
                     <div className="ann-tab-root">
-                        {/* ── SOUS-TABS ── */}
-                        <div className="ann-subtabs-bar">
+                        <div className="ann-subtabs-bar" style={{ borderTop: '2px solid #ede9fe', paddingTop: 10, marginTop: 4 }}>
                             <div className="ann-subtabs">
-                                <button
-                                    className="ann-stab active"
-                                    onClick={() => setAnnPage(1)}
-                                >
-                                    Mes demandes de prière
+                                <span style={{ fontSize: 14, fontWeight: 700, color: '#7c3aed', display: 'flex', alignItems: 'center', gap: 7 }}>
+                                    🙏 Mes demandes de prière
                                     {annStats.total > 0 && (
-                                        <span className="ann-stab-badge">
-                                            {annStats.total}
-                                        </span>
+                                        <span className="ann-stab-badge">{annStats.total}</span>
                                     )}
-                                </button>
+                                </span>
                             </div>
                             <div className="ann-filters">
                                 {[
@@ -1489,10 +1687,7 @@ export default function Index({
                                     <button
                                         key={f.v}
                                         className={`ann-filter-btn ${annFilter === f.v ? "active" : ""}`}
-                                        onClick={() => {
-                                            setAnnFilter(f.v);
-                                            setAnnPage(1);
-                                        }}
+                                        onClick={() => { setAnnFilter(f.v); setAnnPage(1); }}
                                     >
                                         {f.l}
                                     </button>
@@ -1634,25 +1829,24 @@ export default function Index({
                                                 {/* Progress tracker */}
                                                 <AnnonceDotTrack
                                                     statut={ann.statut}
+                                                    ann={ann}
                                                 />
                                             </div>
                                             <div className="ann-item-right">
-                                                {isCours && (
-                                                    <span className="ann-badge ann-badge-orange">
-                                                        EN COURS
-                                                    </span>
+                                                {/* Badges statut */}
+                                                {isRefuse && <span className="ann-badge ann-badge-terra">REFUSÉE</span>}
+                                                {isValid && <span className="ann-badge ann-badge-sage">PUBLIÉE</span>}
+                                                {isCours && ann.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" && (
+                                                    <span className="ann-badge" style={{ background: "#ede9fe", color: "#7c3aed" }}>CHEZ LE BUREAU</span>
                                                 )}
-                                                {isValid && (
-                                                    <span className="ann-badge ann-badge-sage">
-                                                        PUBLIÉE
-                                                    </span>
+                                                {isCours && ann.statut === "TRANSMISE_AU_PASTEUR" && (
+                                                    <span className="ann-badge" style={{ background: "#dbeafe", color: "#1d4ed8" }}>CHEZ LE PASTEUR</span>
                                                 )}
-                                                {isRefuse && (
-                                                    <span className="ann-badge ann-badge-terra">
-                                                        REFUSÉE
-                                                    </span>
+                                                {isCours && !["TRANSMISE_AU_BUREAU_CONDUCTEUR", "TRANSMISE_AU_PASTEUR"].includes(ann.statut) && (
+                                                    <span className="ann-badge ann-badge-orange">EN COURS</span>
                                                 )}
-                                                {isValid && (
+                                                {/* Bouton fiche accessible dès validation conducteur */}
+                                                {CAN_DOWNLOAD_ANNONCE.includes(ann.statut) && (
                                                     <button
                                                         type="button"
                                                         className="btn-pdf btn-pdf-sm"
@@ -1664,8 +1858,7 @@ export default function Index({
                                                             );
                                                         }}
                                                     >
-                                                        <Eye size={11} /> Voir
-                                                        la fiche
+                                                        <Eye size={11} /> Voir la fiche
                                                     </button>
                                                 )}
                                                 <svg
@@ -1950,7 +2143,7 @@ export default function Index({
                 )}
             </div>
 
-            {/* ══════════ MODAL : NOUVELLE ANNONCE 3 ÉTAPES ══════════ */}
+            {/* ══════════ MODAL : FLASH ANNONCE ══════════ */}
             {showAnnonceModal && (
                 <div className="modal-overlay" onClick={closeAnnonce}>
                     <div
@@ -1959,15 +2152,9 @@ export default function Index({
                     >
                         <div className="modal-head">
                             <div>
-                                <div className="modal-title">
-                                    {annonceStep === 1 && "Type de demande de prière"}
-                                    {annonceStep === 2 &&
-                                        `${selectedType?.emoji || "🙏"} ${selectedType?.label || "Demande de prière"}`}
-                                    {annonceStep === 3 && "Confirmation"}
-                                </div>
+                                <div className="modal-title">📢 Faire une annonce</div>
                                 <div className="modal-sub">
-                                    Étape {annonceStep} / 3 · Circuit :
-                                    Conducteur → Pasteur → Publication
+                                    Sera publiée dans le flash info après validation de l'admin
                                 </div>
                             </div>
                             <button
@@ -1979,384 +2166,50 @@ export default function Index({
                             </button>
                         </div>
 
-                        {/* Steps pill */}
-                        <div className="ann-steps-bar">
-                            {["Type", "Détails", "Confirmation"].map((s, i) => (
-                                <div
-                                    key={i}
-                                    className={`asb-step ${annonceStep > i + 1 ? "done" : annonceStep === i + 1 ? "active" : ""}`}
-                                >
-                                    <div className="asb-dot">
-                                        {annonceStep > i + 1 ? "✓" : i + 1}
-                                    </div>
-                                    <span>{s}</span>
-                                </div>
-                            ))}
-                        </div>
 
                         <div className="modal-body">
-                            {/* ÉTAPE 1 */}
-                            {annonceStep === 1 && (
-                                <div className="ann-type-grid">
-                                    {ANNONCE_TYPES.map((t) => (
-                                        <button
-                                            key={t.value}
-                                            type="button"
-                                            className={`ann-type-btn atype-${t.color} ${annonceForm.type_annonce === t.value ? "sel" : ""}`}
-                                            onClick={() =>
-                                                setAnnonceForm((f) => ({
-                                                    ...f,
-                                                    type_annonce: t.value,
-                                                    motif: "",
-                                                }))
-                                            }
-                                        >
-                                            <span className="atb-emoji">
-                                                {t.emoji}
-                                            </span>
-                                            <span className="atb-label">
-                                                {t.label}
-                                            </span>
-                                            {annonceForm.type_annonce ===
-                                                t.value && (
-                                                <span className="atb-check">
-                                                    ✓
-                                                </span>
-                                            )}
-                                        </button>
-                                    ))}
+                            <div className="ann-form">
+                                <Field label="Titre de l'annonce" required>
+                                    <input
+                                        className="ann-input"
+                                        type="text"
+                                        placeholder="Ex: Cérémonie de mariage, Annonce de naissance..."
+                                        value={annonceForm.titre}
+                                        onChange={(e) => setAnnonceForm((f) => ({ ...f, titre: e.target.value }))}
+                                        maxLength={255}
+                                    />
+                                </Field>
+                                <Field label="Contenu de l'annonce" required>
+                                    <textarea
+                                        className="ann-textarea"
+                                        rows={5}
+                                        placeholder="Décrivez votre annonce en détail..."
+                                        value={annonceForm.contenu}
+                                        onChange={(e) => setAnnonceForm((f) => ({ ...f, contenu: e.target.value }))}
+                                        maxLength={2000}
+                                    />
+                                    <div className="ann-chars">{annonceForm.contenu.length}/2000</div>
+                                </Field>
+                                <div className="ann-visibility">
+                                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Visible par toute la paroisse après validation de l'administrateur
                                 </div>
-                            )}
-
-                            {/* ÉTAPE 2 */}
-                            {annonceStep === 2 && (
-                                <div className="ann-form">
-                                    {(annonceForm.type_annonce === "grace" || annonceForm.type_annonce === "priere") && (
-                                        <Field label="Motif" required>
-                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-                                                {(annonceForm.type_annonce === "grace" ? MOTIFS_GRACE : MOTIFS_INTERCESSION).map((m) => (
-                                                    <button
-                                                        key={m.value}
-                                                        type="button"
-                                                        onClick={() => setAnnonceForm((f) => ({ ...f, motif: m.value }))}
-                                                        style={{
-                                                            padding: "6px 14px",
-                                                            borderRadius: 20,
-                                                            border: annonceForm.motif === m.value ? "2px solid #d97706" : "1.5px solid #d1d5db",
-                                                            background: annonceForm.motif === m.value ? "#fffbeb" : "#fff",
-                                                            color: annonceForm.motif === m.value ? "#b45309" : "#374151",
-                                                            fontWeight: annonceForm.motif === m.value ? 700 : 400,
-                                                            fontSize: 12,
-                                                            cursor: "pointer",
-                                                            transition: "all .15s",
-                                                        }}
-                                                    >
-                                                        {annonceForm.motif === m.value && "✓ "}{m.label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </Field>
-                                    )}
-                                    {(annonceForm.type_annonce === "grace" || annonceForm.type_annonce === "priere") && (
-                                        <Field label="Voulez-vous rendre publiquement témoignage ?">
-                                            <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                                                {[{ val: true, label: "OUI" }, { val: false, label: "NON" }].map(({ val, label }) => (
-                                                    <button
-                                                        key={label}
-                                                        type="button"
-                                                        onClick={() => setAnnonceForm((f) => ({ ...f, temoignage_public: val }))}
-                                                        style={{
-                                                            padding: "6px 20px",
-                                                            borderRadius: 20,
-                                                            border: annonceForm.temoignage_public === val ? "2px solid #d97706" : "1.5px solid #d1d5db",
-                                                            background: annonceForm.temoignage_public === val ? "#fffbeb" : "#fff",
-                                                            color: annonceForm.temoignage_public === val ? "#b45309" : "#374151",
-                                                            fontWeight: annonceForm.temoignage_public === val ? 700 : 400,
-                                                            fontSize: 12,
-                                                            cursor: "pointer",
-                                                        }}
-                                                    >
-                                                        {label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
-                                                Pour cas exceptionnel
-                                            </div>
-                                        </Field>
-                                    )}
-                                    <Field
-                                        label="Personne concernée"
-                                        required
-                                    >
-                                        <select
-                                            className="ann-input"
-                                            value={annonceForm.membre_id}
-                                            onChange={(e) =>
-                                                setAnnonceForm((f) => ({
-                                                    ...f,
-                                                    membre_id: e.target.value,
-                                                }))
-                                            }
-                                        >
-                                            <option value="">
-                                                -- Sélectionnez un membre --
-                                            </option>
-                                            {familyMembers.map((m) => (
-                                                <option key={m.id} value={m.id}>
-                                                    {m.prenom} {m.nom}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </Field>
-                                    <Field
-                                        label="Message de l'annonce"
-                                        required
-                                    >
-                                        <textarea
-                                            className="ann-textarea"
-                                            rows={4}
-                                            placeholder={getPlaceholder(
-                                                annonceForm.type_annonce,
-                                            )}
-                                            value={annonceForm.message}
-                                            onChange={(e) =>
-                                                setAnnonceForm((f) => ({
-                                                    ...f,
-                                                    message: e.target.value,
-                                                }))
-                                            }
-                                        />
-                                        <div className="ann-chars">
-                                            {annonceForm.message.length}/500
-                                        </div>
-                                    </Field>
-                                    <div style={{ display: "flex", gap: 12 }}>
-                                        <Field label="Date du culte" style={{ flex: 1 }}>
-                                            <input
-                                                className="ann-input"
-                                                type="date"
-                                                value={annonceForm.date_annonce}
-                                                onChange={(e) =>
-                                                    setAnnonceForm((f) => ({
-                                                        ...f,
-                                                        date_annonce:
-                                                            e.target.value,
-                                                    }))
-                                                }
-                                            />
-                                        </Field>
-                                        <Field label="Heure du culte" style={{ flex: 1 }}>
-                                            <input
-                                                className="ann-input"
-                                                type="time"
-                                                value={annonceForm.heure_culte}
-                                                onChange={(e) =>
-                                                    setAnnonceForm((f) => ({
-                                                        ...f,
-                                                        heure_culte:
-                                                            e.target.value,
-                                                    }))
-                                                }
-                                            />
-                                        </Field>
-                                    </div>
-                                    <div className="ann-visibility">
-                                        <svg
-                                            width="13"
-                                            height="13"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h.5A2.5 2.5 0 0021.5 5.5v-1.565"
-                                            />
-                                        </svg>
-                                        Visible par toute la paroisse après
-                                        validation du pasteur
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ÉTAPE 3 */}
-                            {annonceStep === 3 && (
-                                <div className="ann-recap">
-                                    <div
-                                        className={`ann-recap-type atype-${selectedType?.color}`}
-                                    >
-                                        <span style={{ fontSize: 30 }}>
-                                            {selectedType?.emoji}
-                                        </span>
-                                        <div>
-                                            <div className="art-label">
-                                                {selectedType?.label}
-                                            </div>
-                                            {selectedMotifLabel && (
-                                                <div className="art-sub" style={{ fontWeight: 600 }}>
-                                                    Motif : {selectedMotifLabel}
-                                                </div>
-                                            )}
-                                            <div className="art-sub">
-                                                Demande de prière paroissiale
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {annonceForm.membre_id && (
-                                        <RecapRow
-                                            label="Concerné(e)"
-                                            value={(() => {
-                                                const m = familyMembers.find(
-                                                    (fm) =>
-                                                        String(fm.id) ===
-                                                        String(
-                                                            annonceForm.membre_id,
-                                                        ),
-                                                );
-                                                return m
-                                                    ? `${m.prenom} ${m.nom}`
-                                                    : "Membre";
-                                            })()}
-                                        />
-                                    )}
-                                    {annonceForm.date_annonce && (
-                                        <RecapRow
-                                            label="Date du culte"
-                                            value={formatDate(
-                                                annonceForm.date_annonce,
-                                            )}
-                                        />
-                                    )}
-                                    {annonceForm.heure_culte && (
-                                        <RecapRow
-                                            label="Heure du culte"
-                                            value={annonceForm.heure_culte}
-                                        />
-                                    )}
-                                    <div className="ann-recap-msg">
-                                        <div className="arm-label">Message</div>
-                                        <div className="arm-text">
-                                            {annonceForm.message}
-                                        </div>
-                                    </div>
-                                    <div className="ann-circuit-info">
-                                        <svg
-                                            width="13"
-                                            height="13"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                            />
-                                        </svg>
-                                        Après soumission :{" "}
-                                        <strong>Conducteur</strong> →{" "}
-                                        <strong>Pasteur</strong> →{" "}
-                                        <strong>Publication + Fiche PDF</strong>
-                                    </div>
-                                </div>
-                            )}
+                            </div>
                         </div>
-
                         <div className="modal-foot">
-                            {annonceStep > 1 ? (
-                                <button
-                                    type="button"
-                                    className="btn-mghost"
-                                    onClick={() => setAnnonceStep((s) => s - 1)}
-                                >
-                                    ← Retour
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    className="btn-mghost"
-                                    onClick={closeAnnonce}
-                                >
-                                    Annuler
-                                </button>
-                            )}
-                            {annonceStep < 3 ? (
-                                <button
-                                    type="button"
-                                    className="btn-mnext"
-                                    disabled={
-                                        annonceStep === 1 &&
-                                        !annonceForm.type_annonce
-                                    }
-                                    onClick={() => {
-                                        if (
-                                            annonceStep === 2 &&
-                                            (annonceForm.type_annonce === "grace" || annonceForm.type_annonce === "priere") &&
-                                            !annonceForm.motif
-                                        ) {
-                                            notify("Veuillez sélectionner un motif.", "error");
-                                            return;
-                                        }
-                                        if (
-                                            annonceStep === 2 &&
-                                            !annonceForm.membre_id
-                                        ) {
-                                            notify(
-                                                "Veuillez sélectionner un membre.",
-                                                "error",
-                                            );
-                                            return;
-                                        }
-                                        if (
-                                            annonceStep === 2 &&
-                                            !annonceForm.message.trim()
-                                        ) {
-                                            notify(
-                                                "Le message est obligatoire.",
-                                                "error",
-                                            );
-                                            return;
-                                        }
-                                        setAnnonceStep((s) => s + 1);
-                                    }}
-                                >
-                                    Suivant →
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    className="btn-msubmit"
-                                    disabled={annonceProcessing}
-                                    onClick={submitAnnonce}
-                                >
-                                    {annonceProcessing ? (
-                                        <>
-                                            <svg
-                                                width="13"
-                                                height="13"
-                                                className="spin"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                                />
-                                            </svg>{" "}
-                                            Envoi...
-                                        </>
-                                    ) : (
-                                        <>📢 Soumettre l'annonce</>
-                                    )}
-                                </button>
-                            )}
+                            <button type="button" className="btn-mghost" onClick={closeAnnonce}>Annuler</button>
+                            <button
+                                type="button"
+                                className="btn-msubmit"
+                                disabled={annonceProcessing || !annonceForm.titre.trim() || !annonceForm.contenu.trim()}
+                                onClick={submitAnnonce}
+                            >
+                                {annonceProcessing ? (
+                                    <><svg width="13" height="13" className="spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Envoi...</>
+                                ) : <>📢 Soumettre l'annonce</>}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2798,6 +2651,7 @@ export default function Index({
                             </div>
                             <AnnonceDotTrack
                                 statut={selectedAnnonce.statut}
+                                ann={selectedAnnonce}
                                 expanded
                             />
 
@@ -2948,50 +2802,103 @@ export default function Index({
 
 /* ════════ SUB-COMPONENTS ════════ */
 
-function AnnonceDotTrack({ statut, expanded }) {
+function fmtDT(val) {
+    if (!val) return null;
+    const d = new Date(val);
+    if (isNaN(d)) return null;
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function AnnonceDotTrack({ statut, expanded, ann }) {
     const steps = [
-        { key: "SOUMISE", label: "Soumise", icon: "📝" },
-        { key: "EN_ATTENTE_CONDUCTEUR", label: "Conducteur", icon: "📋" },
-        { key: "TRANSMISE_AU_PASTEUR", label: "Pasteur", icon: "✝" },
-        { key: "PUBLIEE", label: "Publié", icon: "🌍" },
+        { key: "SOUMISE",                        label: "Soumise",               icon: "📝" },
+        { key: "EN_ATTENTE_CONDUCTEUR",           label: "Conducteur",            icon: "📋" },
+        { key: "TRANSMISE_AU_BUREAU_CONDUCTEUR",  label: "Bureau des Conducteurs", icon: "🏛" },
+        { key: "TRANSMISE_AU_PASTEUR",            label: "Pasteur",               icon: "✝" },
+        { key: "PUBLIEE",                        label: "Acte validé",           icon: "🌍" },
     ];
+
     const isRefuse = String(statut).startsWith("REFUSEE");
-    const effectiveStatus =
-        statut === "VALIDEE" || statut === "ARCHIVEE" ? "PUBLIEE" : statut;
+    const effectiveStatus = (statut === "VALIDEE" || statut === "ARCHIVEE") ? "PUBLIEE" : statut;
     const idx = steps.findIndex((s) => s.key === effectiveStatus);
     const activeIdx = isRefuse
-        ? statut === "REFUSEE_PAR_CONDUCTEUR"
-            ? 1
-            : 2
-        : idx === -1
-          ? 0
-          : idx;
+        ? statut === "REFUSEE_PAR_CONDUCTEUR" ? 1
+        : statut === "REFUSEE_PAR_BUREAU_CONDUCTEUR" ? 2
+        : 3
+        : idx === -1 ? 0 : idx;
+
+    // Build timestamp info from historiques
+    const hists = Array.isArray(ann?.historiques) ? ann.historiques : [];
+    const findHist = (statuts) => hists
+        .filter(h => statuts.includes(h.statut_nouveau))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+
+    const histConducteur      = findHist(["EN_ATTENTE_CONDUCTEUR", "TRANSMISE_AU_BUREAU_CONDUCTEUR"]);
+    const histBureauConducteur = findHist(["TRANSMISE_AU_BUREAU_CONDUCTEUR", "TRANSMISE_AU_PASTEUR"]);
+    const histPasteur         = findHist(["VALIDEE", "PUBLIEE"]);
+    const histPublie          = findHist(["PUBLIEE", "VALIDEE"]);
+
+    // Fallback conducteur name/date for records created before historique tracking was added
+    const conducteurFallbackDate = !histConducteur && ["TRANSMISE_AU_BUREAU_CONDUCTEUR", "TRANSMISE_AU_PASTEUR"].includes(statut)
+        ? fmtDT(ann?.updated_at) : null;
+    const conducteurName = histConducteur?.acteur
+        ? `${histConducteur.acteur.prenom} ${histConducteur.acteur.nom}`
+        : (ann?.conducteur ? `${ann.conducteur.prenom} ${ann.conducteur.nom}` : null);
+
+    const stepMeta = [
+        {
+            date: fmtDT(ann?.created_at),
+            who: null,
+        },
+        {
+            date: fmtDT(histConducteur?.created_at) || conducteurFallbackDate,
+            who: conducteurName,
+        },
+        {
+            date: fmtDT(histBureauConducteur?.created_at),
+            who: histBureauConducteur?.acteur ? `${histBureauConducteur.acteur.prenom} ${histBureauConducteur.acteur.nom}` : null,
+        },
+        {
+            date: fmtDT(histPasteur?.created_at),
+            who: histPasteur?.acteur ? `${histPasteur.acteur.prenom} ${histPasteur.acteur.nom}` : null,
+        },
+        {
+            date: fmtDT(histPublie?.created_at),
+            who: null,
+        },
+    ];
 
     return (
         <div className={`ann-track ${expanded ? "ann-track-exp" : ""}`}>
             {steps.map((s, i) => {
-                const isDone = !isRefuse && i < activeIdx;
+                const isDone   = !isRefuse && i < activeIdx;
                 const isActive = i === activeIdx;
-                const isRef = isRefuse && isActive;
+                const isRef    = isRefuse && isActive;
+                const meta     = stepMeta[i];
+                const showMeta = (isDone || isActive) && (meta.date || meta.who);
                 return (
                     <div key={s.key} className="ann-track-step">
-                        <div
-                            className={`ann-track-dot ${isDone ? "done" : isRef ? "refuse" : isActive ? "active" : ""}`}
-                        >
-                            {isDone ? "✓" : isRef ? "✕" : s.icon}
-                        </div>
-                        {expanded && (
-                            <div
-                                className={`ann-track-lbl ${isDone ? "done-lbl" : isRef ? "refuse-lbl" : isActive ? "active-lbl" : ""}`}
-                            >
-                                {s.label}
+                        {/* Dot + connecting line on same horizontal row */}
+                        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                            <div className={`ann-track-dot ${isDone ? "done" : isRef ? "refuse" : isActive ? "active" : ""}`}>
+                                {isDone ? "✓" : isRef ? "✕" : s.icon}
                             </div>
-                        )}
-                        {i < steps.length - 1 && (
-                            <div
-                                className={`ann-track-line ${isDone ? "done-line" : ""}`}
-                            />
-                        )}
+                            {i < steps.length - 1 && (
+                                <div className={`ann-track-line ${isDone ? "done-line" : ""}`} />
+                            )}
+                        </div>
+                        {/* Label + meta below dot */}
+                        <div className={`ann-track-lbl ${isDone ? "done-lbl" : isRef ? "refuse-lbl" : isActive ? "active-lbl" : ""}`}
+                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, marginTop: 4 }}>
+                            <span style={{ fontWeight: isActive ? 700 : 500 }}>{s.label}</span>
+                            {showMeta && meta.who && (
+                                <span style={{ fontSize: 9.5, color: '#64748b', whiteSpace: 'nowrap', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.who}</span>
+                            )}
+                            {showMeta && meta.date && (
+                                <span style={{ fontSize: 9, color: '#94a3b8', whiteSpace: 'nowrap' }}>{meta.date}</span>
+                            )}
+                        </div>
                     </div>
                 );
             })}
@@ -3639,13 +3546,13 @@ const styles = `
 .ann-badge-terra{background:rgba(192,96,64,.08);color:#C06040;border:1px solid rgba(192,96,64,.2)}
 
 /* PROGRESS TRACKER */
-.ann-track{display:flex;align-items:center;gap:0}
+.ann-track{display:flex;align-items:flex-start;gap:0}
 .ann-track-exp{gap:0}
-.ann-track-step{display:flex;align-items:center;flex:1}
+.ann-track-step{display:flex;flex-direction:column;align-items:center;flex:1}
 .ann-track-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #D6D1C7;background:#F5F4F0;color:#9C9484;flex-shrink:0;transition:all .3s}
 .ann-track-dot.done{background:#4A7C5E;border-color:#4A7C5E;color:#fff}.ann-track-dot.active{background:rgba(184,122,32,.08);border-color:#B87A20;color:#B87A20;animation:activePulse 2s infinite}.ann-track-dot.refuse{background:#C06040;border-color:#C06040;color:#fff}
 @keyframes activePulse{0%,100%{box-shadow:0 0 0 0 rgba(184,122,32,.3)}50%{box-shadow:0 0 0 5px rgba(184,122,32,0)}}
-.ann-track-line{flex:1;height:2px;background:#E8E4DC;transition:background .3s}.ann-track-line.done-line{background:#4A7C5E;opacity:.4}
+.ann-track-line{width:100%;height:2px;background:#E8E4DC;transition:background .3s;margin:11px 0 0}.ann-track-line.done-line{background:#4A7C5E;opacity:.4}
 .ann-track-lbl{font-size:9.5px;font-weight:700;text-align:center;margin-top:5px;color:#9C9484;white-space:nowrap}
 .ann-track-lbl.done-lbl{color:#4A7C5E}.ann-track-lbl.active-lbl{color:#B87A20}.ann-track-lbl.refuse-lbl{color:#C06040}
 .ann-track-exp .ann-track-step{flex-direction:column;gap:4px;flex:1}

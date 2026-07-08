@@ -62,6 +62,13 @@ const Icon = ({ name, className }) => {
                 d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
             />
         ),
+        transfert: (
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+            />
+        ),
         logout: (
             <path
                 strokeLinecap="round"
@@ -107,6 +114,7 @@ export default function Dashboard({
     pendingLiturgieCount = 0,
     surveyBadgeCount = 0,
     prayerBadgeCount = 0,
+    pendingExternalTransfersCount = 0,
     auth,
     familyStats,
     familyData,
@@ -119,6 +127,14 @@ export default function Dashboard({
             href: "/pasteur/inscriptions",
             color: "text-blue-600",
             bg: "bg-blue-100",
+        },
+        {
+            title: "Transferts",
+            desc: "Sorties et changements de classe",
+            icon: "transfert",
+            href: "/pasteur/transferts",
+            color: "text-violet-600",
+            bg: "bg-violet-100",
         },
         {
             title: "Présences",
@@ -266,6 +282,12 @@ export default function Dashboard({
                                         <NotificationBadge
                                             count={prayerBadgeCount}
                                         />
+                                    )}
+                                {item.icon === "transfert" &&
+                                    pendingExternalTransfersCount > 0 && (
+                                        <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-violet-600 text-white text-[11px] font-bold shadow animate-pulse">
+                                            {pendingExternalTransfersCount > 99 ? "99+" : pendingExternalTransfersCount}
+                                        </span>
                                     )}
                             </div>
                         </Link>

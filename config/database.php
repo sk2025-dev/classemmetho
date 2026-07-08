@@ -180,4 +180,20 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Export MySQL « metho1_jubile » (dump phpMyAdmin)
+    |--------------------------------------------------------------------------
+    |
+    | Fichier de référence versionné pour répliquer la base (structure + données).
+    | Import : php artisan db:import-metho1-jubile (base vide recommandée).
+    |
+    */
+
+    'metho1_jubile_snapshot' => [
+        'path' => (($p = trim((string) (env('METHO1_JUBILE_SQL_PATH') ?? ''))) !== '')
+            ? $p
+            : database_path('sql/metho1_jubile_snapshot.sql'),
+    ],
+
 ];

@@ -16,6 +16,7 @@ function AppHeader({ auth, onLogout, basePath }) {
         const labels = {
             admin: "Administrateur",
             pasteur: "Pasteur",
+            bureau_conducteur: "Bureau des Conducteurs",
             conducteur: "Conducteur",
             responsable: "Responsable",
             responsable_famille: "Responsable Famille",
@@ -25,7 +26,7 @@ function AppHeader({ auth, onLogout, basePath }) {
     };
 
     return (
-        <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
+        <header className="app-header sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
                     {/* Logo et Titre */}
@@ -377,13 +378,14 @@ export default function MainLayout({ children, auth }) {
     };
 
     const buildFlashSentence = (annonce) => {
-        const familyName = annonce?.family?.nom?.trim();
-        const isAdminInfo = !annonce?.family && !annonce?.family_id;
+        const createur = annonce?.createur;
+        const isAdminInfo = !annonce?.family_id && createur?.role === 'admin';
+        const createurNom = createur ? `${createur.prenom || ''} ${createur.nom || ''}`.trim() : null;
         const source = isAdminInfo
             ? "L'Église du Jubilé"
-            : familyName
-            ? `Famille ${familyName.toUpperCase()}`
-            : "Une famille de la paroisse";
+            : createurNom
+            ? createurNom
+            : "Un membre de la paroisse";
         const type = String(annonce?.type_acte || "").toLowerCase();
         const title = getAnnonceTitle(annonce);
         const content = getAnnonceContent(annonce);
@@ -498,14 +500,14 @@ export default function MainLayout({ children, auth }) {
 
     const mergedTickerMessages = [...churchInfoMessages, ...tickerMessages];
 
-    const isAdminAnnonce = (a) => !a?.family && !a?.family_id;
+    const isAdminAnnonce = (a) => !a?.family && !a?.family_id && a?.createur?.role === 'admin';
 
     const categorizedInfo = {
         infosEglise: announcements.filter(isAdminAnnonce),
         annonces: announcements.filter(
             (a) =>
                 !isAdminAnnonce(a) &&
-                ["annonce", "annonce_liturgique", "grace", "generale"].includes(
+                ["annonce", "annonce_liturgique", "generale", "felicitations"].includes(
                     String(a?.type_acte || "").toLowerCase(),
                 ),
         ),
@@ -516,7 +518,9 @@ export default function MainLayout({ children, auth }) {
             (a) => !isAdminAnnonce(a) && String(a?.type_acte || "").toLowerCase() === "deces",
         ),
         prieres: announcements.filter(
-            (a) => !isAdminAnnonce(a) && String(a?.type_acte || "").toLowerCase() === "priere",
+            (a) =>
+                !isAdminAnnonce(a) &&
+                ["priere", "grace"].includes(String(a?.type_acte || "").toLowerCase()),
         ),
         infos: churchInfoMessages,
     };
@@ -620,7 +624,7 @@ export default function MainLayout({ children, auth }) {
                                             accent="blue"
                                         />
                                         <InfoCategory
-                                            title="🙏 Demandes de prière"
+                                            title="📢 Annonces"
                                             items={categorizedInfo.annonces.map((a) =>
                                                 truncateText(buildFlashSentence(a))
                                             )}
@@ -641,7 +645,7 @@ export default function MainLayout({ children, auth }) {
                                             accent="gray"
                                         />
                                         <InfoCategory
-                                            title="🙏 Sujets de prière"
+                                            title="🙏 Demandes de prière & actions de grâce"
                                             items={categorizedInfo.prieres.map((a) =>
                                                 truncateText(buildFlashSentence(a))
                                             )}

@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
 
@@ -144,6 +150,65 @@ const GLOBAL_STYLES = `
         gap: 0.5rem;
         flex-wrap: wrap;
         margin-left: auto;
+    }
+
+    /* Critères actifs (résumé lisible) */
+    .active-criteria-bar {
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(37, 99, 235, 0.2);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+    .active-criteria-title {
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #1e40af;
+        margin-bottom: 0.5rem;
+    }
+    .active-criteria-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    .criteria-chip {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.35rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 9999px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        font-size: 0.8rem;
+        color: #1e3a8a;
+        max-width: 100%;
+    }
+    .criteria-chip-label {
+        font-weight: 700;
+        color: #3730a3;
+        flex-shrink: 0;
+    }
+    .criteria-chip-value {
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 280px;
+    }
+    @media (max-width: 640px) {
+        .criteria-chip-value { max-width: 180px; white-space: normal; }
+    }
+    .active-criteria-results {
+        margin-top: 0.6rem;
+        padding-top: 0.6rem;
+        border-top: 1px dashed #cbd5e1;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #334155;
     }
 
     /* Table Styles */
@@ -516,2034 +581,2080 @@ const GLOBAL_STYLES = `
 
 // --- Composant Badge pour le statut (baptisé/non baptisé) ---
 const MemberStatusBadge = ({ member }) => {
-    const isBaptized = member.baptise;
-    const className = isBaptized
-        ? "status-badge bg-green-100 text-green-800 border-green-200"
-        : "status-badge bg-gray-100 text-gray-800 border-gray-200";
-    const icon = isBaptized ? (
-        <svg
-            className="w-3 h-3 mr-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-        >
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-            />
-        </svg>
-    ) : (
-        <svg
-            className="w-3 h-3 mr-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-        >
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-            />
-        </svg>
-    );
-    return (
-        <span className={`${className} items-center`}>
-            {icon}
-            {isBaptized ? "Baptisé" : "Non baptisé"}
-        </span>
-    );
+  const isBaptized = member.baptise;
+  const className = isBaptized
+    ? "status-badge bg-green-100 text-green-800 border-green-200"
+    : "status-badge bg-gray-100 text-gray-800 border-gray-200";
+  const icon = isBaptized ? (
+    <svg
+      className="w-3 h-3 mr-1"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M5 13l4 4L19 7"
+      />
+    </svg>
+  ) : (
+    <svg
+      className="w-3 h-3 mr-1"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M6 18L18 6M6 6l12 12"
+      />
+    </svg>
+  );
+  return (
+    <span className={`${className} items-center`}>
+      {icon}
+      {isBaptized ? "Baptisé" : "Non baptisé"}
+    </span>
+  );
 };
 
 // --- Composant pour les détails du membre ---
 const MemberDetailsModal = ({
-    member,
-    cotisations,
-    actesLiturgiques,
-    userData,
-    onClose,
+  member,
+  cotisations,
+  actesLiturgiques,
+  userData,
+  onClose,
 }) => {
-    // Génère l'avatar de remplacement avec l'initiale
-    const getFallbackAvatar = (initial) => {
-        return `data:image/svg+xml,${encodeURIComponent(
-            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  // Génère l'avatar de remplacement avec l'initiale
+  const getFallbackAvatar = (initial) => {
+    return `data:image/svg+xml,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
         <circle cx="50" cy="50" r="45" fill="#fbbf24"/>
         <text x="50" y="65" font-size="40" text-anchor="middle" fill="white" font-weight="bold">
           ${initial}
         </text>
       </svg>`,
-        )}`;
-    };
+    )}`;
+  };
 
-    const initial = (member?.prenoms || member?.nom || "?")
-        .charAt(0)
-        .toUpperCase();
-    const fallbackAvatar = getFallbackAvatar(initial);
-    const photoSrc = member?.photo || fallbackAvatar;
+  const initial = (member?.prenoms || member?.nom || "?")
+    .charAt(0)
+    .toUpperCase();
+  const fallbackAvatar = getFallbackAvatar(initial);
+  const photoSrc = member?.photo || fallbackAvatar;
 
-    if (!member) return null;
+  if (!member) return null;
 
-    return (
-        <div className="member-details">
-            {/* IDENTITÉ */}
-            <div className="detail-section">
-                <h3>🧍 Identité</h3>
-                <div className="member-identity">
-                    <div className="member-photo-large">
-                        <img
-                            src={photoSrc}
-                            alt={`${member.prenoms} ${member.nom}`}
-                            onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = fallbackAvatar;
-                            }}
-                        />
-                    </div>
-                    <div className="member-identity-info">
-                        <p>
-                            <strong>Nom & Prénoms:</strong> {member.prenoms}{" "}
-                            {member.nom}
-                        </p>
-                        <p>
-                            <strong>Famille:</strong> {member.famille || "-"}
-                        </p>
-                        <p>
-                            <strong>Genre:</strong>{" "}
-                            {member.sexe === "M" ? "Masculin" : "Féminin"}
-                        </p>
-                        <p>
-                            <strong>Date de naissance:</strong>{" "}
-                            {member.dateNaissance
-                                ? new Date(
-                                      member.dateNaissance,
-                                  ).toLocaleDateString()
-                                : "-"}
-                        </p>
-                        <p>
-                            <strong>Numéro membre:</strong>{" "}
-                            {member.numMembre || "-"}
-                        </p>
-                        <p>
-                            <strong>Classe méthodiste:</strong>{" "}
-                            {member.classeMethodiste || "-"}
-                        </p>
-                        <p>
-                            <strong>Profession:</strong>{" "}
-                            {member.profession || "-"}
-                        </p>
-                        <p>
-                            <strong>Fonction:</strong> {member.fonction || "-"}
-                        </p>
-                        <p>
-                            <strong>Relation:</strong> {member.relation || "-"}
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* INFORMATIONS SPIRITUELLES */}
-            <div className="detail-section">
-                <h3>🕊️ Informations spirituelles</h3>
-                <div className="spiritual-info">
-                    <p>
-                        <strong>Baptême:</strong>{" "}
-                        {member.baptise ? "Oui" : "Non"}{" "}
-                        {member.dateBapteme &&
-                            `(${new Date(member.dateBapteme).toLocaleDateString()})`}
-                    </p>
-                    {member.lieuBapteme && (
-                        <p>
-                            <strong>Lieu de baptême:</strong>{" "}
-                            {member.lieuBapteme}
-                        </p>
-                    )}
-                    <p>
-                        <strong>1ère communion:</strong>{" "}
-                        {member.premiereCommunion ? "Oui" : "Non"}{" "}
-                        {member.dateCommunion &&
-                            `(${new Date(member.dateCommunion).toLocaleDateString()})`}
-                    </p>
-                    <p>
-                        <strong>Confirmation:</strong>{" "}
-                        {member.confirme ? "Oui" : "Non"}
-                    </p>
-                    <p>
-                        <strong>Mariage religieux:</strong>{" "}
-                        {member.marieReligieusement ? "Oui" : "Non"}
-                    </p>
-                    <div className="actes-list">
-                        <strong>Actes liturgiques associés:</strong>
-                        {actesLiturgiques && actesLiturgiques.length > 0 ? (
-                            <ul>
-                                {actesLiturgiques.map((acte, index) => (
-                                    <li key={index}>
-                                        {acte.typeName} -{" "}
-                                        {new Date(
-                                            acte.proposedDate,
-                                        ).toLocaleDateString()}
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p>Aucun acte liturgique enregistré.</p>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* INFORMATIONS FAMILIALES */}
-            <div className="detail-section">
-                <h3>👪 Informations familiales</h3>
-                <div className="spiritual-info">
-                    <p>
-                        <strong>Mariage civil:</strong>{" "}
-                        {member.mariageCivil ? "Oui" : "Non"}
-                    </p>
-                    <p>
-                        <strong>Doté:</strong> {member.dote ? "Oui" : "Non"}
-                    </p>
-                    <p>
-                        <strong>Veuf:</strong> {member.veuf ? "Oui" : "Non"}
-                    </p>
-                </div>
-            </div>
-
-            {/* CONTACT */}
-            <div className="detail-section">
-                <h3>🧾 Contact</h3>
-                <div className="contact-info">
-                    <p>
-                        <strong>Téléphone:</strong> {member.telephone || "-"}
-                    </p>
-                    <p>
-                        <strong>Email:</strong> {member.email || "-"}
-                    </p>
-                    <p>
-                        <strong>Adresse:</strong> {member.adresse || "-"}
-                    </p>
-                    {member.quartier && (
-                        <p>
-                            <strong>Quartier:</strong> {member.quartier}
-                        </p>
-                    )}
-                </div>
-            </div>
-
-            {/* COTISATIONS */}
-            <div className="detail-section">
-                <h3>💰 Cotisations</h3>
-                <div className="cotisations-info">
-                    {cotisations?.fimeco ? (
-                        <div className="cotisation-item">
-                            <strong>FIMECO:</strong>{" "}
-                            {cotisations.fimeco.montantPaye} FCFA /{" "}
-                            {cotisations.fimeco.montantDu} FCFA
-                            <span className="solde">
-                                Solde: {cotisations.fimeco.solde} FCFA
-                            </span>
-                        </div>
-                    ) : (
-                        <p>FIMECO: Aucune souscription</p>
-                    )}
-                    {cotisations?.autres && cotisations.autres.length > 0 ? (
-                        <div className="cotisation-item">
-                            <strong>Autres cotisations:</strong>
-                            <ul>
-                                {cotisations.autres.map((c, index) => (
-                                    <li key={index}>
-                                        {c.nom}: {c.montant} FCFA
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    ) : (
-                        <p>Autres cotisations: Aucune</p>
-                    )}
-                </div>
-            </div>
-
-            {/* AUTRES INFORMATIONS (visible seulement pour les admins) */}
-            {userData?.role === "admin" && (
-                <div className="detail-section">
-                    <h3>📌 Autres informations</h3>
-                    <div className="other-info">
-                        <p>
-                            <strong>Statut:</strong> {member.statutVie || "-"}
-                        </p>
-                        <p>
-                            <strong>Date de création:</strong>{" "}
-                            {member.dateCreation
-                                ? new Date(
-                                      member.dateCreation,
-                                  ).toLocaleDateString()
-                                : "-"}
-                        </p>
-                    </div>
-                </div>
-            )}
+  return (
+    <div className="member-details">
+      {/* IDENTITÉ */}
+      <div className="detail-section">
+        <h3>🧍 Identité</h3>
+        <div className="member-identity">
+          <div className="member-photo-large">
+            <img
+              src={photoSrc}
+              alt={`${member.prenoms} ${member.nom}`}
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = fallbackAvatar;
+              }}
+            />
+          </div>
+          <div className="member-identity-info">
+            <p>
+              <strong>Nom & Prénoms:</strong> {member.prenoms} {member.nom}
+            </p>
+            <p>
+              <strong>Famille:</strong> {member.famille || "-"}
+            </p>
+            <p>
+              <strong>Genre:</strong>{" "}
+              {member.sexe === "M" ? "Masculin" : "Féminin"}
+            </p>
+            <p>
+              <strong>Date de naissance:</strong>{" "}
+              {member.dateNaissance
+                ? new Date(member.dateNaissance).toLocaleDateString()
+                : "-"}
+            </p>
+            <p>
+              <strong>Numéro membre:</strong> {member.numMembre || "-"}
+            </p>
+            <p>
+              <strong>Classe méthodiste:</strong>{" "}
+              {member.classeMethodiste || "-"}
+            </p>
+            <p>
+              <strong>Profession:</strong> {member.profession || "-"}
+            </p>
+            <p>
+              <strong>Fonction:</strong> {member.fonction || "-"}
+            </p>
+            <p>
+              <strong>Relation:</strong> {member.relation || "-"}
+            </p>
+          </div>
         </div>
-    );
+      </div>
+
+      {/* INFORMATIONS SPIRITUELLES */}
+      <div className="detail-section">
+        <h3>🕊️ Informations spirituelles</h3>
+        <div className="spiritual-info">
+          <p>
+            <strong>Baptême:</strong> {member.baptise ? "Oui" : "Non"}{" "}
+            {member.dateBapteme &&
+              `(${new Date(member.dateBapteme).toLocaleDateString()})`}
+          </p>
+          {member.lieuBapteme && (
+            <p>
+              <strong>Lieu de baptême:</strong> {member.lieuBapteme}
+            </p>
+          )}
+          <p>
+            <strong>1ère communion:</strong>{" "}
+            {member.premiereCommunion ? "Oui" : "Non"}{" "}
+            {member.dateCommunion &&
+              `(${new Date(member.dateCommunion).toLocaleDateString()})`}
+          </p>
+          <p>
+            <strong>Confirmation:</strong> {member.confirme ? "Oui" : "Non"}
+          </p>
+          <p>
+            <strong>Mariage religieux:</strong>{" "}
+            {member.marieReligieusement ? "Oui" : "Non"}
+          </p>
+          <div className="actes-list">
+            <strong>Actes liturgiques associés:</strong>
+            {actesLiturgiques && actesLiturgiques.length > 0 ? (
+              <ul>
+                {actesLiturgiques.map((acte, index) => (
+                  <li key={index}>
+                    {acte.typeName} -{" "}
+                    {new Date(acte.proposedDate).toLocaleDateString()}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>Aucun acte liturgique enregistré.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* INFORMATIONS FAMILIALES */}
+      <div className="detail-section">
+        <h3>👪 Informations familiales</h3>
+        <div className="spiritual-info">
+          <p>
+            <strong>Mariage civil:</strong>{" "}
+            {member.mariageCivil ? "Oui" : "Non"}
+          </p>
+          <p>
+            <strong>Doté:</strong> {member.dote ? "Oui" : "Non"}
+          </p>
+          <p>
+            <strong>Veuf:</strong> {member.veuf ? "Oui" : "Non"}
+          </p>
+        </div>
+      </div>
+
+      {/* CONTACT */}
+      <div className="detail-section">
+        <h3>🧾 Contact</h3>
+        <div className="contact-info">
+          <p>
+            <strong>Téléphone:</strong> {member.telephone || "-"}
+          </p>
+          <p>
+            <strong>Email:</strong> {member.email || "-"}
+          </p>
+          <p>
+            <strong>Adresse:</strong> {member.adresse || "-"}
+          </p>
+          {member.quartier && (
+            <p>
+              <strong>Quartier:</strong> {member.quartier}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* COTISATIONS */}
+      <div className="detail-section">
+        <h3>💰 Cotisations</h3>
+        <div className="cotisations-info">
+          {cotisations?.fimeco ? (
+            <div className="cotisation-item">
+              <strong>FIMECO:</strong> {cotisations.fimeco.montantPaye} FCFA /{" "}
+              {cotisations.fimeco.montantDu} FCFA
+              <span className="solde">
+                Solde: {cotisations.fimeco.solde} FCFA
+              </span>
+            </div>
+          ) : (
+            <p>FIMECO: Aucune souscription</p>
+          )}
+          {cotisations?.autres && cotisations.autres.length > 0 ? (
+            <div className="cotisation-item">
+              <strong>Autres cotisations:</strong>
+              <ul>
+                {cotisations.autres.map((c, index) => (
+                  <li key={index}>
+                    {c.nom}: {c.montant} FCFA
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p>Autres cotisations: Aucune</p>
+          )}
+        </div>
+      </div>
+
+      {/* AUTRES INFORMATIONS (visible seulement pour les admins) */}
+      {userData?.role === "admin" && (
+        <div className="detail-section">
+          <h3>📌 Autres informations</h3>
+          <div className="other-info">
+            <p>
+              <strong>Statut:</strong> {member.statutVie || "-"}
+            </p>
+            <p>
+              <strong>Date de création:</strong>{" "}
+              {member.dateCreation
+                ? new Date(member.dateCreation).toLocaleDateString()
+                : "-"}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
+
+/** Paramètres par défaut côté serveur (AnnuaireService) — omis dans l’URL quand inchangés. */
+const ANNUAIRE_QUERY_DEFAULTS = {
+  perPage: 10,
+  view: "all",
+  page: 1,
+  familiesPerPage: 5,
+  classesPerPage: 1,
+};
+
+/**
+ * Réduit la query pour l’URL : pas de clés vides, pas de valeurs par défaut.
+ * Les critères restent visibles dans l’encart « Critères actifs », pas besoin de les répéter dans la barre d’adresse.
+ */
+function compactAnnuaireQueryForUrl(normalized) {
+  const out = {};
+  const s = String(normalized.search ?? "").trim();
+  if (s) {
+    out.search = s;
+  }
+  for (const key of ["classe", "famille", "profession", "role"]) {
+    const v = String(normalized[key] ?? "").trim();
+    if (v) {
+      out[key] = v;
+    }
+  }
+  if (normalized.perPage !== ANNUAIRE_QUERY_DEFAULTS.perPage) {
+    out.perPage = normalized.perPage;
+  }
+  if (normalized.view !== ANNUAIRE_QUERY_DEFAULTS.view) {
+    out.view = normalized.view;
+  }
+  if (normalized.page !== ANNUAIRE_QUERY_DEFAULTS.page) {
+    out.page = normalized.page;
+  }
+  if (normalized.familiesPerPage !== ANNUAIRE_QUERY_DEFAULTS.familiesPerPage) {
+    out.familiesPerPage = normalized.familiesPerPage;
+  }
+  if (normalized.classesPerPage !== ANNUAIRE_QUERY_DEFAULTS.classesPerPage) {
+    out.classesPerPage = normalized.classesPerPage;
+  }
+  return out;
+}
 
 // ==================== COMPOSANT PRINCIPAL ====================
 const Annuaire = ({
-    members = null,
-    families = null,
-    classes = null,
-    view = "all",
-    cotisations = {},
-    user = { role: "user" },
-    filters = {},
-    filterOptions = { classes: [], familles: [], professions: [], roles: [] },
+  members = null,
+  families = null,
+  classes = null,
+  view = "all",
+  cotisations = {},
+  user = { role: "user" },
+  filters = {},
+  filterOptions = { classes: [], familles: [], professions: [], roles: [] },
 }) => {
-    const toPaginated = (source, defaultPerPage = 10) => {
-        if (!source) {
-            return {
-                data: [],
-                links: [],
-                current_page: 1,
-                per_page: defaultPerPage,
-                total: 0,
-            };
-        }
+  const toPaginated = (source, defaultPerPage = 10) => {
+    if (!source) {
+      return {
+        data: [],
+        links: [],
+        current_page: 1,
+        per_page: defaultPerPage,
+        total: 0,
+      };
+    }
 
-        if (Array.isArray(source)) {
-            return {
-                data: source,
-                links: [],
-                current_page: 1,
-                per_page: source.length || defaultPerPage,
-                total: source.length,
-            };
-        }
+    if (Array.isArray(source)) {
+      return {
+        data: source,
+        links: [],
+        current_page: 1,
+        per_page: source.length || defaultPerPage,
+        total: source.length,
+      };
+    }
 
-        return {
-            data: Array.isArray(source.data) ? source.data : [],
-            links: Array.isArray(source.links) ? source.links : [],
-            current_page: source.current_page || 1,
-            per_page: source.per_page || defaultPerPage,
-            total:
-                source.total ||
-                (Array.isArray(source.data) ? source.data.length : 0),
-        };
+    return {
+      data: Array.isArray(source.data) ? source.data : [],
+      links: Array.isArray(source.links) ? source.links : [],
+      current_page: source.current_page || 1,
+      per_page: source.per_page || defaultPerPage,
+      total:
+        source.total || (Array.isArray(source.data) ? source.data.length : 0),
     };
+  };
 
-    const membersPage = toPaginated(members, 10);
-    const familiesPage = toPaginated(families, 10);
-    const classesPage = toPaginated(classes, 10);
+  const membersPage = toPaginated(members, 10);
+  const familiesPage = toPaginated(families, 10);
+  const classesPage = toPaginated(classes, 10);
 
-    const {
-        data: paginatedMembers,
-        links: membersLinks,
-        current_page: membersCurrentPage,
-        per_page: membersPerPage,
-        total: membersTotal,
-    } = membersPage;
+  const {
+    data: paginatedMembers,
+    links: membersLinks,
+    current_page: membersCurrentPage,
+    per_page: membersPerPage,
+    total: membersTotal,
+  } = membersPage;
 
-    // États des filtres
-    const [searchTerm, setSearchTerm] = useState(filters.search || "");
-    const [classeFilter, setClasseFilter] = useState(filters.classe || "");
-    const [familleFilter, setFamilleFilter] = useState(filters.famille || "");
-    const [professionFilter, setProfessionFilter] = useState(
-        filters.profession || "",
+  // États des filtres
+  const [searchTerm, setSearchTerm] = useState(filters.search || "");
+  const [searchInput, setSearchInput] = useState(filters.search || "");
+  const [classeFilter, setClasseFilter] = useState(filters.classe || "");
+  const [familleFilter, setFamilleFilter] = useState(filters.famille || "");
+  const [professionFilter, setProfessionFilter] = useState(
+    filters.profession || "",
+  );
+  const [roleFilter, setRoleFilter] = useState(filters.role || "");
+  const [itemsPerPage, setItemsPerPage] = useState(filters.perPage || 10);
+
+  const [currentView, setCurrentView] = useState(view);
+
+  useEffect(() => {
+    setCurrentView(view);
+  }, [view]);
+
+  useEffect(() => {
+    const rawList = filterOptions.familles || [];
+    const ids = new Set(
+      rawList
+        .map((f) => {
+          if (!f || typeof f !== "object") {
+            return "";
+          }
+          return String(f.id ?? "");
+        })
+        .filter(Boolean),
     );
-    const [roleFilter, setRoleFilter] = useState(filters.role || "");
-    const [itemsPerPage, setItemsPerPage] = useState(filters.perPage || 10);
+    const cur = String(familleFilter || "").trim();
+    if (cur && !ids.has(cur)) {
+      setFamilleFilter("");
+    }
+  }, [filterOptions.familles, familleFilter]);
 
-    const [currentView, setCurrentView] = useState(view);
-    const [viewMode, setViewMode] = useState("grid");
+  const [viewMode, setViewMode] = useState("grid");
 
-    const [selectedMember, setSelectedMember] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isExiting, setIsExiting] = useState(false);
-    const [photoPopup, setPhotoPopup] = useState({
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const [photoPopup, setPhotoPopup] = useState({
+    visible: false,
+    src: "",
+    x: 0,
+    y: 0,
+    exiting: false,
+  });
+  const popupRef = useRef(null);
+  const [actesLiturgiques, setActesLiturgiques] = useState([]);
+  const [classMemberPages, setClassMemberPages] = useState({});
+  const hasMountedRef = useRef(false);
+  const hasRestoredStateRef = useRef(false);
+
+  const persistAnnuaireState = useCallback((payload) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      window.sessionStorage.setItem(
+        ANNUAIRE_STATE_STORAGE_KEY,
+        JSON.stringify(payload),
+      );
+    } catch {
+      // Ignore storage failures and keep the page usable.
+    }
+  }, []);
+
+  const readAnnuaireState = useCallback(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    try {
+      const rawValue = window.sessionStorage.getItem(
+        ANNUAIRE_STATE_STORAGE_KEY,
+      );
+
+      return rawValue ? JSON.parse(rawValue) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const buildQueryPayload = useCallback(
+    (overrides = {}) => ({
+      search: searchTerm,
+      classe: classeFilter,
+      famille: familleFilter,
+      profession: professionFilter,
+      role: roleFilter,
+      perPage: itemsPerPage,
+      view: currentView,
+      page: 1,
+      ...overrides,
+    }),
+    [
+      searchTerm,
+      classeFilter,
+      familleFilter,
+      professionFilter,
+      roleFilter,
+      itemsPerPage,
+      currentView,
+    ],
+  );
+
+  const normalizeAnnuairePayload = useCallback(
+    (payload = {}) => ({
+      search: String(payload.search ?? ""),
+      classe: String(payload.classe ?? ""),
+      famille: String(payload.famille ?? ""),
+      profession: String(payload.profession ?? ""),
+      role: String(payload.role ?? ""),
+      perPage: Math.max(1, Number(payload.perPage ?? itemsPerPage ?? 10)),
+      view: String(payload.view ?? currentView ?? "all"),
+      page: Math.max(1, Number(payload.page ?? 1)),
+      familiesPerPage: Math.max(
+        1,
+        Number(payload.familiesPerPage ?? familiesPage.per_page ?? 5),
+      ),
+      classesPerPage: Math.max(
+        1,
+        Number(payload.classesPerPage ?? classesPage.per_page ?? 1),
+      ),
+    }),
+    [itemsPerPage, currentView, familiesPage.per_page, classesPage.per_page],
+  );
+
+  const currentServerPayload = normalizeAnnuairePayload({
+    search: filters.search || "",
+    classe: filters.classe || "",
+    famille: filters.famille || "",
+    profession: filters.profession || "",
+    role: filters.role || "",
+    perPage: filters.perPage || 10,
+    view,
+    page:
+      view === "families"
+        ? familiesPage.current_page
+        : view === "classes"
+          ? classesPage.current_page
+          : membersCurrentPage,
+    familiesPerPage: familiesPage.per_page,
+    classesPerPage: classesPage.per_page,
+  });
+
+  const isSamePayload = useCallback(
+    (left, right) => {
+      const normalizedLeft = normalizeAnnuairePayload(left);
+      const normalizedRight = normalizeAnnuairePayload(right);
+
+      return Object.keys(normalizedLeft).every(
+        (key) =>
+          String(normalizedLeft[key] ?? "") ===
+          String(normalizedRight[key] ?? ""),
+      );
+    },
+    [normalizeAnnuairePayload],
+  );
+
+  const visitAnnuaire = useCallback(
+    (payloadOverrides = {}, options = {}) => {
+      const payload = normalizeAnnuairePayload(
+        buildQueryPayload(payloadOverrides),
+      );
+
+      persistAnnuaireState(payload);
+
+      const queryForUrl = compactAnnuaireQueryForUrl(payload);
+
+      router.get(window.location.pathname, queryForUrl, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: false,
+        ...options,
+        onSuccess: (...args) => {
+          options.onSuccess?.(...args);
+        },
+      });
+    },
+    [normalizeAnnuairePayload, buildQueryPayload, persistAnnuaireState],
+  );
+
+  const parsePaginationPayload = useCallback(
+    (url) => {
+      const parsedUrl = new URL(url, window.location.origin);
+      const params = parsedUrl.searchParams;
+
+      return {
+        search: params.get("search") ?? searchTerm,
+        classe: params.get("classe") ?? classeFilter,
+        famille: params.get("famille") ?? familleFilter,
+        profession: params.get("profession") ?? professionFilter,
+        role: params.get("role") ?? roleFilter,
+        perPage: params.get("perPage") ?? itemsPerPage,
+        view: params.get("view") ?? currentView,
+        page: params.get("page") ?? 1,
+        familiesPerPage:
+          params.get("familiesPerPage") ?? familiesPage.per_page ?? 5,
+        classesPerPage:
+          params.get("classesPerPage") ?? classesPage.per_page ?? 1,
+      };
+    },
+    [
+      searchTerm,
+      classeFilter,
+      familleFilter,
+      professionFilter,
+      roleFilter,
+      itemsPerPage,
+      currentView,
+      familiesPage.per_page,
+      classesPage.per_page,
+    ],
+  );
+
+  const applyFilters = useCallback(() => {
+    visitAnnuaire({
+      page: 1,
+      familiesPerPage: 5,
+      classesPerPage: 1,
+    });
+  }, [visitAnnuaire]);
+
+  useEffect(() => {
+    if (hasRestoredStateRef.current) {
+      return;
+    }
+
+    hasRestoredStateRef.current = true;
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (window.location.search) {
+      persistAnnuaireState(currentServerPayload);
+      return;
+    }
+
+    const savedState = readAnnuaireState();
+    if (!savedState || isSamePayload(savedState, currentServerPayload)) {
+      return;
+    }
+
+    const restored = normalizeAnnuairePayload(savedState);
+    router.get(window.location.pathname, compactAnnuaireQueryForUrl(restored), {
+      preserveState: true,
+      preserveScroll: true,
+      replace: false,
+    });
+  }, [
+    currentServerPayload,
+    readAnnuaireState,
+    persistAnnuaireState,
+    isSamePayload,
+    normalizeAnnuairePayload,
+  ]);
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      applyFilters();
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [applyFilters]);
+
+  const submitSearch = () => {
+    const nextSearch = searchInput.trim();
+    setSearchInput(nextSearch);
+    setSearchTerm(nextSearch);
+  };
+
+  const switchView = (newView) => {
+    setCurrentView(newView);
+    visitAnnuaire({
+      view: newView,
+      page: 1,
+      familiesPerPage: 5,
+      classesPerPage: 1,
+    });
+    setClassMemberPages({});
+  };
+
+  const handlePageChange = (url) => {
+    if (url) {
+      visitAnnuaire(parsePaginationPayload(url));
+    }
+  };
+
+  const handleFamilyPageChange = (url) => {
+    if (url) {
+      visitAnnuaire(parsePaginationPayload(url));
+    }
+  };
+
+  const handleClassPageChange = (url) => {
+    if (url) {
+      visitAnnuaire(parsePaginationPayload(url));
+    }
+    setClassMemberPages({});
+  };
+
+  const handlePerPageChange = (newPerPage) => {
+    setItemsPerPage(newPerPage);
+  };
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setSearchInput("");
+    setClasseFilter("");
+    setFamilleFilter("");
+    setProfessionFilter("");
+    setRoleFilter("");
+    setItemsPerPage(10);
+  };
+
+  const activeCriteriaChips = useMemo(() => {
+    const chips = [];
+    const q = String(searchTerm || "").trim();
+    if (q) {
+      chips.push({
+        key: "search",
+        label: "Recherche",
+        value: `"${q}"`,
+      });
+    }
+    const cf = String(classeFilter || "").trim();
+    if (cf) {
+      const list = filterOptions.classes || [];
+      const c = list.find((x) => x && String(x.id ?? "") === cf);
+      chips.push({
+        key: "classe",
+        label: "Classe",
+        value: c?.nom ?? c?.label ?? `Réf. ${cf}`,
+      });
+    }
+    const ff = String(familleFilter || "").trim();
+    if (ff) {
+      const list = filterOptions.familles || [];
+      const f = list.find((x) => x && String(x.id ?? "") === ff);
+      chips.push({
+        key: "famille",
+        label: "Famille",
+        value: f?.nom ?? f?.label ?? `Réf. ${ff}`,
+      });
+    }
+    const pf = String(professionFilter || "").trim();
+    if (pf) {
+      const list = filterOptions.professions || [];
+      const p = list.find((x) => x && String(x.value ?? x.id ?? "") === pf);
+      chips.push({
+        key: "profession",
+        label: "Profession",
+        value: p?.label ?? p?.nom ?? pf,
+      });
+    }
+    const rf = String(roleFilter || "").trim();
+    if (rf) {
+      const list = filterOptions.roles || [];
+      const r = list.find((x) => x && String(x.value ?? x.role ?? "") === rf);
+      chips.push({
+        key: "role",
+        label: "Rôle",
+        value: r?.label ?? r?.nom ?? rf,
+      });
+    }
+    const viewLabels = {
+      all: "Tous les membres",
+      families: "Familles",
+      classes: "Classes",
+    };
+    chips.push({
+      key: "view",
+      label: "Affichage",
+      value: viewLabels[currentView] || currentView,
+    });
+    return chips;
+  }, [
+    searchTerm,
+    classeFilter,
+    familleFilter,
+    professionFilter,
+    roleFilter,
+    currentView,
+    filterOptions.classes,
+    filterOptions.familles,
+    filterOptions.professions,
+    filterOptions.roles,
+  ]);
+
+  const criteriaResultsLine = useMemo(() => {
+    if (currentView === "families") {
+      return `${familiesPage.total} famille(s) sur cette page (filtres appliqués).`;
+    }
+    if (currentView === "classes") {
+      return `${classesPage.total} classe(s) sur cette page (filtres appliqués).`;
+    }
+    return `${membersTotal} membre(s) sur cette recherche.`;
+  }, [currentView, familiesPage.total, classesPage.total, membersTotal]);
+
+  const openModal = (member) => {
+    setSelectedMember(member);
+    setIsExiting(false);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      setIsExiting(false);
+      setIsModalOpen(false);
+      setSelectedMember(null);
+    }, 200);
+  };
+
+  const openPhotoPopup = (src, event) => {
+    event.stopPropagation();
+    const x = event.clientX;
+    const y = event.clientY;
+    setPhotoPopup({
+      visible: true,
+      src,
+      x,
+      y,
+      exiting: false,
+    });
+  };
+
+  const closePhotoPopup = () => {
+    setPhotoPopup((prev) => ({ ...prev, exiting: true }));
+    setTimeout(() => {
+      setPhotoPopup({
         visible: false,
         src: "",
         x: 0,
         y: 0,
         exiting: false,
-    });
-    const popupRef = useRef(null);
-    const [actesLiturgiques, setActesLiturgiques] = useState([]);
-    const [classMemberPages, setClassMemberPages] = useState({});
-    const hasMountedRef = useRef(false);
-    const hasRestoredStateRef = useRef(false);
+      });
+    }, 150);
+  };
 
-    const cleanCurrentUrl = useCallback(() => {
-        if (typeof window === "undefined") {
-            return;
-        }
-
-        const cleanUrl = `${window.location.pathname}${window.location.hash || ""}`;
-
-        if (window.location.search) {
-            window.history.replaceState(window.history.state, "", cleanUrl);
-        }
-    }, []);
-
-    const persistAnnuaireState = useCallback((payload) => {
-        if (typeof window === "undefined") {
-            return;
-        }
-
-        try {
-            window.sessionStorage.setItem(
-                ANNUAIRE_STATE_STORAGE_KEY,
-                JSON.stringify(payload),
-            );
-        } catch {
-            // Ignore storage failures and keep the page usable.
-        }
-    }, []);
-
-    const readAnnuaireState = useCallback(() => {
-        if (typeof window === "undefined") {
-            return null;
-        }
-
-        try {
-            const rawValue = window.sessionStorage.getItem(
-                ANNUAIRE_STATE_STORAGE_KEY,
-            );
-
-            return rawValue ? JSON.parse(rawValue) : null;
-        } catch {
-            return null;
-        }
-    }, []);
-
-    const buildQueryPayload = useCallback(
-        (overrides = {}) => ({
-            search: searchTerm,
-            classe: classeFilter,
-            famille: familleFilter,
-            profession: professionFilter,
-            role: roleFilter,
-            perPage: itemsPerPage,
-            view: currentView,
-            page: 1,
-            ...overrides,
-        }),
-        [
-            searchTerm,
-            classeFilter,
-            familleFilter,
-            professionFilter,
-            roleFilter,
-            itemsPerPage,
-            currentView,
-        ],
-    );
-
-    const normalizeAnnuairePayload = useCallback(
-        (payload = {}) => ({
-            search: String(payload.search ?? ""),
-            classe: String(payload.classe ?? ""),
-            famille: String(payload.famille ?? ""),
-            profession: String(payload.profession ?? ""),
-            role: String(payload.role ?? ""),
-            perPage: Math.max(1, Number(payload.perPage ?? itemsPerPage ?? 10)),
-            view: String(payload.view ?? currentView ?? "all"),
-            page: Math.max(1, Number(payload.page ?? 1)),
-            familiesPerPage: Math.max(
-                1,
-                Number(payload.familiesPerPage ?? familiesPage.per_page ?? 5),
-            ),
-            classesPerPage: Math.max(
-                1,
-                Number(payload.classesPerPage ?? classesPage.per_page ?? 1),
-            ),
-        }),
-        [itemsPerPage, currentView, familiesPage.per_page, classesPage.per_page],
-    );
-
-    const currentServerPayload = normalizeAnnuairePayload({
-        search: filters.search || "",
-        classe: filters.classe || "",
-        famille: filters.famille || "",
-        profession: filters.profession || "",
-        role: filters.role || "",
-        perPage: filters.perPage || 10,
-        view,
-        page:
-            view === "families"
-                ? familiesPage.current_page
-                : view === "classes"
-                  ? classesPage.current_page
-                  : membersCurrentPage,
-        familiesPerPage: familiesPage.per_page,
-        classesPerPage: classesPage.per_page,
-    });
-
-    const isSamePayload = useCallback(
-        (left, right) => {
-            const normalizedLeft = normalizeAnnuairePayload(left);
-            const normalizedRight = normalizeAnnuairePayload(right);
-
-            return Object.keys(normalizedLeft).every(
-                (key) =>
-                    String(normalizedLeft[key] ?? "") ===
-                    String(normalizedRight[key] ?? ""),
-            );
-        },
-        [normalizeAnnuairePayload],
-    );
-
-    const visitAnnuaire = useCallback(
-        (payloadOverrides = {}, options = {}) => {
-            const payload = normalizeAnnuairePayload(
-                buildQueryPayload(payloadOverrides),
-            );
-
-            persistAnnuaireState(payload);
-
-            router.get(window.location.pathname, payload, {
-                preserveState: true,
-                preserveScroll: true,
-                replace: true,
-                ...options,
-                onSuccess: (...args) => {
-                    cleanCurrentUrl();
-                    options.onSuccess?.(...args);
-                },
-            });
-        },
-        [
-            normalizeAnnuairePayload,
-            buildQueryPayload,
-            persistAnnuaireState,
-            cleanCurrentUrl,
-        ],
-    );
-
-    const parsePaginationPayload = useCallback(
-        (url) => {
-            const parsedUrl = new URL(url, window.location.origin);
-            const params = parsedUrl.searchParams;
-
-            return {
-                search: params.get("search") ?? searchTerm,
-                classe: params.get("classe") ?? classeFilter,
-                famille: params.get("famille") ?? familleFilter,
-                profession: params.get("profession") ?? professionFilter,
-                role: params.get("role") ?? roleFilter,
-                perPage: params.get("perPage") ?? itemsPerPage,
-                view: params.get("view") ?? currentView,
-                page: params.get("page") ?? 1,
-                familiesPerPage:
-                    params.get("familiesPerPage") ?? familiesPage.per_page ?? 5,
-                classesPerPage:
-                    params.get("classesPerPage") ?? classesPage.per_page ?? 1,
-            };
-        },
-        [
-            searchTerm,
-            classeFilter,
-            familleFilter,
-            professionFilter,
-            roleFilter,
-            itemsPerPage,
-            currentView,
-            familiesPage.per_page,
-            classesPage.per_page,
-        ],
-    );
-
-    const applyFilters = useCallback(() => {
-        visitAnnuaire({
-            page: 1,
-            familiesPerPage: 5,
-            classesPerPage: 1,
-        });
-    }, [visitAnnuaire]);
-
-    useEffect(() => {
-        if (hasRestoredStateRef.current) {
-            return;
-        }
-
-        hasRestoredStateRef.current = true;
-
-        if (typeof window === "undefined") {
-            return;
-        }
-
-        if (window.location.search) {
-            persistAnnuaireState(currentServerPayload);
-            cleanCurrentUrl();
-            return;
-        }
-
-        const savedState = readAnnuaireState();
-        if (!savedState || isSamePayload(savedState, currentServerPayload)) {
-            return;
-        }
-
-        router.get(window.location.pathname, savedState, {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-            onSuccess: () => {
-                cleanCurrentUrl();
-            },
-        });
-    }, [
-        currentServerPayload,
-        readAnnuaireState,
-        persistAnnuaireState,
-        cleanCurrentUrl,
-        isSamePayload,
-    ]);
-
-    useEffect(() => {
-        if (!hasMountedRef.current) {
-            hasMountedRef.current = true;
-            return;
-        }
-
-        const handler = setTimeout(() => {
-            applyFilters();
-        }, 350);
-        return () => clearTimeout(handler);
-    }, [applyFilters]);
-
-    const switchView = (newView) => {
-        setCurrentView(newView);
-        visitAnnuaire({
-            view: newView,
-            page: 1,
-            familiesPerPage: 5,
-            classesPerPage: 1,
-        });
-        setClassMemberPages({});
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        photoPopup.visible &&
+        popupRef.current &&
+        !popupRef.current.contains(event.target)
+      ) {
+        closePhotoPopup();
+      }
     };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [photoPopup.visible]);
 
-    const handlePageChange = (url) => {
-        if (url) {
-            visitAnnuaire(parsePaginationPayload(url));
-        }
-    };
-
-    const handleFamilyPageChange = (url) => {
-        if (url) {
-            visitAnnuaire(parsePaginationPayload(url));
-        }
-    };
-
-    const handleClassPageChange = (url) => {
-        if (url) {
-            visitAnnuaire(parsePaginationPayload(url));
-        }
-        setClassMemberPages({});
-    };
-
-    const handlePerPageChange = (newPerPage) => {
-        setItemsPerPage(newPerPage);
-    };
-
-    const resetFilters = () => {
-        setSearchTerm("");
-        setClasseFilter("");
-        setFamilleFilter("");
-        setProfessionFilter("");
-        setRoleFilter("");
-        setItemsPerPage(10);
-    };
-
-    const openModal = (member) => {
-        setSelectedMember(member);
-        setIsExiting(false);
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setIsExiting(true);
-        setTimeout(() => {
-            setIsExiting(false);
-            setIsModalOpen(false);
-            setSelectedMember(null);
-        }, 200);
-    };
-
-    const openPhotoPopup = (src, event) => {
-        event.stopPropagation();
-        const x = event.clientX;
-        const y = event.clientY;
-        setPhotoPopup({
-            visible: true,
-            src,
-            x,
-            y,
-            exiting: false,
-        });
-    };
-
-    const closePhotoPopup = () => {
-        setPhotoPopup((prev) => ({ ...prev, exiting: true }));
-        setTimeout(() => {
-            setPhotoPopup({
-                visible: false,
-                src: "",
-                x: 0,
-                y: 0,
-                exiting: false,
-            });
-        }, 150);
-    };
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (
-                photoPopup.visible &&
-                popupRef.current &&
-                !popupRef.current.contains(event.target)
-            ) {
-                closePhotoPopup();
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () =>
-            document.removeEventListener("mousedown", handleClickOutside);
-    }, [photoPopup.visible]);
-
-    const normalizeMember = (member) => {
-        const toText = (value, fallback = "-") => {
-            if (value === null || value === undefined) return fallback;
-            if (typeof value === "string" || typeof value === "number")
-                return String(value);
-            if (typeof value === "object") {
-                return String(
-                    value.nom ??
-                        value.label ??
-                        value.name ??
-                        value.code ??
-                        fallback,
-                );
-            }
-            return fallback;
-        };
-
-        const prenoms = toText(
-            member?.prenoms || member?.prenom || member?.full_name,
-            "",
+  const normalizeMember = (member) => {
+    const toText = (value, fallback = "-") => {
+      if (value === null || value === undefined) return fallback;
+      if (typeof value === "string" || typeof value === "number")
+        return String(value);
+      if (typeof value === "object") {
+        return String(
+          value.nom ?? value.label ?? value.name ?? value.code ?? fallback,
         );
-        return {
-            ...member,
-            prenoms,
-            classeMethodiste: toText(
-                member?.classeMethodiste || member?.classe,
-                "-",
-            ),
-            famille: toText(
-                member?.famille || member?.family || member?.family_code,
-                "-",
-            ),
-            codeFamille:
-                member?.code_famille || member?.family?.code_famille || null,
-            codeMembre: member?.numMembre || member?.code_membre || null,
-            photo: member?.photo || member?.profile_photo_url || "",
-            sexe: toText(member?.sexe || member?.genre, ""),
-            dateNaissance:
-                member?.dateNaissance || member?.date_naissance || null,
-            telephone: toText(member?.telephone, "-"),
-            email: toText(member?.email, "-"),
-            fonction: toText(member?.fonction, "-"),
-            profession: toText(member?.profession, "-"),
-        };
+      }
+      return fallback;
     };
 
-    const getFallbackImage = (member) => {
+    const prenoms = toText(
+      member?.prenoms || member?.prenom || member?.full_name,
+      "",
+    );
+    return {
+      ...member,
+      prenoms,
+      classeMethodiste: toText(member?.classeMethodiste || member?.classe, "-"),
+      famille: toText(
+        member?.famille || member?.family || member?.family_code,
+        "-",
+      ),
+      codeFamille: member?.code_famille || member?.family?.code_famille || null,
+      codeMembre: member?.numMembre || member?.code_membre || null,
+      photo: member?.photo || member?.profile_photo_url || "",
+      sexe: toText(member?.sexe || member?.genre, ""),
+      dateNaissance: member?.dateNaissance || member?.date_naissance || null,
+      telephone: toText(member?.telephone, "-"),
+      email: toText(member?.email, "-"),
+      fonction: toText(member?.fonction, "-"),
+      profession: toText(member?.profession, "-"),
+    };
+  };
+
+  const getFallbackImage = (member) => {
+    const normalized = normalizeMember(member);
+    const initial = (normalized.prenoms || normalized.nom || "?")
+      .charAt(0)
+      .toUpperCase();
+    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#2563eb"/><text x="50" y="65" font-size="40" text-anchor="middle" fill="white" font-weight="bold">${initial}</text></svg>`)}`;
+  };
+
+  const loadMemberCotisations = (member) => {
+    if (!cotisations || typeof cotisations !== "object") {
+      return { fimeco: null, autres: [] };
+    }
+    let fimecoData = null;
+    if (Array.isArray(cotisations.fimeco)) {
+      fimecoData =
+        cotisations.fimeco.find((c) => c.famille === member.famille) || null;
+    }
+    let autresData = [];
+    if (Array.isArray(cotisations.autres)) {
+      autresData = cotisations.autres;
+    }
+    return {
+      fimeco: fimecoData,
+      autres: autresData,
+    };
+  };
+
+  const getPopupStyle = () => {
+    if (!photoPopup.visible) return {};
+    const popupWidth = 260;
+    const popupHeight = 260;
+    let left = photoPopup.x + 10;
+    let top = photoPopup.y - popupHeight / 2;
+    if (left + popupWidth > window.innerWidth) {
+      left = photoPopup.x - popupWidth - 10;
+    }
+    if (top < 0) top = 10;
+    if (top + popupHeight > window.innerHeight) {
+      top = window.innerHeight - popupHeight - 10;
+    }
+    return { left, top };
+  };
+
+  // ========== EXPORT EXCEL ==========
+  const exportToExcel = () => {
+    if (paginatedMembers.length === 0) {
+      alert("Aucune donnée à exporter.");
+      return;
+    }
+
+    const columns = [
+      "#",
+      "Nom",
+      "Prénoms",
+      "Genre",
+      "Famille",
+      "Code famille",
+      "Code membre",
+      "Classe",
+      "Téléphone",
+      "Email",
+      "Baptême",
+      "Relation",
+      "1ère communion",
+      "Mariage civil",
+      "Mariage religieux",
+      "Doté",
+      "Veuf",
+      "Date naissance",
+      "Fonction",
+      "Profession",
+    ];
+
+    const rows = paginatedMembers.map((member, idx) => {
+      const normalized = normalizeMember(member);
+      const rowNumber = (membersCurrentPage - 1) * membersPerPage + idx + 1;
+      return [
+        rowNumber,
+        normalized.nom || "",
+        normalized.prenoms || "",
+        normalized.sexe === "M" ? "Masculin" : "Féminin",
+        normalized.famille || "",
+        normalized.codeFamille || "",
+        normalized.codeMembre || "",
+        normalized.classeMethodiste || "",
+        normalized.telephone || "",
+        normalized.email || "",
+        normalized.baptise ? "Oui" : "Non",
+        normalized.relation || "",
+        normalized.premiereCommunion ? "Oui" : "Non",
+        normalized.mariageCivil ? "Oui" : "Non",
+        normalized.marieReligieusement ? "Oui" : "Non",
+        normalized.dote ? "Oui" : "Non",
+        normalized.veuf ? "Oui" : "Non",
+        normalized.dateNaissance || "",
+        normalized.fonction || "",
+        normalized.profession || "",
+      ];
+    });
+
+    const csvContent = [
+      columns.join(";"),
+      ...rows.map((row) =>
+        row
+          .map((cell) => {
+            const cellStr = cell.toString().replace(/"/g, '""');
+            return cellStr.includes(";") || cellStr.includes('"')
+              ? `"${cellStr}"`
+              : cellStr;
+          })
+          .join(";"),
+      ),
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `annuaire_membres_${new Date().toISOString().slice(0, 10)}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // ========== EXPORT PDF ==========
+  const exportToPDF = async () => {
+    if (paginatedMembers.length === 0) {
+      alert("Aucune donnée à exporter.");
+      return;
+    }
+
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const { default: autoTable } = await import("jspdf-autotable");
+      const doc = new jsPDF({ orientation: "landscape" });
+      const logoPath = withBasePath("", "/images/image.png");
+      try {
+        const response = await fetch(logoPath);
+        if (response.ok) {
+          const blob = await response.blob();
+          const reader = new FileReader();
+          const logoData = await new Promise((resolve) => {
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+          // Logo carré 22×22mm, aligné à droite avec marge 10mm
+          const pageW = doc.internal.pageSize.getWidth();
+          doc.addImage(logoData, "PNG", pageW - 32, 4, 22, 22);
+        }
+      } catch (e) {
+        console.log("Logo non chargé, génération sans logo.");
+      }
+      doc.setFontSize(18);
+      doc.text("Annuaire des membres", 14, 22);
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(`Export du ${new Date().toLocaleDateString()}`, 14, 30);
+
+      const columns = [
+        { header: "#", dataKey: "index" },
+        { header: "Nom", dataKey: "nom" },
+        { header: "Prénoms", dataKey: "prenoms" },
+        { header: "Genre", dataKey: "genre" },
+        // { header: "Famille", dataKey: "famille" }, // supprimé
+        { header: "Code famille", dataKey: "codeFamille" },
+        { header: "Code membre", dataKey: "codeMembre" },
+        { header: "Classe", dataKey: "classe" },
+        { header: "Téléphone", dataKey: "telephone" },
+        { header: "Email", dataKey: "email" },
+        { header: "Baptême", dataKey: "baptise" },
+        { header: "Relation", dataKey: "relation" },
+        { header: "1ère communion", dataKey: "premiereCommunion" },
+        { header: "Mariage civil", dataKey: "mariageCivil" },
+        { header: "Mariage religieux", dataKey: "marieReligieusement" },
+        { header: "Doté", dataKey: "dote" },
+        { header: "Veuf", dataKey: "veuf" },
+        { header: "Date naiss.", dataKey: "dateNaissance" },
+        { header: "Fonction", dataKey: "fonction" },
+        { header: "Profession", dataKey: "profession" },
+      ];
+
+      const data = paginatedMembers.map((member, idx) => {
         const normalized = normalizeMember(member);
-        const initial = (normalized.prenoms || normalized.nom || "?")
-            .charAt(0)
-            .toUpperCase();
-        return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#2563eb"/><text x="50" y="65" font-size="40" text-anchor="middle" fill="white" font-weight="bold">${initial}</text></svg>`)}`;
-    };
-
-    const loadMemberCotisations = (member) => {
-        if (!cotisations || typeof cotisations !== "object") {
-            return { fimeco: null, autres: [] };
+        const rowNumber = (membersCurrentPage - 1) * membersPerPage + idx + 1;
+        // Formatage de la date de naissance JJ/MM/AAAA
+        let formattedDate = "";
+        if (normalized.dateNaissance) {
+          const d = new Date(normalized.dateNaissance);
+          if (!isNaN(d.getTime())) {
+            const day = String(d.getDate()).padStart(2, "0");
+            const month = String(d.getMonth() + 1).padStart(2, "0");
+            const year = d.getFullYear();
+            formattedDate = `${day}/${month}/${year}`;
+          } else {
+            formattedDate = normalized.dateNaissance;
+          }
         }
-        let fimecoData = null;
-        if (Array.isArray(cotisations.fimeco)) {
-            fimecoData =
-                cotisations.fimeco.find((c) => c.famille === member.famille) ||
-                null;
-        }
-        let autresData = [];
-        if (Array.isArray(cotisations.autres)) {
-            autresData = cotisations.autres;
-        }
+        // Code famille = même logique que le tableau web (normalized.famille)
+        const familleCode =
+          normalized.famille !== "-" ? normalized.famille : "";
         return {
-            fimeco: fimecoData,
-            autres: autresData,
+          index: rowNumber,
+          nom: normalized.nom || "",
+          prenoms: normalized.prenoms || "",
+          genre: normalized.sexe === "M" ? "Masculin" : "Féminin",
+          // famille: familleNom, // supprimé
+          codeFamille: familleCode,
+          codeMembre: normalized.codeMembre || "",
+          classe: normalized.classeMethodiste || "",
+          telephone: normalized.telephone || "",
+          email: normalized.email || "",
+          baptise: normalized.baptise ? "Oui" : "Non",
+          relation: normalized.relation || "",
+          premiereCommunion: normalized.premiereCommunion ? "Oui" : "Non",
+          mariageCivil: normalized.mariageCivil ? "Oui" : "Non",
+          marieReligieusement: normalized.marieReligieusement ? "Oui" : "Non",
+          dote: normalized.dote ? "Oui" : "Non",
+          veuf: normalized.veuf ? "Oui" : "Non",
+          dateNaissance: formattedDate,
+          fonction: normalized.fonction || "",
+          profession: normalized.profession || "",
         };
-    };
+      });
 
-    const getPopupStyle = () => {
-        if (!photoPopup.visible) return {};
-        const popupWidth = 260;
-        const popupHeight = 260;
-        let left = photoPopup.x + 10;
-        let top = photoPopup.y - popupHeight / 2;
-        if (left + popupWidth > window.innerWidth) {
-            left = photoPopup.x - popupWidth - 10;
-        }
-        if (top < 0) top = 10;
-        if (top + popupHeight > window.innerHeight) {
-            top = window.innerHeight - popupHeight - 10;
-        }
-        return { left, top };
-    };
+      // Largeurs en mm — total ~270mm pour tenir sur A4 paysage (277mm utiles)
+      const columnStyles = {
+        index: { cellWidth: 6, halign: "center" },
+        nom: { cellWidth: 17 },
+        prenoms: { cellWidth: 20 },
+        genre: { cellWidth: 12, halign: "center" },
+        codeFamille: { cellWidth: 13, halign: "center" },
+        codeMembre: { cellWidth: 13, halign: "center" },
+        classe: { cellWidth: 15 },
+        telephone: { cellWidth: 20 },
+        email: { cellWidth: 26 },
+        baptise: { cellWidth: 10, halign: "center" },
+        relation: { cellWidth: 12 },
+        premiereCommunion: { cellWidth: 13, halign: "center" },
+        mariageCivil: { cellWidth: 12, halign: "center" },
+        marieReligieusement: { cellWidth: 13, halign: "center" },
+        dote: { cellWidth: 8, halign: "center" },
+        veuf: { cellWidth: 8, halign: "center" },
+        dateNaissance: { cellWidth: 14, halign: "center" },
+        fonction: { cellWidth: 16 },
+        profession: { cellWidth: 16 },
+      };
+      // Total : 6+17+20+12+13+13+15+20+26+10+12+13+12+13+8+8+14+16+16 = 264mm ✓
 
-    // ========== EXPORT EXCEL ==========
-    const exportToExcel = () => {
-        if (paginatedMembers.length === 0) {
-            alert("Aucune donnée à exporter.");
-            return;
-        }
+      autoTable(doc, {
+        columns,
+        body: data,
+        startY: 38,
+        // margin: { left: 10, right: 10 },
+        tableWidth: 264,
+        styles: {
+          fontSize: 7.5,
+          cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+          overflow: "linebreak",
+          lineColor: [220, 225, 235],
+          lineWidth: 0.2,
+          valign: "middle",
+        },
+        headStyles: {
+          fillColor: [37, 99, 235],
+          textColor: 255,
+          fontSize: 7,
+          fontStyle: "bold",
+          cellPadding: { top: 4, right: 3, bottom: 4, left: 3 },
+          halign: "center",
+          lineWidth: 0,
+        },
+        alternateRowStyles: { fillColor: [247, 249, 252] },
+        columnStyles,
+        tableLineColor: [200, 210, 225],
+        tableLineWidth: 0.2,
+        didDrawPage: (hookData) => {
+          // Pied de page : numéro de page
+          const pageCount = doc.getNumberOfPages();
+          const currentPage = hookData.pageNumber;
+          doc.setFontSize(7);
+          doc.setTextColor(150);
+          doc.text(
+            `Page ${currentPage} / ${pageCount}`,
+            doc.internal.pageSize.getWidth() / 2,
+            doc.internal.pageSize.getHeight() - 6,
+            { align: "center" },
+          );
+          doc.text(
+            `Eglise Méthodiste du Jubilé de Cocody — Annuaire des membres`,
+            10,
+            doc.internal.pageSize.getHeight() - 6,
+          );
+        },
+      });
 
-        const columns = [
-            "#",
-            "Nom",
-            "Prénoms",
-            "Genre",
-            "Famille",
-            "Code famille",
-            "Code membre",
-            "Classe",
-            "Téléphone",
-            "Email",
-            "Baptême",
-            "Relation",
-            "1ère communion",
-            "Mariage civil",
-            "Mariage religieux",
-            "Doté",
-            "Veuf",
-            "Date naissance",
-            "Fonction",
-            "Profession",
-        ];
+      doc.save(`annuaire_membres_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (error) {
+      console.error("Erreur lors de la génération du PDF :", error);
+      alert(
+        "Impossible de générer le PDF. Vérifiez que les bibliothèques 'jspdf' et 'jspdf-autotable' sont installées.",
+      );
+    }
+  };
 
-        const rows = paginatedMembers.map((member, idx) => {
-            const normalized = normalizeMember(member);
-            const rowNumber =
-                (membersCurrentPage - 1) * membersPerPage + idx + 1;
-            return [
-                rowNumber,
-                normalized.nom || "",
-                normalized.prenoms || "",
-                normalized.sexe === "M" ? "Masculin" : "Féminin",
-                normalized.famille || "",
-                normalized.codeFamille || "",
-                normalized.codeMembre || "",
-                normalized.classeMethodiste || "",
-                normalized.telephone || "",
-                normalized.email || "",
-                normalized.baptise ? "Oui" : "Non",
-                normalized.relation || "",
-                normalized.premiereCommunion ? "Oui" : "Non",
-                normalized.mariageCivil ? "Oui" : "Non",
-                normalized.marieReligieusement ? "Oui" : "Non",
-                normalized.dote ? "Oui" : "Non",
-                normalized.veuf ? "Oui" : "Non",
-                normalized.dateNaissance || "",
-                normalized.fonction || "",
-                normalized.profession || "",
-            ];
-        });
-
-        const csvContent = [
-            columns.join(";"),
-            ...rows.map((row) =>
-                row
-                    .map((cell) => {
-                        const cellStr = cell.toString().replace(/"/g, '""');
-                        return cellStr.includes(";") || cellStr.includes('"')
-                            ? `"${cellStr}"`
-                            : cellStr;
-                    })
-                    .join(";"),
-            ),
-        ].join("\n");
-
-        const blob = new Blob(["\uFEFF" + csvContent], {
-            type: "text/csv;charset=utf-8;",
-        });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.href = url;
-        link.setAttribute(
-            "download",
-            `annuaire_membres_${new Date().toISOString().slice(0, 10)}.csv`,
-        );
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-
-    // ========== EXPORT PDF ==========
-    const exportToPDF = async () => {
-        if (paginatedMembers.length === 0) {
-            alert("Aucune donnée à exporter.");
-            return;
-        }
-
-        try {
-            const { default: jsPDF } = await import("jspdf");
-            const { default: autoTable } = await import("jspdf-autotable");
-            const doc = new jsPDF({ orientation: "landscape" });
-            const logoPath = withBasePath("", "/images/image.png");
-            try {
-                const response = await fetch(logoPath);
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const reader = new FileReader();
-                    const logoData = await new Promise((resolve) => {
-                        reader.onloadend = () => resolve(reader.result);
-                        reader.readAsDataURL(blob);
-                    });
-                    // Logo carré 22×22mm, aligné à droite avec marge 10mm
-                    const pageW = doc.internal.pageSize.getWidth();
-                    doc.addImage(logoData, "PNG", pageW - 32, 4, 22, 22);
-                }
-            } catch (e) {
-                console.log("Logo non chargé, génération sans logo.");
-            }
-            doc.setFontSize(18);
-            doc.text("Annuaire des membres", 14, 22);
-            doc.setFontSize(11);
-            doc.setTextColor(100);
-            doc.text(`Export du ${new Date().toLocaleDateString()}`, 14, 30);
-
-            const columns = [
-                { header: "#", dataKey: "index" },
-                { header: "Nom", dataKey: "nom" },
-                { header: "Prénoms", dataKey: "prenoms" },
-                { header: "Genre", dataKey: "genre" },
-                // { header: "Famille", dataKey: "famille" }, // supprimé
-                { header: "Code famille", dataKey: "codeFamille" },
-                { header: "Code membre", dataKey: "codeMembre" },
-                { header: "Classe", dataKey: "classe" },
-                { header: "Téléphone", dataKey: "telephone" },
-                { header: "Email", dataKey: "email" },
-                { header: "Baptême", dataKey: "baptise" },
-                { header: "Relation", dataKey: "relation" },
-                { header: "1ère communion", dataKey: "premiereCommunion" },
-                { header: "Mariage civil", dataKey: "mariageCivil" },
-                { header: "Mariage religieux", dataKey: "marieReligieusement" },
-                { header: "Doté", dataKey: "dote" },
-                { header: "Veuf", dataKey: "veuf" },
-                { header: "Date naiss.", dataKey: "dateNaissance" },
-                { header: "Fonction", dataKey: "fonction" },
-                { header: "Profession", dataKey: "profession" },
-            ];
-
-            const data = paginatedMembers.map((member, idx) => {
-                const normalized = normalizeMember(member);
-                const rowNumber =
-                    (membersCurrentPage - 1) * membersPerPage + idx + 1;
-                // Formatage de la date de naissance JJ/MM/AAAA
-                let formattedDate = "";
-                if (normalized.dateNaissance) {
-                    const d = new Date(normalized.dateNaissance);
-                    if (!isNaN(d.getTime())) {
-                        const day = String(d.getDate()).padStart(2, "0");
-                        const month = String(d.getMonth() + 1).padStart(2, "0");
-                        const year = d.getFullYear();
-                        formattedDate = `${day}/${month}/${year}`;
-                    } else {
-                        formattedDate = normalized.dateNaissance;
-                    }
-                }
-                // Code famille = même logique que le tableau web (normalized.famille)
-                const familleCode = normalized.famille !== "-" ? normalized.famille : "";
-                return {
-                    index: rowNumber,
-                    nom: normalized.nom || "",
-                    prenoms: normalized.prenoms || "",
-                    genre: normalized.sexe === "M" ? "Masculin" : "Féminin",
-                    // famille: familleNom, // supprimé
-                    codeFamille: familleCode,
-                    codeMembre: normalized.codeMembre || "",
-                    classe: normalized.classeMethodiste || "",
-                    telephone: normalized.telephone || "",
-                    email: normalized.email || "",
-                    baptise: normalized.baptise ? "Oui" : "Non",
-                    relation: normalized.relation || "",
-                    premiereCommunion: normalized.premiereCommunion
-                        ? "Oui"
-                        : "Non",
-                    mariageCivil: normalized.mariageCivil ? "Oui" : "Non",
-                    marieReligieusement: normalized.marieReligieusement
-                        ? "Oui"
-                        : "Non",
-                    dote: normalized.dote ? "Oui" : "Non",
-                    veuf: normalized.veuf ? "Oui" : "Non",
-                    dateNaissance: formattedDate,
-                    fonction: normalized.fonction || "",
-                    profession: normalized.profession || "",
-                };
-            });
-
-            // Largeurs en mm — total ~270mm pour tenir sur A4 paysage (277mm utiles)
-            const columnStyles = {
-                index:               { cellWidth: 6,  halign: "center" },
-                nom:                 { cellWidth: 17 },
-                prenoms:             { cellWidth: 20 },
-                genre:               { cellWidth: 12, halign: "center" },
-                codeFamille:         { cellWidth: 13, halign: "center" },
-                codeMembre:          { cellWidth: 13, halign: "center" },
-                classe:              { cellWidth: 15 },
-                telephone:           { cellWidth: 20 },
-                email:               { cellWidth: 26 },
-                baptise:             { cellWidth: 10, halign: "center" },
-                relation:            { cellWidth: 12 },
-                premiereCommunion:   { cellWidth: 13, halign: "center" },
-                mariageCivil:        { cellWidth: 12, halign: "center" },
-                marieReligieusement: { cellWidth: 13, halign: "center" },
-                dote:                { cellWidth: 8,  halign: "center" },
-                veuf:                { cellWidth: 8,  halign: "center" },
-                dateNaissance:       { cellWidth: 14, halign: "center" },
-                fonction:            { cellWidth: 16 },
-                profession:          { cellWidth: 16 },
-            };
-            // Total : 6+17+20+12+13+13+15+20+26+10+12+13+12+13+8+8+14+16+16 = 264mm ✓
-
-            autoTable(doc, {
-                columns,
-                body: data,
-                startY: 38,
-                // margin: { left: 10, right: 10 },
-                tableWidth: 264,
-                styles: {
-                    fontSize: 7.5,
-                    cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
-                    overflow: "linebreak",
-                    lineColor: [220, 225, 235],
-                    lineWidth: 0.2,
-                    valign: "middle",
-                },
-                headStyles: {
-                    fillColor: [37, 99, 235],
-                    textColor: 255,
-                    fontSize: 7,
-                    fontStyle: "bold",
-                    cellPadding: { top: 4, right: 3, bottom: 4, left: 3 },
-                    halign: "center",
-                    lineWidth: 0,
-                },
-                alternateRowStyles: { fillColor: [247, 249, 252] },
-                columnStyles,
-                tableLineColor: [200, 210, 225],
-                tableLineWidth: 0.2,
-                didDrawPage: (hookData) => {
-                    // Pied de page : numéro de page
-                    const pageCount = doc.getNumberOfPages();
-                    const currentPage = hookData.pageNumber;
-                    doc.setFontSize(7);
-                    doc.setTextColor(150);
-                    doc.text(
-                        `Page ${currentPage} / ${pageCount}`,
-                        doc.internal.pageSize.getWidth() / 2,
-                        doc.internal.pageSize.getHeight() - 6,
-                        { align: "center" }
-                    );
-                    doc.text(
-                        `Eglise Méthodiste du Jubilé de Cocody — Annuaire des membres`,
-                        10,
-                        doc.internal.pageSize.getHeight() - 6,
-                    );
-                },
-            });
-
-            doc.save(
-                `annuaire_membres_${new Date().toISOString().slice(0, 10)}.pdf`,
-            );
-        } catch (error) {
-            console.error("Erreur lors de la génération du PDF :", error);
-            alert(
-                "Impossible de générer le PDF. Vérifiez que les bibliothèques 'jspdf' et 'jspdf-autotable' sont installées.",
-            );
-        }
-    };
-
-    // Composant de pagination générique
-    const Pagination = ({
-        links,
-        currentPage,
-        perPage,
-        total,
-        onPageChange,
-    }) => {
-        if (!links || links.length <= 3) return null;
-
-        return (
-            <div className="flex items-center justify-between px-4 py-3 bg-white/50 backdrop-blur-sm border-t border-white/50">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-700">
-                        Affichage de {(currentPage - 1) * perPage + 1} à{" "}
-                        {Math.min(currentPage * perPage, total)} sur {total}{" "}
-                        membres
-                    </span>
-                    {currentView === "all" && (
-                        <select
-                            value={perPage}
-                            onChange={(e) => {
-                                const newPerPage = parseInt(e.target.value);
-                                onPageChange(null, newPerPage);
-                            }}
-                            className="input-control !py-1 !px-2 text-sm"
-                        >
-                            <option value={10}>10 par page</option>
-                            <option value={20}>20 par page</option>
-                            <option value={50}>50 par page</option>
-                            <option value={100}>100 par page</option>
-                        </select>
-                    )}
-                </div>
-                <div className="flex gap-2">
-                    {links.map((link, index) => {
-                        if (link.url === null) {
-                            return (
-                                <span
-                                    key={index}
-                                    className="btn btn-secondary !py-1 !px-3 disabled opacity-50 cursor-not-allowed"
-                                    dangerouslySetInnerHTML={{
-                                        __html: link.label,
-                                    }}
-                                />
-                            );
-                        }
-                        return (
-                            <button
-                                key={index}
-                                onClick={() => onPageChange(link.url)}
-                                className={`btn !py-1 !px-3 ${link.active ? "btn-primary" : "btn-secondary"}`}
-                                dangerouslySetInnerHTML={{ __html: link.label }}
-                            />
-                        );
-                    })}
-                </div>
-            </div>
-        );
-    };
-
-    // ========== VUES ==========
-
-    // Vue tableau (pour 'all')
-    const renderTableView = () => {
-        return (
-            <>
-                <div className="table-scroll">
-                    <table style={{ minWidth: "2800px" }}>
-                        <thead>
-                            <tr>
-                                <th className="text-center">#</th>
-                                <th className="text-center">Photo</th>
-                                <th className="text-center">Nom & Prénoms</th>
-                                <th className="text-center">Genre</th>
-
-                                <th className="text-center">Code famille</th>
-                                <th className="text-center">Code membre</th>
-                                <th className="text-center">Classe</th>
-                                <th className="text-center">Téléphone</th>
-                                <th className="text-center">Email</th>
-                                <th className="text-center">Baptême</th>
-                                <th className="text-center">Relation</th>
-                                <th className="text-center">1ère communion</th>
-                                <th className="text-center">Mariage civil</th>
-                                <th className="text-center">
-                                    Mariage religieux
-                                </th>
-                                <th className="text-center">Doté</th>
-                                <th className="text-center">Veuf</th>
-                                <th className="text-center">Date naiss.</th>
-                                <th className="text-center">Fonction</th>
-                                <th className="text-center">Profession</th>
-                                <th className="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {paginatedMembers.length > 0 ? (
-                                paginatedMembers.map((rawMember, idx) => {
-                                    const member = normalizeMember(rawMember);
-                                    const rowNumber =
-                                        (membersCurrentPage - 1) *
-                                            membersPerPage +
-                                        idx +
-                                        1;
-                                    return (
-                                        <tr
-                                            key={member.id}
-                                            className="hover:bg-white/90 transition"
-                                        >
-                                            <td className="text-center">
-                                                {rowNumber}
-                                            </td>
-                                            <td className="text-center">
-                                                <img
-                                                    src={
-                                                        member.photo ||
-                                                        getFallbackImage(member)
-                                                    }
-                                                    className="member-photo-small mx-auto"
-                                                    onClick={(e) =>
-                                                        openPhotoPopup(
-                                                            member.photo ||
-                                                                getFallbackImage(
-                                                                    member,
-                                                                ),
-                                                            e,
-                                                        )
-                                                    }
-                                                    onError={(e) => {
-                                                        e.target.src =
-                                                            getFallbackImage(
-                                                                member,
-                                                            );
-                                                    }}
-                                                    alt={member.prenoms}
-                                                />
-                                            </td>
-                                            <td className="text-center font-medium">
-                                                {member.prenoms} {member.nom}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.sexe === "M"
-                                                    ? "Masculin"
-                                                    : "Féminin"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.famille || "-"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.codeMembre || "-"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.classeMethodiste || "-"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.telephone || "-"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.email || "-"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.baptise ? "Oui" : "Non"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.relation || "-"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.premiereCommunion
-                                                    ? "Oui"
-                                                    : "Non"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.mariageCivil
-                                                    ? "Oui"
-                                                    : "Non"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.marieReligieusement
-                                                    ? "Oui"
-                                                    : "Non"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.dote ? "Oui" : "Non"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.veuf ? "Oui" : "Non"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.dateNaissance
-                                                    ? new Date(
-                                                          member.dateNaissance,
-                                                      ).toLocaleDateString(
-                                                          "fr-FR",
-                                                      )
-                                                    : "-"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.fonction || "-"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.profession || "-"}
-                                            </td>
-                                            <td className="text-center">
-                                                <button
-                                                    onClick={() =>
-                                                        openModal(member)
-                                                    }
-                                                    className="btn btn-view text-xs px-3 py-1.5"
-                                                >
-                                                    <svg
-                                                        className="w-4 h-4 inline mr-1"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                        />
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                        />
-                                                    </svg>
-                                                    Voir
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            ) : (
-                                <tr>
-                                    <td
-                                        colSpan={21}
-                                        className="text-center py-12 text-gray-400 italic"
-                                    >
-                                        Aucun membre trouvé.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-                <Pagination
-                    links={membersLinks}
-                    currentPage={membersCurrentPage}
-                    perPage={membersPerPage}
-                    total={membersTotal}
-                    onPageChange={(url, newPerPage) => {
-                        if (newPerPage) {
-                            handlePerPageChange(newPerPage);
-                        } else {
-                            handlePageChange(url);
-                        }
-                    }}
-                />
-            </>
-        );
-    };
-
-    // Vue grille (pour 'all')
-    const renderGridView = () => {
-        return (
-            <>
-                <div className="grid-view">
-                    {paginatedMembers.length > 0 ? (
-                        paginatedMembers.map((rawMember) => {
-                            const member = normalizeMember(rawMember);
-                            return (
-                                <div key={member.id} className="grid-card">
-                                    <div className="grid-cover"></div>
-                                    <div className="grid-profile-container">
-                                        <div
-                                            className="grid-profile-photo"
-                                            onClick={(e) =>
-                                                openPhotoPopup(
-                                                    member.photo ||
-                                                        getFallbackImage(
-                                                            member,
-                                                        ),
-                                                    e,
-                                                )
-                                            }
-                                        >
-                                            <img
-                                                src={
-                                                    member.photo ||
-                                                    getFallbackImage(member)
-                                                }
-                                                onError={(e) => {
-                                                    e.target.src =
-                                                        getFallbackImage(
-                                                            member,
-                                                        );
-                                                }}
-                                                alt={member.prenoms}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="grid-card-info">
-                                        <h4>
-                                            {member.prenoms} {member.nom}
-                                        </h4>
-                                        <div className="grid-card-famille">
-                                            {member.famille || "-"}
-                                        </div>
-                                        <div className="grid-card-classe">
-                                            {member.classeMethodiste || "-"}
-                                        </div>
-                                        <div className="grid-card-contact">
-                                            <svg
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                                                />
-                                            </svg>
-                                            {member.telephone || "-"}
-                                        </div>
-                                        <div className="grid-card-contact">
-                                            <svg
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                                />
-                                            </svg>
-                                            {member.email || "-"}
-                                        </div>
-                                        {member.profession && member.profession !== "-" && (
-                                            <div className="grid-card-profession">
-                                                💼 {member.profession}
-                                            </div>
-                                        )}
-                                        <button
-                                            onClick={() => openModal(member)}
-                                            className="btn btn-view mt-3 w-full"
-                                        >
-                                            Voir profil
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    ) : (
-                        <p className="col-span-full text-center py-12 text-gray-400 italic">
-                            Aucun membre trouvé.
-                        </p>
-                    )}
-                </div>
-                <Pagination
-                    links={membersLinks}
-                    currentPage={membersCurrentPage}
-                    perPage={membersPerPage}
-                    total={membersTotal}
-                    onPageChange={(url, newPerPage) => {
-                        if (newPerPage) {
-                            handlePerPageChange(newPerPage);
-                        } else {
-                            handlePageChange(url);
-                        }
-                    }}
-                />
-            </>
-        );
-    };
-
-    // Vue familles (inchangée)
-    const renderFamiliesView = () => {
-        if (familiesPage.data.length === 0) {
-            return (
-                <p className="text-center py-12 text-gray-400 italic">
-                    Aucune famille trouvée.
-                </p>
-            );
-        }
-        return (
-            <div className="families-list">
-                {familiesPage.data.map((family) => (
-                    <div key={family.id} className="family-group">
-                        <div className="family-header">
-                            <h3>{family.nom}</h3>
-                            <span className="family-count">{family.count}</span>
-                        </div>
-                        <div className="family-members">
-                            {(family.members || []).map((member) => (
-                                <div
-                                    key={member.id}
-                                    className="family-member-item"
-                                >
-                                    <img
-                                        src={
-                                            member.photo ||
-                                            getFallbackImage(member)
-                                        }
-                                        onClick={(e) =>
-                                            openPhotoPopup(
-                                                member.photo ||
-                                                    getFallbackImage(member),
-                                                e,
-                                            )
-                                        }
-                                        onError={(e) => {
-                                            e.target.src =
-                                                getFallbackImage(member);
-                                        }}
-                                        alt={member.prenoms}
-                                    />
-                                    <div
-                                        className="member-info"
-                                        onClick={() => openModal(member)}
-                                    >
-                                        <strong>
-                                            {member.prenoms} {member.nom}
-                                        </strong>
-                                        <p>{member.classeMethodiste || "-"}</p>
-                                        <p className="text-sm text-gray-600">
-                                            {member.telephone || "-"}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-                <Pagination
-                    links={familiesPage.links}
-                    currentPage={familiesPage.current_page}
-                    perPage={familiesPage.per_page}
-                    total={familiesPage.total}
-                    onPageChange={handleFamilyPageChange}
-                />
-            </div>
-        );
-    };
-
-    // Vue classes (inchangée)
-    const renderClassesView = () => {
-        if (classesPage.data.length === 0) {
-            return (
-                <p className="text-center py-12 text-gray-400 italic">
-                    Aucune classe trouvée.
-                </p>
-            );
-        }
-        return (
-            <div className="classes-list">
-                {classesPage.data.map((classe) => {
-                    const members = classe.members || [];
-                    const totalMembers = members.length;
-                    const membersPerPage = 10;
-                    const currentPage = classMemberPages[classe.id] || 1;
-                    const totalPages = Math.ceil(totalMembers / membersPerPage);
-                    const startIndex = (currentPage - 1) * membersPerPage;
-                    const displayedMembers = members.slice(
-                        startIndex,
-                        startIndex + membersPerPage,
-                    );
-
-                    return (
-                        <div key={classe.id} className="class-group">
-                            <div className="class-header">
-                                <h3>{classe.nom}</h3>
-                                <span className="class-count">
-                                    {totalMembers}
-                                </span>
-                            </div>
-                            <div className="class-members">
-                                {displayedMembers.map((member) => (
-                                    <div
-                                        key={member.id}
-                                        className="class-member-item"
-                                    >
-                                        <img
-                                            src={
-                                                member.photo ||
-                                                getFallbackImage(member)
-                                            }
-                                            onClick={(e) =>
-                                                openPhotoPopup(
-                                                    member.photo ||
-                                                        getFallbackImage(
-                                                            member,
-                                                        ),
-                                                    e,
-                                                )
-                                            }
-                                            onError={(e) => {
-                                                e.target.src =
-                                                    getFallbackImage(member);
-                                            }}
-                                            alt={member.prenoms}
-                                        />
-                                        <div
-                                            className="member-info"
-                                            onClick={() => openModal(member)}
-                                        >
-                                            <strong>
-                                                {member.prenoms} {member.nom}
-                                            </strong>
-                                            <p>{member.famille || "-"}</p>
-                                            <p className="text-sm text-gray-600">
-                                                {member.telephone || "-"}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            {totalPages > 1 && (
-                                <div className="flex items-center justify-center gap-4 p-4 border-t border-white/50">
-                                    <button
-                                        onClick={() => {
-                                            setClassMemberPages((prev) => ({
-                                                ...prev,
-                                                [classe.id]: currentPage - 1,
-                                            }));
-                                        }}
-                                        disabled={currentPage === 1}
-                                        className="btn btn-icon !p-2 disabled:opacity-50"
-                                        aria-label="Page précédente"
-                                    >
-                                        <svg
-                                            className="w-5 h-5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M15 19l-7-7 7-7"
-                                            />
-                                        </svg>
-                                    </button>
-                                    <span className="text-sm text-gray-700">
-                                        Page {currentPage} / {totalPages}
-                                    </span>
-                                    <button
-                                        onClick={() => {
-                                            setClassMemberPages((prev) => ({
-                                                ...prev,
-                                                [classe.id]: currentPage + 1,
-                                            }));
-                                        }}
-                                        disabled={currentPage === totalPages}
-                                        className="btn btn-icon !p-2 disabled:opacity-50"
-                                        aria-label="Page suivante"
-                                    >
-                                        <svg
-                                            className="w-5 h-5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M9 5l7 7-7 7"
-                                            />
-                                        </svg>
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-                <Pagination
-                    links={classesPage.links}
-                    currentPage={classesPage.current_page}
-                    perPage={classesPage.per_page}
-                    total={classesPage.total}
-                    onPageChange={handleClassPageChange}
-                />
-            </div>
-        );
-    };
-
-    const renderActiveView = () => {
-        switch (currentView) {
-            case "all":
-                return viewMode === "table"
-                    ? renderTableView()
-                    : renderGridView();
-            case "families":
-                return renderFamiliesView();
-            case "classes":
-                return renderClassesView();
-            default:
-                return renderTableView();
-        }
-    };
+  // Composant de pagination générique
+  const Pagination = ({ links, currentPage, perPage, total, onPageChange }) => {
+    if (!links || links.length <= 3) return null;
 
     return (
-        <>
-            <Head title="Annuaire des membres" />
-            <style>{GLOBAL_STYLES}</style>
-
-            {/* MODAL DÉTAILS MEMBRE */}
-            {isModalOpen && (
-                <div
-                    className={`modal-overlay ${isExiting ? "closing" : ""}`}
-                    onClick={closeModal}
-                >
-                    <div
-                        className={`modal-content ${isExiting ? "closing" : ""}`}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="modal-header">
-                            <h2 className="text-xl font-bold">Fiche membre</h2>
-                            <button onClick={closeModal}>
-                                <svg
-                                    className="w-5 h-5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                        <div className="modal-body">
-                            <MemberDetailsModal
-                                member={selectedMember}
-                                cotisations={
-                                    selectedMember
-                                        ? loadMemberCotisations(selectedMember)
-                                        : {}
-                                }
-                                actesLiturgiques={actesLiturgiques}
-                                userData={user}
-                                onClose={closeModal}
-                            />
-                        </div>
-                        <div className="modal-footer">
-                            <button
-                                onClick={closeModal}
-                                className="btn btn-secondary"
-                            >
-                                Fermer
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* POPUP PHOTO */}
-            {photoPopup.visible && (
-                <div
-                    ref={popupRef}
-                    className={`photo-popup ${photoPopup.exiting ? "closing" : ""}`}
-                    style={getPopupStyle()}
-                >
-                    <img src={photoPopup.src} alt="Agrandissement" />
-                    <button
-                        className="photo-popup-close"
-                        onClick={closePhotoPopup}
-                    >
-                        ×
-                    </button>
-                </div>
-            )}
-
-            {/* CONTENU PRINCIPAL */}
-            <div
-                className="min-h-screen py-8 px-4 animate-fade-in-up"
-                style={{
-                    background:
-                        "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
-                }}
+      <div className="flex items-center justify-between px-4 py-3 bg-white/50 backdrop-blur-sm border-t border-white/50">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-700">
+            Affichage de {(currentPage - 1) * perPage + 1} à{" "}
+            {Math.min(currentPage * perPage, total)} sur {total} membres
+          </span>
+          {currentView === "all" && (
+            <select
+              value={perPage}
+              onChange={(e) => {
+                const newPerPage = parseInt(e.target.value);
+                onPageChange(null, newPerPage);
+              }}
+              className="input-control !py-1 !px-2 text-sm"
             >
-                <div className="w-full">
-                    {/* HEADER avec bouton retour et titre */}
-                    <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 w-full">
-                        <div className="w-full md:w-auto flex-shrink-0">
-                            <Link
-                                href={withBasePath("", "/admin/dashboard")}
-                                className="btn btn-secondary gap-2 w-full md:w-auto justify-center"
-                            >
-                                <svg
-                                    className="w-5 h-5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                                    />
-                                </svg>
-                                Retour
-                            </Link>
-                        </div>
-                        <h1 className="text-xl md:text-2xl font-bold text-white text-center flex-1 order-first md:order-none">
-                            Annuaire des membres
-                        </h1>
-                        <div className="w-full md:w-auto flex-shrink-0"></div>
-                    </div>
-
-                    {/* BARRE DE FILTRES */}
-                    <div className="glass-panel filters-bar">
-                        {/* Première ligne : filtres */}
-                        <div className="filter-group">
-                            <div className="input-search-wrapper">
-                                <svg
-                                    className="input-search-icon"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                    />
-                                </svg>
-                                <input
-                                    type="text"
-                                    placeholder="Rechercher (nom, téléphone, classe)..."
-                                    className="input-control input-search"
-                                    value={searchTerm}
-                                    onChange={(e) =>
-                                        setSearchTerm(e.target.value)
-                                    }
-                                />
-                            </div>
-
-                            <select
-                                value={classeFilter}
-                                onChange={(e) =>
-                                    setClasseFilter(e.target.value)
-                                }
-                                className="input-control"
-                                style={{ minWidth: "140px" }}
-                            >
-                                <option value="">Toutes classes</option>
-                                {filterOptions.classes.map((c, idx) => {
-                                    const value =
-                                        typeof c === "object" && c !== null
-                                            ? String(c.id ?? c.nom ?? idx)
-                                            : String(c);
-                                    const label =
-                                        typeof c === "object" && c !== null
-                                            ? String(
-                                                  c.nom ??
-                                                      c.label ??
-                                                      c.id ??
-                                                      value,
-                                              )
-                                            : String(c);
-                                    return (
-                                        <option
-                                            key={`classe-${value}-${idx}`}
-                                            value={value}
-                                        >
-                                            {label}
-                                        </option>
-                                    );
-                                })}
-                            </select>
-
-                            <select
-                                value={familleFilter}
-                                onChange={(e) =>
-                                    setFamilleFilter(e.target.value)
-                                }
-                                className="input-control"
-                                style={{ minWidth: "140px" }}
-                            >
-                                <option value="">Toutes familles</option>
-                                {filterOptions.familles.map((f, idx) => {
-                                    const value =
-                                        typeof f === "object" && f !== null
-                                            ? String(
-                                                  f.id ??
-                                                      f.code ??
-                                                      f.nom ??
-                                                      idx,
-                                              )
-                                            : String(f);
-                                    const label =
-                                        typeof f === "object" && f !== null
-                                            ? String(
-                                                  f.nom ??
-                                                      f.label ??
-                                                      f.code ??
-                                                      value,
-                                              )
-                                            : String(f);
-                                    return (
-                                        <option
-                                            key={`famille-${value}-${idx}`}
-                                            value={value}
-                                        >
-                                            {label}
-                                        </option>
-                                    );
-                                })}
-                            </select>
-
-                            <select
-                                value={professionFilter}
-                                onChange={(e) =>
-                                    setProfessionFilter(e.target.value)
-                                }
-                                className="input-control"
-                                style={{ minWidth: "140px" }}
-                            >
-                                <option value="">Toutes professions</option>
-                                {filterOptions.professions.map((p, idx) => {
-                                    const value =
-                                        typeof p === "object" && p !== null
-                                            ? String(p.value ?? p.id ?? idx)
-                                            : String(p);
-                                    const label =
-                                        typeof p === "object" && p !== null
-                                            ? String(p.label ?? p.nom ?? value)
-                                            : String(p);
-                                    return (
-                                        <option
-                                            key={`profession-${value}-${idx}`}
-                                            value={value}
-                                        >
-                                            {label}
-                                        </option>
-                                    );
-                                })}
-                            </select>
-
-                            <select
-                                value={roleFilter}
-                                onChange={(e) => setRoleFilter(e.target.value)}
-                                className="input-control"
-                                style={{ minWidth: "140px" }}
-                            >
-                                <option value="">Tous rôles</option>
-                                {filterOptions.roles.map((r, idx) => {
-                                    const value =
-                                        typeof r === "object" && r !== null
-                                            ? String(
-                                                  r.value ??
-                                                      r.id ??
-                                                      r.role ??
-                                                      idx,
-                                              )
-                                            : String(r);
-                                    const label =
-                                        typeof r === "object" && r !== null
-                                            ? String(
-                                                  r.label ??
-                                                      r.nom ??
-                                                      r.role ??
-                                                      value,
-                                              )
-                                            : String(r);
-                                    return (
-                                        <option
-                                            key={`role-${value}-${idx}`}
-                                            value={value}
-                                        >
-                                            {label}
-                                        </option>
-                                    );
-                                })}
-                            </select>
-
-                            <button
-                                onClick={resetFilters}
-                                className="btn btn-success"
-                            >
-                                <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                                Réinitialiser
-                            </button>
-                        </div>
-
-                        {/* Deuxième ligne : navigation + actions */}
-                        <div className="filter-second-row">
-                            <div className="filter-nav">
-                                {["all", "families", "classes"].map(
-                                    (viewKey) => (
-                                        <button
-                                            key={viewKey}
-                                            className={`filter-nav-btn ${currentView === viewKey ? "active" : ""}`}
-                                            onClick={() => switchView(viewKey)}
-                                        >
-                                            {viewKey === "all"
-                                                ? "Tous"
-                                                : viewKey === "families"
-                                                  ? "Familles"
-                                                  : "Classes"}
-                                        </button>
-                                    ),
-                                )}
-                            </div>
-
-                            {currentView === "all" && (
-                                <div className="filter-actions">
-                                    <button
-                                        onClick={() =>
-                                            setViewMode(
-                                                viewMode === "table"
-                                                    ? "grid"
-                                                    : "table",
-                                            )
-                                        }
-                                        className="btn btn-secondary"
-                                    >
-                                        {viewMode === "table"
-                                            ? "Vue grille"
-                                            : "Vue liste"}
-                                    </button>
-                                    <button
-                                        onClick={exportToExcel}
-                                        className="btn btn-excel"
-                                    >
-                                        Excel
-                                    </button>
-                                    <button
-                                        onClick={exportToPDF}
-                                        className="btn btn-pdf"
-                                    >
-                                        PDF
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* TABLEAU / GRILLE / VUES */}
-                    <div className="table-container mt-6">
-                        {renderActiveView()}
-                    </div>
-                </div>
-            </div>
-        </>
+              <option value={10}>10 par page</option>
+              <option value={20}>20 par page</option>
+              <option value={50}>50 par page</option>
+              <option value={100}>100 par page</option>
+            </select>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {links.map((link, index) => {
+            if (link.url === null) {
+              return (
+                <span
+                  key={index}
+                  className="btn btn-secondary !py-1 !px-3 disabled opacity-50 cursor-not-allowed"
+                  dangerouslySetInnerHTML={{
+                    __html: link.label,
+                  }}
+                />
+              );
+            }
+            return (
+              <button
+                key={index}
+                onClick={() => onPageChange(link.url)}
+                className={`btn !py-1 !px-3 ${link.active ? "btn-primary" : "btn-secondary"}`}
+                dangerouslySetInnerHTML={{ __html: link.label }}
+              />
+            );
+          })}
+        </div>
+      </div>
     );
+  };
+
+  // ========== VUES ==========
+  const localSearchQuery = searchInput.trim().toLowerCase();
+  const matchesLocalSearch = (member) => {
+    if (!localSearchQuery) return true;
+    const haystack = [
+      member.nom,
+      member.prenoms,
+      member.telephone,
+      member.profession,
+      member.codeMembre,
+      member.codeFamille,
+      member.famille,
+      member.classeMethodiste,
+      member.email,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(localSearchQuery);
+  };
+  const filterMembersBySearch = (members) => members.filter(matchesLocalSearch);
+
+  // Vue tableau (pour 'all')
+  const renderTableView = () => {
+    const normalizedMembers = paginatedMembers
+      .map(normalizeMember)
+      .filter(Boolean);
+    const visibleMembers = filterMembersBySearch(normalizedMembers);
+    return (
+      <>
+        <div className="table-scroll">
+          <table style={{ minWidth: "2800px" }}>
+            <thead>
+              <tr>
+                <th className="text-center">#</th>
+                <th className="text-center">Photo</th>
+                <th className="text-center">Nom & Prénoms</th>
+                <th className="text-center">Genre</th>
+
+                <th className="text-center">Code famille</th>
+                <th className="text-center">Code membre</th>
+                <th className="text-center">Classe</th>
+                <th className="text-center">Téléphone</th>
+                <th className="text-center">Email</th>
+                <th className="text-center">Baptême</th>
+                <th className="text-center">Relation</th>
+                <th className="text-center">1ère communion</th>
+                <th className="text-center">Mariage civil</th>
+                <th className="text-center">Mariage religieux</th>
+                <th className="text-center">Doté</th>
+                <th className="text-center">Veuf</th>
+                <th className="text-center">Date naiss.</th>
+                <th className="text-center">Fonction</th>
+                <th className="text-center">Profession</th>
+                <th className="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleMembers.length > 0 ? (
+                visibleMembers.map((member, idx) => {
+                  const rowNumber =
+                    (membersCurrentPage - 1) * membersPerPage + idx + 1;
+                  return (
+                    <tr
+                      key={member.id}
+                      className="hover:bg-white/90 transition"
+                    >
+                      <td className="text-center">{rowNumber}</td>
+                      <td className="text-center">
+                        <img
+                          src={member.photo || getFallbackImage(member)}
+                          className="member-photo-small mx-auto"
+                          onClick={(e) =>
+                            openPhotoPopup(
+                              member.photo || getFallbackImage(member),
+                              e,
+                            )
+                          }
+                          onError={(e) => {
+                            e.target.src = getFallbackImage(member);
+                          }}
+                          alt={member.prenoms}
+                        />
+                      </td>
+                      <td className="text-center font-medium">
+                        {member.prenoms} {member.nom}
+                      </td>
+                      <td className="text-center">
+                        {member.sexe === "M" ? "Masculin" : "Féminin"}
+                      </td>
+                      <td className="text-center">{member.famille || "-"}</td>
+                      <td className="text-center">
+                        {member.codeMembre || "-"}
+                      </td>
+                      <td className="text-center">
+                        {member.classeMethodiste || "-"}
+                      </td>
+                      <td className="text-center">{member.telephone || "-"}</td>
+                      <td className="text-center">{member.email || "-"}</td>
+                      <td className="text-center">
+                        {member.baptise ? "Oui" : "Non"}
+                      </td>
+                      <td className="text-center">{member.relation || "-"}</td>
+                      <td className="text-center">
+                        {member.premiereCommunion ? "Oui" : "Non"}
+                      </td>
+                      <td className="text-center">
+                        {member.mariageCivil ? "Oui" : "Non"}
+                      </td>
+                      <td className="text-center">
+                        {member.marieReligieusement ? "Oui" : "Non"}
+                      </td>
+                      <td className="text-center">
+                        {member.dote ? "Oui" : "Non"}
+                      </td>
+                      <td className="text-center">
+                        {member.veuf ? "Oui" : "Non"}
+                      </td>
+                      <td className="text-center">
+                        {member.dateNaissance
+                          ? new Date(member.dateNaissance).toLocaleDateString(
+                              "fr-FR",
+                            )
+                          : "-"}
+                      </td>
+                      <td className="text-center">{member.fonction || "-"}</td>
+                      <td className="text-center">
+                        {member.profession || "-"}
+                      </td>
+                      <td className="text-center">
+                        <button
+                          onClick={() => openModal(member)}
+                          className="btn btn-view text-xs px-3 py-1.5"
+                        >
+                          <svg
+                            className="w-4 h-4 inline mr-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
+                          </svg>
+                          Voir
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td
+                    colSpan={21}
+                    className="text-center py-12 text-gray-400 italic"
+                  >
+                    Aucun membre trouvé.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pagination
+          links={membersLinks}
+          currentPage={membersCurrentPage}
+          perPage={membersPerPage}
+          total={membersTotal}
+          onPageChange={(url, newPerPage) => {
+            if (newPerPage) {
+              handlePerPageChange(newPerPage);
+            } else {
+              handlePageChange(url);
+            }
+          }}
+        />
+      </>
+    );
+  };
+
+  // Vue grille (pour 'all')
+  const renderGridView = () => {
+    const normalizedMembers = paginatedMembers
+      .map(normalizeMember)
+      .filter(Boolean);
+    const visibleMembers = filterMembersBySearch(normalizedMembers);
+    return (
+      <>
+        <div className="grid-view">
+          {visibleMembers.length > 0 ? (
+            visibleMembers.map((member) => (
+              <div key={member.id} className="grid-card">
+                <div className="grid-cover"></div>
+                <div className="grid-profile-container">
+                  <div
+                    className="grid-profile-photo"
+                    onClick={(e) =>
+                      openPhotoPopup(
+                        member.photo || getFallbackImage(member),
+                        e,
+                      )
+                    }
+                  >
+                    <img
+                      src={member.photo || getFallbackImage(member)}
+                      onError={(e) => {
+                        e.target.src = getFallbackImage(member);
+                      }}
+                      alt={member.prenoms}
+                    />
+                  </div>
+                </div>
+                <div className="grid-card-info">
+                  <h4>
+                    {member.prenoms} {member.nom}
+                  </h4>
+                  <div className="grid-card-famille">
+                    {member.famille || "-"}
+                  </div>
+                  <div className="grid-card-classe">
+                    {member.classeMethodiste || "-"}
+                  </div>
+                  <div className="grid-card-contact">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                      />
+                    </svg>
+                    {member.telephone || "-"}
+                  </div>
+                  <div className="grid-card-contact">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                    {member.email || "-"}
+                  </div>
+                  {member.profession && member.profession !== "-" && (
+                    <div className="grid-card-profession">
+                      💼 {member.profession}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => openModal(member)}
+                    className="btn btn-view mt-3 w-full"
+                  >
+                    Voir profil
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="col-span-full text-center py-12 text-gray-400 italic">
+              Aucun membre trouvé.
+            </p>
+          )}
+        </div>
+        <Pagination
+          links={membersLinks}
+          currentPage={membersCurrentPage}
+          perPage={membersPerPage}
+          total={membersTotal}
+          onPageChange={(url, newPerPage) => {
+            if (newPerPage) {
+              handlePerPageChange(newPerPage);
+            } else {
+              handlePageChange(url);
+            }
+          }}
+        />
+      </>
+    );
+  };
+
+  // Vue familles (inchangée)
+  const renderFamiliesView = () => {
+    if (familiesPage.data.length === 0) {
+      return (
+        <p className="text-center py-12 text-gray-400 italic">
+          Aucune famille trouvée.
+        </p>
+      );
+    }
+    const hasLocalSearch = localSearchQuery.length > 0;
+    const visibleFamilies = familiesPage.data
+      .map((family) => {
+        const normalizedMembers = (family.members || [])
+          .map(normalizeMember)
+          .filter(Boolean);
+        const visibleMembers = filterMembersBySearch(normalizedMembers);
+        if (hasLocalSearch && visibleMembers.length === 0) {
+          return null;
+        }
+        return {
+          family,
+          members: visibleMembers,
+          count: hasLocalSearch ? visibleMembers.length : family.count,
+        };
+      })
+      .filter(Boolean);
+    if (visibleFamilies.length === 0) {
+      return (
+        <p className="text-center py-12 text-gray-400 italic">
+          Aucun membre trouvé.
+        </p>
+      );
+    }
+    return (
+      <div className="families-list">
+        {visibleFamilies.map(({ family, members, count }) => (
+          <div key={family.id} className="family-group">
+            <div className="family-header">
+              <h3>{family.nom}</h3>
+              <span className="family-count">{count}</span>
+            </div>
+            <div className="family-members">
+              {members.map((member) => (
+                <div key={member.id} className="family-member-item">
+                  <img
+                    src={member.photo || getFallbackImage(member)}
+                    onClick={(e) =>
+                      openPhotoPopup(
+                        member.photo || getFallbackImage(member),
+                        e,
+                      )
+                    }
+                    onError={(e) => {
+                      e.target.src = getFallbackImage(member);
+                    }}
+                    alt={member.prenoms}
+                  />
+                  <div
+                    className="member-info"
+                    onClick={() => openModal(member)}
+                  >
+                    <strong>
+                      {member.prenoms} {member.nom}
+                    </strong>
+                    <p>{member.classeMethodiste || "-"}</p>
+                    <p className="text-sm text-gray-600">
+                      {member.telephone || "-"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        <Pagination
+          links={familiesPage.links}
+          currentPage={familiesPage.current_page}
+          perPage={familiesPage.per_page}
+          total={familiesPage.total}
+          onPageChange={handleFamilyPageChange}
+        />
+      </div>
+    );
+  };
+
+  // Vue classes (inchangée)
+  const renderClassesView = () => {
+    if (classesPage.data.length === 0) {
+      return (
+        <p className="text-center py-12 text-gray-400 italic">
+          Aucune classe trouvée.
+        </p>
+      );
+    }
+    return (
+      <div className="classes-list">
+        {classesPage.data.map((classe) => {
+          const members = classe.members || [];
+          const normalizedMembers = members
+            .map(normalizeMember)
+            .filter(Boolean);
+          const filteredMembers = filterMembersBySearch(normalizedMembers);
+          if (localSearchQuery && filteredMembers.length === 0) {
+            return null;
+          }
+          const totalMembers = filteredMembers.length;
+          const membersPerPage = 10;
+          const currentPage = classMemberPages[classe.id] || 1;
+          const totalPages = Math.ceil(totalMembers / membersPerPage);
+          const startIndex = (currentPage - 1) * membersPerPage;
+          const displayedMembers = filteredMembers.slice(
+            startIndex,
+            startIndex + membersPerPage,
+          );
+
+          return (
+            <div key={classe.id} className="class-group">
+              <div className="class-header">
+                <h3>{classe.nom}</h3>
+                <span className="class-count">{totalMembers}</span>
+              </div>
+              <div className="class-members">
+                {displayedMembers.map((member) => (
+                  <div key={member.id} className="class-member-item">
+                    <img
+                      src={member.photo || getFallbackImage(member)}
+                      onClick={(e) =>
+                        openPhotoPopup(
+                          member.photo || getFallbackImage(member),
+                          e,
+                        )
+                      }
+                      onError={(e) => {
+                        e.target.src = getFallbackImage(member);
+                      }}
+                      alt={member.prenoms}
+                    />
+                    <div
+                      className="member-info"
+                      onClick={() => openModal(member)}
+                    >
+                      <strong>
+                        {member.prenoms} {member.nom}
+                      </strong>
+                      <p>{member.famille || "-"}</p>
+                      <p className="text-sm text-gray-600">
+                        {member.telephone || "-"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-4 p-4 border-t border-white/50">
+                  <button
+                    onClick={() => {
+                      setClassMemberPages((prev) => ({
+                        ...prev,
+                        [classe.id]: currentPage - 1,
+                      }));
+                    }}
+                    disabled={currentPage === 1}
+                    className="btn btn-icon !p-2 disabled:opacity-50"
+                    aria-label="Page précédente"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 19l-7-7 7-7"
+                      />
+                    </svg>
+                  </button>
+                  <span className="text-sm text-gray-700">
+                    Page {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setClassMemberPages((prev) => ({
+                        ...prev,
+                        [classe.id]: currentPage + 1,
+                      }));
+                    }}
+                    disabled={currentPage === totalPages}
+                    className="btn btn-icon !p-2 disabled:opacity-50"
+                    aria-label="Page suivante"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <Pagination
+          links={classesPage.links}
+          currentPage={classesPage.current_page}
+          perPage={classesPage.per_page}
+          total={classesPage.total}
+          onPageChange={handleClassPageChange}
+        />
+      </div>
+    );
+  };
+
+  const renderActiveView = () => {
+    switch (currentView) {
+      case "all":
+        return viewMode === "table" ? renderTableView() : renderGridView();
+      case "families":
+        return renderFamiliesView();
+      case "classes":
+        return renderClassesView();
+      default:
+        return renderTableView();
+    }
+  };
+
+  return (
+    <>
+      <Head title="Annuaire des membres" />
+      <style>{GLOBAL_STYLES}</style>
+
+      {/* MODAL DÉTAILS MEMBRE */}
+      {isModalOpen && (
+        <div
+          className={`modal-overlay ${isExiting ? "closing" : ""}`}
+          onClick={closeModal}
+        >
+          <div
+            className={`modal-content ${isExiting ? "closing" : ""}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h2 className="text-xl font-bold">Fiche membre</h2>
+              <button onClick={closeModal}>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <MemberDetailsModal
+                member={selectedMember}
+                cotisations={
+                  selectedMember ? loadMemberCotisations(selectedMember) : {}
+                }
+                actesLiturgiques={actesLiturgiques}
+                userData={user}
+                onClose={closeModal}
+              />
+            </div>
+            <div className="modal-footer">
+              <button onClick={closeModal} className="btn btn-secondary">
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP PHOTO */}
+      {photoPopup.visible && (
+        <div
+          ref={popupRef}
+          className={`photo-popup ${photoPopup.exiting ? "closing" : ""}`}
+          style={getPopupStyle()}
+        >
+          <img src={photoPopup.src} alt="Agrandissement" />
+          <button className="photo-popup-close" onClick={closePhotoPopup}>
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* CONTENU PRINCIPAL */}
+      <div
+        className="min-h-screen py-8 px-4 animate-fade-in-up"
+        style={{
+          background:
+            "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
+        }}
+      >
+        <div className="w-full">
+          {/* HEADER avec bouton retour et titre */}
+          <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 w-full">
+            <div className="w-full md:w-auto flex-shrink-0">
+              <Link
+                href={withBasePath("", "/admin/dashboard")}
+                className="btn btn-secondary gap-2 w-full md:w-auto justify-center"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
+                </svg>
+                Retour
+              </Link>
+            </div>
+            <h1 className="text-xl md:text-2xl font-bold text-white text-center flex-1 order-first md:order-none">
+              Annuaire des membres
+            </h1>
+            <div className="w-full md:w-auto flex-shrink-0"></div>
+          </div>
+
+          {/* BARRE DE FILTRES */}
+          <div className="glass-panel filters-bar">
+            {/* Première ligne : filtres */}
+            <div className="filter-group">
+              <div className="input-search-wrapper">
+                <svg
+                  className="input-search-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Rechercher (nom, téléphone, classe)..."
+                  className="input-control input-search"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      submitSearch();
+                    }
+                  }}
+                />
+              </div>
+
+              <select
+                value={classeFilter}
+                onChange={(e) => setClasseFilter(e.target.value)}
+                className="input-control"
+                style={{ minWidth: "140px" }}
+              >
+                <option value="">Toutes classes</option>
+                {filterOptions.classes.map((c, idx) => {
+                  const value =
+                    typeof c === "object" && c !== null
+                      ? String(c.id ?? c.nom ?? idx)
+                      : String(c);
+                  const label =
+                    typeof c === "object" && c !== null
+                      ? String(c.nom ?? c.label ?? c.id ?? value)
+                      : String(c);
+                  return (
+                    <option key={`classe-${value}-${idx}`} value={value}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+
+              <select
+                value={familleFilter}
+                onChange={(e) => setFamilleFilter(e.target.value)}
+                className="input-control"
+                style={{ minWidth: "140px" }}
+              >
+                <option value="">Toutes familles</option>
+                {filterOptions.familles.map((f, idx) => {
+                  const value =
+                    typeof f === "object" && f !== null
+                      ? String(f.id ?? f.code ?? f.nom ?? idx)
+                      : String(f);
+                  const label =
+                    typeof f === "object" && f !== null
+                      ? String(f.nom ?? f.label ?? f.code ?? value)
+                      : String(f);
+                  return (
+                    <option key={`famille-${value}-${idx}`} value={value}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+
+              <select
+                value={professionFilter}
+                onChange={(e) => setProfessionFilter(e.target.value)}
+                className="input-control"
+                style={{ minWidth: "140px" }}
+              >
+                <option value="">Toutes professions</option>
+                {filterOptions.professions.map((p, idx) => {
+                  const value =
+                    typeof p === "object" && p !== null
+                      ? String(p.value ?? p.id ?? idx)
+                      : String(p);
+                  const label =
+                    typeof p === "object" && p !== null
+                      ? String(p.label ?? p.nom ?? value)
+                      : String(p);
+                  return (
+                    <option key={`profession-${value}-${idx}`} value={value}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="input-control"
+                style={{ minWidth: "140px" }}
+              >
+                <option value="">Tous rôles</option>
+                {filterOptions.roles.map((r, idx) => {
+                  const value =
+                    typeof r === "object" && r !== null
+                      ? String(r.value ?? r.id ?? r.role ?? idx)
+                      : String(r);
+                  const label =
+                    typeof r === "object" && r !== null
+                      ? String(r.label ?? r.nom ?? r.role ?? value)
+                      : String(r);
+                  return (
+                    <option key={`role-${value}-${idx}`} value={value}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+
+              <button onClick={submitSearch} className="btn btn-primary">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                Rechercher
+              </button>
+
+              <button onClick={resetFilters} className="btn btn-success">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+                Réinitialiser
+              </button>
+            </div>
+
+            {/* Deuxième ligne : navigation + actions */}
+            <div className="filter-second-row">
+              <div className="filter-nav">
+                {["all", "families", "classes"].map((viewKey) => (
+                  <button
+                    key={viewKey}
+                    className={`filter-nav-btn ${currentView === viewKey ? "active" : ""}`}
+                    onClick={() => switchView(viewKey)}
+                  >
+                    {viewKey === "all"
+                      ? "Tous"
+                      : viewKey === "families"
+                        ? "Familles"
+                        : "Classes"}
+                  </button>
+                ))}
+              </div>
+
+              {currentView === "all" && (
+                <div className="filter-actions">
+                  <button
+                    onClick={() =>
+                      setViewMode(viewMode === "table" ? "grid" : "table")
+                    }
+                    className="btn btn-secondary"
+                  >
+                    {viewMode === "table" ? "Vue grille" : "Vue liste"}
+                  </button>
+                  <button onClick={exportToExcel} className="btn btn-excel">
+                    Excel
+                  </button>
+                  <button onClick={exportToPDF} className="btn btn-pdf">
+                    PDF
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="active-criteria-bar">
+            <div className="active-criteria-title">Critères actifs</div>
+            <div className="active-criteria-chips">
+              {activeCriteriaChips.map((c) => (
+                <span
+                  key={c.key}
+                  className="criteria-chip"
+                  title={`${c.label} : ${c.value}`}
+                >
+                  <span className="criteria-chip-label">{c.label}</span>
+                  <span className="criteria-chip-value">{c.value}</span>
+                </span>
+              ))}
+            </div>
+            <div className="active-criteria-results">{criteriaResultsLine}</div>
+          </div>
+
+          {/* TABLEAU / GRILLE / VUES */}
+          <div className="table-container mt-6">{renderActiveView()}</div>
+        </div>
+      </div>
+    </>
+  );
 };
 
 export default Annuaire;

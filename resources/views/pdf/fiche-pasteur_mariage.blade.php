@@ -73,6 +73,7 @@ return [
 });
 
 $logoSrc = $logoDataUri ?? null;
+$methoSrc = $methoDataUri ?? null;
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -148,12 +149,16 @@ $logoSrc = $logoDataUri ?? null;
         }
 
         .ref-cell {
-            text-align: right;
-            vertical-align: top;
-            padding-top: 2px;
-            font-size: 9px;
-            color: #9ca3af;
-            white-space: nowrap;
+            text-align: center;
+            vertical-align: middle;
+            width: 88px;
+        }
+
+        .ref-cell img {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            margin-top: 5px;
         }
 
         .divider-wrapper {
@@ -276,12 +281,15 @@ $logoSrc = $logoDataUri ?? null;
                     @endif
                 </td>
                 <td class="church-cell">
-                    <div class="church-name">EMUCI, TEMPLE DU JUBILE DE COCODY</div>
+                    <div class="church-name"> TEMPLE DU JUBILE DE COCODY</div>
                     <div class="church-subtitle">Classe {{ $className }} {{ $documentLabel }}</div>
                 </td>
                 <td class="ref-cell">
-                    <div>Ref. {{ $reference }}</div>
-                    <div>{{ Carbon::parse($generatedAt)->format('d/m/Y H:i') }}</div>
+                    @if(!empty($methoSrc))
+                    <img src="{{ $methoSrc }}" alt="Logo jubilé">
+                    @elseif(file_exists(public_path('images/metho.jpg')))
+                    <img src="{{ public_path('images/metho.jpg') }}" alt="Logo jubilé">
+                    @endif
                 </td>
             </tr>
         </table>
@@ -343,7 +351,7 @@ $logoSrc = $logoDataUri ?? null;
     </div>
 
     <div class="footer">
-        EMUCI Temple du Jubile de Cocody &nbsp;|&nbsp;
+         Temple du Jubile de Cocody &nbsp;|&nbsp;
         Genere par GesParoisse &nbsp;|&nbsp;
         Ref. {{ $reference }}
     </div>

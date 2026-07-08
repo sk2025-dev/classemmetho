@@ -1,4 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
+
+const BADGE_CONFIG = {
+    bapteme:            { label: 'Baptême',               emoji: '💧', bg: '#dbeafe', color: '#1d4ed8' },
+    mariage:            { label: 'Mariage',               emoji: '💍', bg: '#fce7f3', color: '#be185d' },
+    deces:              { label: 'Décès',                 emoji: '🕯️', bg: '#f1f5f9', color: '#475569' },
+    naissance:          { label: 'Naissance',             emoji: '👶', bg: '#dcfce7', color: '#15803d' },
+    premiere_communion: { label: '1re Communion',         emoji: '🍞', bg: '#fef3c7', color: '#b45309' },
+    confirmation:       { label: 'Confirmation',          emoji: '✝️', bg: '#ede9fe', color: '#6d28d9' },
+    grace:              { label: 'Action de grâce',       emoji: '🙌', bg: '#fef3c7', color: '#d97706' },
+    priere:             { label: "Prière d'intercession", emoji: '🙏', bg: '#ede9fe', color: '#7c3aed' },
+};
 
 export default function SoumisesTab({
     soumises,
@@ -21,7 +32,46 @@ export default function SoumisesTab({
     tone,
     iconEmoji,
     normalizePhotoUrl,
+    annEnAttente = [],
+    approveAnnonces,
+    refuseAnnonces,
+    openAnnonceModal,
+    ANNONCE_TYPES = [],
 }) {
+    const [selectedAnnIds, setSelectedAnnIds] = useState(new Set());
+
+    const toggleAnn = (id) => setSelectedAnnIds(prev => {
+        const n = new Set(prev);
+        n.has(id) ? n.delete(id) : n.add(id);
+        return n;
+    });
+
+    const handleSelectAll = () => {
+        toggleSelectAllPage();
+        setSelectedAnnIds(new Set(annEnAttente.map(a => a.id)));
+    };
+
+    const handleDeselectAll = () => {
+        toggleSelectAllPage();
+        setSelectedAnnIds(new Set());
+    };
+
+    const allSelected = allPageSelected && selectedAnnIds.size === annEnAttente.length;
+
+    const handleApprove = () => {
+        if (selectedIds.size > 0) approveSelected();
+        if (selectedAnnIds.size > 0) approveAnnonces([...selectedAnnIds]);
+        setSelectedAnnIds(new Set());
+    };
+
+    const handleRefuse = () => {
+        if (selectedIds.size > 0) refuseSelected();
+        if (selectedAnnIds.size > 0) refuseAnnonces([...selectedAnnIds]);
+        setSelectedAnnIds(new Set());
+    };
+
+    const nothingSelected = selectedIds.size === 0 && selectedAnnIds.size === 0;
+
     return (
         <div className="grid-3-1">
             <div className="panel">
@@ -50,71 +100,53 @@ export default function SoumisesTab({
                     </div>
                     <div className="panel-actions">
                         <span className="panel-count-badge">
-                            {soumises.length}
+                            {soumises.length + annEnAttente.length}
                         </span>
                         <button
                             type="button"
                             className="btn-bulk"
-                            onClick={toggleSelectAllPage}
-                            disabled={
-                                pagedSoumises.length === 0
-                            }
+                            onClick={allSelected ? handleDeselectAll : handleSelectAll}
+                            disabled={soumises.length === 0 && annEnAttente.length === 0}
                         >
-                            {allPageSelected
-                                ? "Tout désélectionner"
-                                : "Tout sélectionner"}
+                            {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
                         </button>
                         <button
                             type="button"
                             className="btn-bulk"
-                            onClick={approveSelected}
-                            disabled={
-                                processing ||
-                                selectedIds.size === 0
-                            }
+                            onClick={handleApprove}
+                            disabled={processing || nothingSelected}
                         >
                             Approuver
                         </button>
                         <button
                             type="button"
                             className="btn-bulk btn-bulk-refuse"
-                            onClick={refuseSelected}
-                            disabled={
-                                processing ||
-                                selectedIds.size === 0
-                            }
+                            onClick={handleRefuse}
+                            disabled={processing || nothingSelected}
                         >
                             Refuser
                         </button>
                     </div>
                 </div>
                 <div className="panel-body">
-                    {soumises.length === 0 && (
+                    {soumises.length === 0 && annEnAttente.length === 0 && (
                         <div className="empty-state">
-                            <svg
-                                width="32"
-                                height="32"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth="1.2"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
+                            <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <span>
-                                Aucune demande en attente
-                            </span>
+                            <span>Aucune demande en attente</span>
                         </div>
                     )}
-                    {pagedSoumises.map((acte, i) => (
+                    {pagedSoumises.map((acte, i) => {
+                        const b = BADGE_CONFIG[acte.type_acte] || { label: acte.type_acte, emoji: '📋', bg: '#f3f4f6', color: '#374151' };
+                        return (
                         <div
                             key={acte.id}
                             className={`demande-item ${i === 0 ? "urgent" : ""}`}
                         >
+                            <span style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:20, background: b.bg, color: b.color, fontSize:11, fontWeight:700, marginBottom:6 }}>
+                                {b.emoji} {b.label}
+                            </span>
                             <label
                                 className="bulk-check"
                                 onClick={(e) =>
@@ -293,7 +325,8 @@ export default function SoumisesTab({
                                 </div>
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
                     {soumisesTotalPages > 1 && (
                         <div className="pager">
                             <button
@@ -331,6 +364,52 @@ export default function SoumisesTab({
                                 Suivant
                             </button>
                         </div>
+                    )}
+                    {annEnAttente.length > 0 && (
+                        <>
+                            <div style={{ padding: '12px 20px 4px', borderTop: '1px solid #f0f0f8', marginTop: 8 }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                    🙏 Demandes de prière à traiter
+                                </span>
+                            </div>
+                            {annEnAttente.map((ann) => {
+                                const t = ANNONCE_TYPES.find(x => x.value === (ann.type_annonce || ann.type_acte));
+                                const b = BADGE_CONFIG[ann.type_annonce || ann.type_acte] || { label: t?.label || ann.type_annonce, emoji: t?.emoji || '🙏', bg: '#ede9fe', color: '#7c3aed' };
+                                const msg = ann.details?.contenu || ann.message || '';
+                                const member = ann.membre ? `${ann.membre.prenom} ${ann.membre.nom}` : (ann.createur ? `${ann.createur.prenom} ${ann.createur.nom}` : '—');
+                                return (
+                                    <div key={`ann-${ann.id}`} className="demande-item" onClick={() => openAnnonceModal('detail', ann)}>
+                                        <span style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:20, background: b.bg, color: b.color, fontSize:11, fontWeight:700, marginBottom:6 }}>
+                                            {b.emoji} {b.label}
+                                        </span>
+                                        <div style={{ display:'flex', alignItems:'flex-start', gap:10, width:'100%' }}>
+                                            <label className="bulk-check" onClick={e => e.stopPropagation()}>
+                                                <input type="checkbox" checked={selectedAnnIds.has(ann.id)} onChange={() => toggleAnn(ann.id)} />
+                                            </label>
+                                            <div className={`demande-acte-icon`} style={{ background: b.bg, color: b.color, fontSize:18, flexShrink:0 }}>{b.emoji}</div>
+                                            <div className="demande-info" style={{ flex:1 }}>
+                                                <div className="demande-name">{member}</div>
+                                                <div className="demande-type">{msg.slice(0, 100)}{msg.length > 100 ? '…' : ''}</div>
+                                                <div className="demande-type" style={{ marginTop:2 }}>Soumis le {ann.created_at ? ann.created_at.slice(0,10) : '—'}</div>
+                                            </div>
+                                            <div className="demande-meta">
+                                                <span className="badge badge-soumise"><span className="badge-dot" />SOUMISE</span>
+                                                <div className="item-actions" onClick={e => e.stopPropagation()}>
+                                                    <button className="btn-small btn-approve" onClick={() => approveAnnonces([ann.id])}>
+                                                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                                        Transmettre
+                                                    </button>
+                                                    <button className="btn-small btn-refuse" onClick={() => refuseAnnonces([ann.id])}>
+                                                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                        Refuser
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </>
                     )}
                 </div>
             </div>

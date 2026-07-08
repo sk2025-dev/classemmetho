@@ -389,7 +389,7 @@ export default function RegisterFamille({
         usePersistentState("registerFamille_selectedRolesResponsable", []);
     const [selectedMembresRoles, setSelectedMembresRoles] = usePersistentState(
         "registerFamille_selectedMembresRoles",
-        new Set(),
+        [],
     );
     const [selectedCity, setSelectedCity] = usePersistentState(
         "registerFamille_selectedCity",
@@ -508,6 +508,23 @@ export default function RegisterFamille({
         };
         fetchData();
     }, []);
+
+    // Purger les IDs de fonctions obsolètes (ex: fonctions combinées supprimées par migration)
+    useEffect(() => {
+        if (churchRoles.length > 0) {
+            const validIds = new Set(churchRoles.map((r) => String(r.id)));
+            setSelectedRolesResponsable((prev) =>
+                (Array.isArray(prev) ? prev : []).filter((id) =>
+                    validIds.has(String(id)),
+                ),
+            );
+            setSelectedMembresRoles((prev) =>
+                (Array.isArray(prev) ? prev : []).filter((id) =>
+                    validIds.has(String(id)),
+                ),
+            );
+        }
+    }, [churchRoles]);
 
     // Fermer les dropdowns
     useEffect(() => {
@@ -1016,10 +1033,12 @@ export default function RegisterFamille({
         });
 
         if (Array.isArray(selectedRolesResponsable)) {
-            selectedRolesResponsable.forEach((roleId, index) => {
-                if (!roleId) return;
-                formData.append(`selectedRoles[${index}][id]`, roleId);
-            });
+            const validFonctionIds = new Set(churchRoles.map((r) => String(r.id)));
+            selectedRolesResponsable
+                .filter((roleId) => roleId && validFonctionIds.has(String(roleId)))
+                .forEach((roleId, index) => {
+                    formData.append(`selectedRoles[${index}][id]`, roleId);
+                });
         }
 
         // --- 3. Membres ---
@@ -1715,7 +1734,7 @@ export default function RegisterFamille({
                                 icon={Users}
                             >
                                 <Select2Fonction
-                                    value={Array.from(selectedMembresRoles).filter(Boolean)}
+                                    value={(Array.isArray(selectedMembresRoles) ? selectedMembresRoles : Array.from(selectedMembresRoles)).filter(Boolean)}
                                     onChange={(e) => {
                                         if (!e.target.value) return;
                                         setSelectedMembresRoles(e.target.value);
@@ -2394,9 +2413,7 @@ export default function RegisterFamille({
                                             hint="Sélectionnez une fonction"
                                         >
                                             <Select2Fonction
-                                                value={Array.from(
-                                                    selectedMembresRoles,
-                                                )}
+                                                value={Array.isArray(selectedMembresRoles) ? selectedMembresRoles : Array.from(selectedMembresRoles)}
                                                 onChange={(e) => {
                                                     // e.target.value est déjà un array d'IDs
                                                     const ids = new Set(

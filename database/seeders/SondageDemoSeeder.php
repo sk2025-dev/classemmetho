@@ -54,8 +54,8 @@ class SondageDemoSeeder extends Seeder
 
     private function ensureConducteur(Classe $classe): User
     {
-        $conducteur = User::query()->updateOrCreate(
-            ['email' => 'conducteur.sondage@classemetho.local'],
+        $conducteur = $this->upsertDemoUser(
+            'conducteur.sondage@classemetho.local',
             [
                 'nom' => 'Ndiaye',
                 'prenom' => 'Samuel',
@@ -114,8 +114,8 @@ class SondageDemoSeeder extends Seeder
                 ->append('.', Str::of($nom)->lower()->ascii(), '@demo.classemetho.local')
                 ->value();
 
-            $users[] = User::query()->updateOrCreate(
-                ['email' => $email],
+            $users[] = $this->upsertDemoUser(
+                $email,
                 [
                     'nom' => $nom,
                     'prenom' => $prenom,
@@ -455,5 +455,26 @@ class SondageDemoSeeder extends Seeder
         };
 
         return [$format, $time];
+    }
+
+    private function upsertDemoUser(string $email, array $attributes): User
+    {
+        $user = User::query()->where('email', $email)->first();
+
+        if ($user) {
+            $user->update($attributes);
+
+            return $user->fresh();
+        }
+
+        return User::query()->create(array_merge($attributes, [
+            'email' => $email,
+            'identifier' => User::generateIdentifier(
+                $attributes['nom'] ?? '',
+                $attributes['prenom'] ?? '',
+                $attributes['date_naissance'] ?? null,
+            ),
+            'code_membre' => User::generateCodeMembre(),
+        ]));
     }
 }

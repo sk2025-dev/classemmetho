@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { normalizePhotoUrl } from "@/Helpers/PhotoUrlHelper";
 import { withBasePath } from "../../../Utils/urlHelper";
 
@@ -472,12 +472,6 @@ const ANNONCE_TYPES = [
         emoji: "🙏",
         color: "violet",
     },
-    {
-        value: "generale",
-        label: "Demande de prière générale",
-        emoji: "🙏",
-        color: "green",
-    },
 ];
 
 const MOTIFS_GRACE = [
@@ -499,6 +493,7 @@ export default function Index({
     classes = [],
     annonces: rawAnnonces = [],
     calendarEvents = [],
+    flashInfoPropres = [],
 }) {
     // ...existing code...
     // Modal pour fiches PDF mariage
@@ -555,6 +550,39 @@ export default function Index({
     });
     const [createForm, setCreateForm] = useState(defaultCreateForm);
     const [acteProcessing, setActeProcessing] = useState(false);
+    /* ── FLASH INFO state ── */
+    const [flashList, setFlashList] = useState(flashInfoPropres);
+    const [showFlashModal, setShowFlashModal] = useState(false);
+    const [flashForm, setFlashForm] = useState({ titre: "", contenu: "", date_expiration: "", membre_id: "" });
+    const [flashSubmitting, setFlashSubmitting] = useState(false);
+    const [flashErrors, setFlashErrors] = useState({});
+
+    const handleFlashSubmit = async (e) => {
+        e.preventDefault();
+        const errs = {};
+        if (!flashForm.titre.trim()) errs.titre = "Le titre est obligatoire.";
+        if (!flashForm.contenu.trim()) errs.contenu = "Le contenu est obligatoire.";
+        if (Object.keys(errs).length) { setFlashErrors(errs); return; }
+        setFlashSubmitting(true);
+        try {
+            const res = await axios.post(withBasePath("", "/conducteur/flash-info"), {
+                titre: flashForm.titre,
+                contenu: flashForm.contenu,
+                date_expiration: flashForm.date_expiration || null,
+                membre_id: flashForm.membre_id || null,
+            });
+            setFlashList((prev) => [res.data.annonce, ...prev]);
+            setFlashForm({ titre: "", contenu: "", date_expiration: "", membre_id: "" });
+            setFlashErrors({});
+            setShowFlashModal(false);
+            setToast("✅ Annonce soumise ! Elle sera publiée après validation par l'administrateur.");
+        } catch (err) {
+            setToast("❌ " + (err.response?.data?.message || "Une erreur est survenue."));
+        } finally {
+            setFlashSubmitting(false);
+        }
+    };
+
     /* ── ANNONCES state ── */
     const [localAnnonces, setLocalAnnonces] = useState(rawAnnonces);
     const [annoncesSubTab, setAnnoncesSubTab] = useState("pending"); // pending | done | mine
@@ -594,14 +622,22 @@ export default function Index({
         const soumises = localActes.filter(
             (a) => ["SOUMISE", "EN_ATTENTE_CONDUCTEUR"].includes(a.statut),
         ).length;
-        const transmises = localActes.filter(
-            (a) => a.statut === "TRANSMISE_AU_PASTEUR",
+        const actesTransmises = localActes.filter(
+            (a) =>
+                a.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" &&
+                !["priere", "grace", "generale"].includes(
+                    String(a.type_acte || "").toLowerCase(),
+                ),
         ).length;
+        const annoncesTransmises = localAnnonces.filter(
+            (a) => a.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR",
+        ).length;
+        const transmises = actesTransmises + annoncesTransmises;
         const valides = localActes.filter((a) =>
             ["VALIDEE", "PUBLIEE", "ARCHIVEE"].includes(a.statut),
         ).length;
         return { soumises, transmises, valides, total: localActes.length };
-    }, [localActes]);
+    }, [localActes, localAnnonces]);
 
     const searchNeedle = searchTerm.trim().toLowerCase();
     const filteredActes = useMemo(() => {
@@ -644,8 +680,7 @@ export default function Index({
     );
     const transmises = filteredActes.filter(
         (a) =>
-            a.statut === "TRANSMISE_AU_PASTEUR" &&
-            !ANNONCE_TYPE_VALUES.includes(
+            a.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" && !ANNONCE_TYPE_VALUES.includes(
                 String(a.type_acte || "").toLowerCase(),
             ),
     );
@@ -655,10 +690,7 @@ export default function Index({
                 "VALIDEE",
                 "PUBLIEE",
                 "ARCHIVEE",
-                "REFUSEE_PAR_CONDUCTEUR",
-                "REFUSEE_PAR_PASTEUR",
-            ].includes(a.statut) &&
-            !ANNONCE_TYPE_VALUES.includes(
+                "REFUSEE_PAR_CONDUCTEUR", "REFUSEE_PAR_BUREAU_CONDUCTEUR", "REFUSEE_PAR_PASTEUR",].includes(a.statut) && !ANNONCE_TYPE_VALUES.includes(
                 String(a.type_acte || "").toLowerCase(),
             ),
     );
@@ -917,6 +949,9 @@ export default function Index({
     const annEnAttente = filteredAnnonces.filter(
         (a) => a.statut === "SOUMISE" && !isMyAnnonce(a),
     );
+    const annTransmises = filteredAnnonces.filter(
+        (a) => a.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" && !isMyAnnonce(a),
+    );
     const annTraitees = filteredAnnonces.filter(
         (a) => a.statut !== "SOUMISE" && !isMyAnnonce(a),
     );
@@ -1126,8 +1161,7 @@ export default function Index({
                 await axios.post(
                     withBasePath("", `/conducteur/liturgie/${id}/transition`),
                     {
-                        statut: "TRANSMISE_AU_PASTEUR",
-                        commentaire: "",
+                        statut: "TRANSMISE_AU_BUREAU_CONDUCTEUR", commentaire: "",
                     },
                 );
             setLocalActes((prev) =>
@@ -1135,14 +1169,14 @@ export default function Index({
                     ids.includes(a.id)
                         ? {
                               ...a,
-                              statut: "TRANSMISE_AU_PASTEUR",
+                              statut: "TRANSMISE_AU_BUREAU_CONDUCTEUR",
                               updated_at: new Date().toISOString(),
                           }
                         : a,
                 ),
             );
             clearSelection();
-            showToast("✅ Demandes transmises au pasteur.");
+            showToast("✅ Demandes transmises au Bureau des Conducteurs.");
         } catch (e) {
             showToast(
                 e?.response?.data?.message || "Echec de la validation groupée.",
@@ -1220,8 +1254,7 @@ export default function Index({
             );
             closeModal();
             showToast(
-                statut === "TRANSMISE_AU_PASTEUR"
-                    ? "✅ Demande transmise au pasteur."
+                statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" ? "✅ Demande transmise au Bureau des Conducteurs."
                     : "Demande refusée.",
             );
         } catch (e) {
@@ -1387,8 +1420,8 @@ export default function Index({
             );
             closeAnnonceModal();
             showToast(
-                statut === "TRANSMISE_AU_PASTEUR"
-                    ? "✅ Demande de prière transmise au pasteur."
+                statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR"
+                    ? "✅ Demande de prière transmise au Bureau des Conducteurs."
                     : "Demande de prière refusée.",
             );
         } catch (e) {
@@ -1398,8 +1431,9 @@ export default function Index({
         }
     };
 
-    const approveAnnonces = async () => {
-        const ids = Array.from(annSelectedIds).filter(
+    const approveAnnonces = async (overrideIds = null) => {
+        const sourceIds = overrideIds ?? Array.from(annSelectedIds);
+        const ids = sourceIds.filter(
             (id) =>
                 localAnnonces.find((a) => a.id === id)?.statut === "SOUMISE",
         );
@@ -1413,7 +1447,7 @@ export default function Index({
                     ids.includes(a.id)
                         ? {
                               ...a,
-                              statut: "TRANSMISE_AU_PASTEUR",
+                              statut: "TRANSMISE_AU_BUREAU_CONDUCTEUR",
                               updated_at: new Date().toISOString(),
                           }
                         : a,
@@ -1425,14 +1459,14 @@ export default function Index({
                     ids.includes(a.id)
                         ? {
                               ...a,
-                              statut: "TRANSMISE_AU_PASTEUR",
+                              statut: "TRANSMISE_AU_BUREAU_CONDUCTEUR",
                               updated_at: new Date().toISOString(),
                           }
                         : a,
                 ),
             );
             setAnnSelectedIds(new Set());
-            showToast("✅ Demandes de prière transmises au pasteur.");
+            showToast("✅ Demandes de prière transmises au Bureau des Conducteurs.");
         } catch (e) {
             showToast("Echec de la validation groupée.");
         } finally {
@@ -1440,8 +1474,9 @@ export default function Index({
         }
     };
 
-    const refuseAnnonces = async () => {
-        const ids = Array.from(annSelectedIds).filter(
+    const refuseAnnonces = async (overrideIds = null) => {
+        const sourceIds = overrideIds ?? Array.from(annSelectedIds);
+        const ids = sourceIds.filter(
             (id) =>
                 localAnnonces.find((a) => a.id === id)?.statut === "SOUMISE",
         );
@@ -1799,9 +1834,9 @@ export default function Index({
                                     />
                                 </svg>
                                 À valider
-                                {stats.soumises > 0 && (
+                                {(soumises.length + annEnAttente.length) > 0 && (
                                     <span className="tab-count tab-red">
-                                        {stats.soumises}
+                                        {soumises.length + annEnAttente.length}
                                     </span>
                                 )}
                             </button>
@@ -1824,9 +1859,9 @@ export default function Index({
                                     />
                                 </svg>
                                 Transmises
-                                {stats.transmises > 0 && (
+                                {(transmises.length + annTransmises.length) > 0 && (
                                     <span className="tab-count tab-gold">
-                                        {stats.transmises}
+                                        {transmises.length + annTransmises.length}
                                     </span>
                                 )}
                             </button>
@@ -1885,32 +1920,6 @@ export default function Index({
                                 </svg>
                                 Calendrier
                             </button>
-                            {/* ★ ONGLET ANNONCES ★ */}
-                            <button
-                                className={`tab tab-ann ${tab === "annonces" ? "active" : ""}`}
-                                onClick={() => setTab("annonces")}
-                            >
-                                <svg
-                                    width="13"
-                                    height="13"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
-                                    />
-                                </svg>
-                                Demandes de prière
-                                {annEnAttente.length > 0 && (
-                                    <span className="tab-count tab-violet">
-                                        {annEnAttente.length}
-                                    </span>
-                                )}
-                            </button>
                             <button
                                 className={`tab tab-mes-demandes ${tab === "mes-demandes" ? "active" : ""}`}
                                 onClick={() => setTab("mes-demandes")}
@@ -1930,6 +1939,21 @@ export default function Index({
                                     />
                                 </svg>
                                 Mes demandes d'acte
+                            </button>
+                            {/* ★ ONGLET FLASH INFO ★ */}
+                            <button
+                                className={`tab tab-flash ${tab === "flash-info" ? "active" : ""}`}
+                                onClick={() => setTab("flash-info")}
+                            >
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                                </svg>
+                                Flash Info
+                                {flashList.filter((a) => a.statut === "SOUMISE").length > 0 && (
+                                    <span className="tab-count tab-amber">
+                                        {flashList.filter((a) => a.statut === "SOUMISE").length}
+                                    </span>
+                                )}
                             </button>
                             <button
                                 className={`tab ${tab === "historique" ? "active" : ""}`}
@@ -1996,7 +2020,7 @@ export default function Index({
                                     <option value="grace">
                                         🙌 Action de grâce
                                     </option>
-                                    <option value="priere">🙏 Prière</option>
+                                    <option value="priere">🙏 Prière d'intercession</option>
                                 </optgroup>
                                 <optgroup label="Mes contenus">
                                     <option value="mes_annonces">
@@ -2040,6 +2064,11 @@ export default function Index({
                             tone={tone}
                             iconEmoji={iconEmoji}
                             normalizePhotoUrl={normalizePhotoUrl}
+                            annEnAttente={annEnAttente}
+                            approveAnnonces={approveAnnonces}
+                            refuseAnnonces={refuseAnnonces}
+                            openAnnonceModal={openAnnonceModal}
+                            ANNONCE_TYPES={ANNONCE_TYPES}
                         />
                     )}
 
@@ -2047,11 +2076,13 @@ export default function Index({
                     {tab === "transmises" && (
                         <TransmisesTab
                             transmises={transmises}
+                            annTransmises={annTransmises}
                             openModal={openModal}
                             prettyType={prettyType}
                             formatDate={formatDate}
                             tone={tone}
                             iconEmoji={iconEmoji}
+                            ANNONCE_TYPES={ANNONCE_TYPES}
                         />
                     )}
 
@@ -2150,6 +2181,190 @@ export default function Index({
                             getActeStatus={getActeStatus}
                             prettyStatut={prettyStatut}
                         />
+                    )}
+
+                    {/* ══════════ ONGLET FLASH INFO ══════════ */}
+                    {tab === "flash-info" && (
+                        <div className="flash-info-tab">
+                            {/* Header */}
+                            <div className="fi-header">
+                                <div className="fi-header-left">
+                                    <div className="fi-icon">📢</div>
+                                    <div>
+                                        <div className="fi-title">Flash Info Paroissial</div>
+                                        <div className="fi-sub">Diffusé aux membres de votre classe · Validé par l'administrateur</div>
+                                    </div>
+                                </div>
+                                <button className="fi-btn-new" onClick={() => setShowFlashModal(true)}>
+                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Faire une annonce
+                                </button>
+                            </div>
+
+                            {/* Liste */}
+                            {flashList.length === 0 ? (
+                                <div className="fi-empty">
+                                    <div className="fi-empty-icon">📢</div>
+                                    <div className="fi-empty-title">Aucune annonce soumise</div>
+                                    <div className="fi-empty-sub">Cliquez sur "Faire une annonce" pour commencer.</div>
+                                    <button className="fi-btn-new" onClick={() => setShowFlashModal(true)}>
+                                        + Faire ma première annonce
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="fi-list">
+                                    {flashList.map((a) => {
+                                        const titre = a.details?.titre || "(Sans titre)";
+                                        const contenu = a.details?.contenu || "";
+                                        const statut = a.statut || "SOUMISE";
+                                        const isPublished = statut === "PUBLIEE";
+                                        const isArchived = statut === "ARCHIVEE";
+                                        const dateCreation = a.created_at
+                                            ? new Date(a.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) +
+                                              " à " + new Date(a.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+                                            : "—";
+                                        const dateExp = a.date_expiration
+                                            ? new Date(a.date_expiration).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                                            : null;
+                                        return (
+                                            <div key={a.id} className={`fi-item ${isPublished ? "fi-published" : isArchived ? "fi-archived" : "fi-pending"}`}>
+                                                <div className="fi-item-top">
+                                                    <div className="fi-item-title">
+                                                        <span className="fi-zap">⚡</span>
+                                                        {titre}
+                                                    </div>
+                                                    <span className={`fi-badge ${isPublished ? "fi-badge-ok" : isArchived ? "fi-badge-arc" : "fi-badge-wait"}`}>
+                                                        {isPublished ? "✅ Publiée" : isArchived ? "Archivée" : "⏳ En attente"}
+                                                    </span>
+                                                </div>
+                                                <div className="fi-item-content">{contenu}</div>
+                                                <div className="fi-item-meta">
+                                                    <span>🕐 Soumis le {dateCreation}</span>
+                                                    {isPublished && a.date_publication && (
+                                                        <span className="fi-meta-ok">✓ Publié le {new Date(a.date_publication).toLocaleDateString("fr-FR")}</span>
+                                                    )}
+                                                    {dateExp && <span>📅 Expire le {dateExp}</span>}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Modal création Flash Info */}
+                            {showFlashModal && (
+                                <div className="fi-modal-overlay" onClick={() => { setShowFlashModal(false); setFlashErrors({}); }}>
+                                    <div className="fi-modal-box" onClick={(e) => e.stopPropagation()}>
+                                        {/* En-tête */}
+                                        <div className="fi-modal-head">
+                                            <div className="fi-modal-head-left">
+                                                <div className="fi-modal-icon">📢</div>
+                                                <div>
+                                                    <div className="fi-modal-title">Nouvelle annonce Flash Info</div>
+                                                    <div className="fi-modal-sub">Sera publiée après validation par l'administrateur</div>
+                                                </div>
+                                            </div>
+                                            <button className="fi-modal-close" onClick={() => { setShowFlashModal(false); setFlashErrors({}); }}>×</button>
+                                        </div>
+
+                                        <form onSubmit={handleFlashSubmit}>
+                                            <div className="fi-modal-body">
+                                                {/* Titre */}
+                                                <div className="fi-field">
+                                                    <label className="fi-label">Titre <span className="fi-req">*</span></label>
+                                                    <input
+                                                        type="text"
+                                                        className={`fi-input ${flashErrors.titre ? "fi-input-err" : ""}`}
+                                                        placeholder="ex: Réunion de prière, Service du dimanche..."
+                                                        value={flashForm.titre}
+                                                        onChange={(e) => { setFlashForm((p) => ({ ...p, titre: e.target.value })); setFlashErrors((p) => ({ ...p, titre: "" })); }}
+                                                    />
+                                                    {flashErrors.titre && <p className="fi-err-msg">{flashErrors.titre}</p>}
+                                                </div>
+
+                                                {/* Membre concerné */}
+                                                <div className="fi-field">
+                                                    <label className="fi-label">
+                                                        Membre concerné
+                                                        <span className="fi-hint"> (optionnel)</span>
+                                                    </label>
+                                                    <select
+                                                        className="fi-input"
+                                                        value={flashForm.membre_id}
+                                                        onChange={(e) => setFlashForm((p) => ({ ...p, membre_id: e.target.value }))}
+                                                    >
+                                                        <option value="">-- Aucun membre spécifique --</option>
+                                                        {familyMembers.map((m) => (
+                                                            <option key={m.id} value={m.id}>
+                                                                {m.prenom} {m.nom}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {/* Message */}
+                                                <div className="fi-field">
+                                                    <label className="fi-label">Message <span className="fi-req">*</span></label>
+                                                    <textarea
+                                                        rows={4}
+                                                        className={`fi-textarea ${flashErrors.contenu ? "fi-input-err" : ""}`}
+                                                        placeholder="Rédigez votre message ici. Il sera affiché dans le flash info de votre classe..."
+                                                        value={flashForm.contenu}
+                                                        onChange={(e) => { setFlashForm((p) => ({ ...p, contenu: e.target.value })); setFlashErrors((p) => ({ ...p, contenu: "" })); }}
+                                                    />
+                                                    <div className="fi-char-count">{flashForm.contenu.length}/2000</div>
+                                                    {flashErrors.contenu && <p className="fi-err-msg">{flashErrors.contenu}</p>}
+                                                </div>
+
+                                                {/* Date expiration */}
+                                                <div className="fi-field">
+                                                    <label className="fi-label">
+                                                        Date d'expiration
+                                                        <span className="fi-hint"> (optionnel — laisser vide = permanent)</span>
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        className="fi-input"
+                                                        value={flashForm.date_expiration}
+                                                        min={new Date().toISOString().split("T")[0]}
+                                                        onChange={(e) => setFlashForm((p) => ({ ...p, date_expiration: e.target.value }))}
+                                                    />
+                                                </div>
+
+                                                {/* Notice */}
+                                                <div className="fi-modal-notice">
+                                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    Cette annonce sera publiée <strong>uniquement après validation par l'administrateur</strong>.
+                                                </div>
+                                            </div>
+
+                                            <div className="fi-modal-foot">
+                                                <button type="button" className="fi-btn-cancel" onClick={() => { setShowFlashModal(false); setFlashErrors({}); }}>
+                                                    Annuler
+                                                </button>
+                                                <button type="submit" className="fi-btn-submit" disabled={flashSubmitting}>
+                                                    {flashSubmitting ? (
+                                                        <>
+                                                            <svg className="fi-spin" width="14" height="14" fill="none" viewBox="0 0 24 24">
+                                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity=".25" />
+                                                                <path fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                                            </svg>
+                                                            Envoi en cours…
+                                                        </>
+                                                    ) : (
+                                                        <>📢 Soumettre</>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
             </main>
@@ -2422,11 +2637,7 @@ export default function Index({
                                         </div>
                                     )}
                                     {[
-                                        "TRANSMISE_AU_PASTEUR",
-                                        "VALIDEE",
-                                        "PUBLIEE",
-                                        "ARCHIVEE",
-                                    ].includes(selected?.statut) && (
+                                        "TRANSMISE_AU_BUREAU_CONDUCTEUR", "TRANSMISE_AU_PASTEUR", "VALIDEE", "PUBLIEE", "ARCHIVEE",].includes(selected?.statut) && (
                                         <div style={{ marginTop: 16 }}>
                                             <button
                                                 style={{
@@ -2891,7 +3102,7 @@ export default function Index({
                                     className="btn-modal btn-modal-gold"
                                     disabled={processing}
                                     onClick={() =>
-                                        submitTransition("TRANSMISE_AU_PASTEUR")
+                                        submitTransition("TRANSMISE_AU_BUREAU_CONDUCTEUR")
                                     }
                                 >
                                     <svg
@@ -3175,9 +3386,8 @@ export default function Index({
                                             />
                                         </Field>
                                         <Field label="Heure du culte" style={{ flex: 1 }}>
-                                            <input
+                                            <select
                                                 className="ann-input"
-                                                type="time"
                                                 value={annonceForm.heure_culte}
                                                 onChange={(e) =>
                                                     setAnnonceForm((prev) => ({
@@ -3186,7 +3396,11 @@ export default function Index({
                                                             e.target.value,
                                                     }))
                                                 }
-                                            />
+                                            >
+                                                <option value="">-- Choisir --</option>
+                                                <option value="07:30">7h30</option>
+                                                <option value="09:30">9h30</option>
+                                            </select>
                                         </Field>
                                     </div>
                                 </div>
@@ -3368,7 +3582,7 @@ export default function Index({
                                             {ANNONCE_TYPES.find(
                                                 (t) =>
                                                     t.value ===
-                                                    selectedAnnonce.type_annonce,
+                                                    (selectedAnnonce.type_annonce || selectedAnnonce.type_acte),
                                             )?.emoji || "📢"}
                                         </span>
                                     )}
@@ -3425,9 +3639,10 @@ export default function Index({
                                         {ANNONCE_TYPES.find(
                                             (t) =>
                                                 t.value ===
-                                                selectedAnnonce.type_annonce,
+                                                (selectedAnnonce.type_annonce || selectedAnnonce.type_acte),
                                         )?.label ||
-                                            selectedAnnonce.type_annonce}
+                                            selectedAnnonce.type_annonce ||
+                                            selectedAnnonce.type_acte}
                                     </div>
                                 </div>
                             </div>
@@ -3462,14 +3677,16 @@ export default function Index({
                                         {ANNONCE_TYPES.find(
                                             (t) =>
                                                 t.value ===
-                                                selectedAnnonce.type_annonce,
+                                                (selectedAnnonce.type_annonce || selectedAnnonce.type_acte),
                                         )?.emoji || "📢"}{" "}
                                         {ANNONCE_TYPES.find(
                                             (t) =>
                                                 t.value ===
-                                                selectedAnnonce.type_annonce,
+                                                (selectedAnnonce.type_annonce || selectedAnnonce.type_acte),
                                         )?.label ||
-                                            selectedAnnonce.type_annonce}
+                                            selectedAnnonce.type_annonce ||
+                                            selectedAnnonce.type_acte ||
+                                            "—"}
                                     </span>
                                 </div>
 
@@ -3897,7 +4114,7 @@ export default function Index({
                                     disabled={annonceProcessing}
                                     onClick={() =>
                                         submitAnnonceTransition(
-                                            "TRANSMISE_AU_PASTEUR",
+                                            "TRANSMISE_AU_BUREAU_CONDUCTEUR",
                                         )
                                     }
                                 >
@@ -3917,7 +4134,7 @@ export default function Index({
                                     </svg>
                                     {annonceProcessing
                                         ? "Envoi..."
-                                        : "Transmettre au pasteur"}
+                                        : "Transmettre au Bureau"}
                                 </button>
                             )}
                             {annonceModal === "refuse" && (
@@ -3991,7 +4208,7 @@ function getActeBadgeClass(status) {
 function prettyStatut(s) {
     const m = {
         SOUMISE: "Soumise",
-        TRANSMISE_AU_PASTEUR: "Transmise au pasteur",
+        TRANSMISE_AU_BUREAU_CONDUCTEUR: "Transmise au Bureau", TRANSMISE_AU_PASTEUR: "Transmise au pasteur",
         EN_ATTENTE_CONDUCTEUR: "En attente du conducteur",
         CEREMONIE_SOUMISE_AU_CONDUCTEUR: "Date soumise au conducteur",
         CEREMONIE_TRANSMISE_AU_PASTEUR: "Date transmise au pasteur",
@@ -3999,7 +4216,7 @@ function prettyStatut(s) {
         VALIDEE: "Validée",
         PUBLIEE: "Publiée",
         ARCHIVEE: "Archivée",
-        REFUSEE_PAR_CONDUCTEUR: "Date refusée par conducteur",
+        REFUSEE_PAR_BUREAU_CONDUCTEUR: "Refusée par le Bureau", REFUSEE_PAR_CONDUCTEUR: "Date refusée par conducteur",
         CEREMONIE_REFUSEE_PAR_CONDUCTEUR: "Date refusée",
         REFUSEE_PAR_PASTEUR: "Refusée par pasteur",
         CEREMONIE_REFUSEE_PAR_PASTEUR: "Date refusée",
@@ -4185,6 +4402,8 @@ const styles = `
 .tab-red{background:var(--red);color:white}.tab-gold{background:var(--gold-dim);color:#857400;border:1px solid rgba(182,192,26,.3)}
 .tab-violet{background:var(--violet);color:white}
 .tab-ann.active{color:var(--violet)}
+.tab-flash.active{color:#b45309}
+.tab-count.tab-amber{background:rgba(217,119,6,.15);color:#b45309;border:1px solid rgba(217,119,6,.25)}
 .tab-date{color:var(--text3)}
 .tab-date.active{color:var(--text);background:rgba(30,64,175,.12);border-color:transparent;box-shadow:0 4px 12px rgba(91,63,175,.25)}
 .tab-count.tab-sage{background:rgba(74,124,94,.2);color:#4a7c5e;border:1px solid rgba(74,124,94,.3)}
@@ -4479,4 +4698,70 @@ const styles = `
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}.grid-3-1,.grid-2{grid-template-columns:1fr}}
 @media(max-width:768px){.page-content{padding:18px}.kpi-row{grid-template-columns:1fr 1fr}.tab-toolbar{align-items:stretch}.tab-bar{width:100%;overflow-x:auto;margin-bottom:0}.quick-tools{width:100%;justify-content:flex-start}.quick-dropdown{width:100%;min-width:0}.quick-search{width:100%;min-width:0}.top-actions{flex-wrap:wrap}.page-heading{order:-1;width:100%}.ann-hero{flex-direction:column;align-items:flex-start}.ann-hero-stats{width:100%}.ann-item-right{min-width:auto}.date-shell-head{flex-direction:column;align-items:flex-start}.date-shell-tools{width:100%;justify-content:flex-start}.date-shell-count{min-width:0}.date-history-head{flex-direction:column;align-items:flex-start}.date-history-count{min-width:0}.date-card{min-height:auto;padding:18px}.date-grid{grid-template-columns:1fr}}
 @media(max-width:500px){.kpi-row{grid-template-columns:1fr}}
+
+/* ── FLASH INFO MODAL ── */
+.fi-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:1100;backdrop-filter:blur(6px)}
+.fi-modal-box{width:100%;max-width:540px;max-height:90vh;overflow-y:auto;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(15,23,42,.3);animation:fiMIn .25s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes fiMIn{from{opacity:0;transform:scale(.96) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.fi-modal-head{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid #f1f5f9}
+.fi-modal-head-left{display:flex;align-items:center;gap:12px}
+.fi-modal-icon{width:42px;height:42px;background:#dbeafe;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.fi-modal-title{font-size:16px;font-weight:800;color:#111827}
+.fi-modal-sub{font-size:12px;color:#6b7280;margin-top:2px}
+.fi-modal-close{width:30px;height:30px;border-radius:7px;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280;cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fi-modal-close:hover{background:#f3f4f6;color:#374151}
+.fi-modal-body{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+.fi-modal-foot{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:14px 24px;border-top:1px solid #f1f5f9;background:#f9fafb;border-radius:0 0 16px 16px}
+.fi-field{display:flex;flex-direction:column;gap:5px}
+.fi-label{font-size:13px;font-weight:600;color:#374151}
+.fi-req{color:#ef4444}
+.fi-hint{font-size:11px;font-weight:400;color:#9ca3af}
+.fi-input{width:100%;height:44px;border:1.5px solid #d1d5db;border-radius:8px;padding:0 14px;font-size:13.5px;color:#111827;outline:none;font-family:inherit;transition:border-color .2s,box-shadow .2s;background:#fff}
+.fi-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.fi-input-err{border-color:#ef4444!important}
+.fi-textarea{width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:12px 14px;font-size:13px;color:#111827;outline:none;resize:vertical;line-height:1.6;font-family:inherit;transition:border-color .2s}
+.fi-textarea:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.fi-char-count{font-size:11px;color:#9ca3af;text-align:right}
+.fi-err-msg{font-size:11px;color:#ef4444;margin-top:2px}
+.fi-modal-notice{display:flex;align-items:flex-start;gap:8px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;color:#1d4ed8;font-weight:500;line-height:1.5}
+.fi-modal-notice strong{font-weight:700}
+.fi-btn-cancel{padding:9px 18px;border-radius:8px;background:#f3f4f6;border:1px solid #e5e7eb;color:#374151;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+.fi-btn-cancel:hover{background:#e5e7eb}
+.fi-btn-submit{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:8px;background:#2563eb;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(37,99,235,.3);transition:all .2s}
+.fi-btn-submit:disabled{opacity:.5;cursor:not-allowed}
+.fi-btn-submit:hover:not(:disabled){background:#1d4ed8;transform:translateY(-1px)}
+.fi-spin{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── FLASH INFO TAB ── */
+.flash-info-tab{display:flex;flex-direction:column;gap:16px}
+.fi-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.7);border-radius:12px;padding:16px 20px;backdrop-filter:blur(8px)}
+.fi-header-left{display:flex;align-items:center;gap:12px}
+.fi-icon{font-size:26px}
+.fi-title{font-size:16px;font-weight:800;color:#1E1B16}
+.fi-sub{font-size:11.5px;color:#9C9484;margin-top:2px}
+.fi-btn-new{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;background:linear-gradient(90deg,#d97706,#b45309);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(180,83,9,.3);transition:all .2s}
+.fi-btn-new:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(180,83,9,.35)}
+.fi-notice{display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(30,64,175,.08);border:1px solid rgba(30,64,175,.18);border-radius:8px;font-size:12px;color:#1e3a8a;font-weight:500}
+.fi-notice strong{font-weight:700}
+.fi-list{display:flex;flex-direction:column;gap:10px}
+.fi-item{background:#fff;border-radius:12px;border:1.5px solid #e8e4dc;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.fi-pending{border-left:4px solid #f59e0b}
+.fi-published{border-left:4px solid #4A7C5E}
+.fi-archived{border-left:4px solid #d1d5db;opacity:.7}
+.fi-item-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.fi-item-title{font-size:14px;font-weight:700;color:#1E1B16;display:flex;align-items:center;gap:6px}
+.fi-zap{font-size:14px}
+.fi-badge{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0}
+.fi-badge-wait{background:rgba(245,158,11,.1);color:#b45309;border:1px solid rgba(245,158,11,.25)}
+.fi-badge-ok{background:rgba(74,124,94,.1);color:#4A7C5E;border:1px solid rgba(74,124,94,.25)}
+.fi-badge-arc{background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb}
+.fi-item-content{font-size:12.5px;color:#5C5748;line-height:1.55;margin-bottom:8px}
+.fi-item-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:#9C9484}
+.fi-meta-ok{color:#4A7C5E;font-weight:600}
+.fi-empty{display:flex;flex-direction:column;align-items:center;padding:48px 24px;background:rgba(255,255,255,.85);border-radius:14px;border:1px solid rgba(255,255,255,.7);text-align:center;gap:8px}
+.fi-empty-icon{font-size:40px}
+.fi-empty-title{font-size:15px;font-weight:700;color:#1E1B16}
+.fi-empty-sub{font-size:12.5px;color:#9C9484;margin-bottom:8px}
+.fi-modal{max-width:520px}
 `;

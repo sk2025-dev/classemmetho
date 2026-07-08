@@ -1,4 +1,4 @@
-@php
+﻿@php
 use Carbon\Carbon;
 
 $details = (array) ($acte->details ?? []);
@@ -18,7 +18,7 @@ $dateDeces = !empty($details['date_deces'])
     })()
     : '—';
 
-$lieuDeces = trim((string) ($details['lieu_deces'] ?? $details['lieu'] ?? '—'));
+$lieuDeces = trim((string) ($details['lieu_deces'] ?? $details['lieu'] ?? ''));
 
 $dateCulte = !empty($acte->date_souhaitee)
     ? (function () use ($acte) {
@@ -57,6 +57,7 @@ $dateEmission = optional($acte->created_at)->format('d/m/Y') ?? now()->format('d
 
 $conducteur = $acte->conducteur ?? null;
 $pasteur = $acte->pasteur ?? null;
+$bureauConducteur = $acte->bureauConducteur ?? null;
 
 $nomConducteur = $conducteur
     ? mb_strtoupper(trim(($conducteur->prenom ?? '') . ' ' . ($conducteur->nom ?? '')), 'UTF-8')
@@ -64,6 +65,10 @@ $nomConducteur = $conducteur
 
 $nomPasteur = $pasteur
     ? mb_strtoupper(trim(($pasteur->prenom ?? '') . ' ' . ($pasteur->nom ?? '')), 'UTF-8')
+    : null;
+
+$nomBureauConducteur = $bureauConducteur
+    ? mb_strtoupper(trim(($bureauConducteur->prenom ?? '') . ' ' . ($bureauConducteur->nom ?? '')), 'UTF-8')
     : null;
 
 $toStorageSignatureDataUri = function (?string $signaturePath): ?string {
@@ -75,11 +80,12 @@ $toStorageSignatureDataUri = function (?string $signaturePath): ?string {
         return $signaturePath;
     }
 
-    $fullPath = storage_path('app/public/' . ltrim($signaturePath, '/'));
-    if (!is_file($fullPath)) {
+    try {
+        if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($signaturePath)) return null;
+        $fullPath = \Illuminate\Support\Facades\Storage::disk('public')->path($signaturePath);
+    } catch (\Throwable $e) {
         return null;
     }
-
     $raw = @file_get_contents($fullPath);
     if ($raw === false) {
         return null;
@@ -119,6 +125,7 @@ $toPublicImageDataUri = function (string $absolutePath): ?string {
 
 $conducteurSignatureDataUri = $conducteurSignatureDataUri ?? $toStorageSignatureDataUri($conducteur->signature_path ?? null);
 $pasteurSignatureDataUri = $pasteurSignatureDataUri ?? $toStorageSignatureDataUri($pasteur->signature_path ?? null);
+$bureauConducteurSignatureDataUri = $bureauConducteurSignatureDataUri ?? $toStorageSignatureDataUri($bureauConducteur->signature_path ?? null);
 
 $logoTempleSrc = $logoDataUri ?? $toPublicImageDataUri(public_path('images/logo.png'));
 $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho.jpg'));
@@ -128,7 +135,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
 
 <head>
     <meta charset="UTF-8">
-    <title>Annonce de Deces - {{ $reference }}</title>
+    <title>Annonce Décès - {{ $reference }}</title>
     <style>
         @page {
             size: A4 portrait;
@@ -358,8 +365,8 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
 
         .signature-image {
             display: block;
-            max-width: 120px;
-            max-height: 46px;
+            max-width: 250px;
+            max-height: 130px;
             margin: 0 auto;
             object-fit: contain;
         }
@@ -419,7 +426,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
 
         <!-- Main title band -->
         <div class="title-band">
-            <div class="title-label">Annonce de Deces</div>
+            <div class="title-label">Annonce Décès</div>
         </div>
 
         <!-- Compact metadata keeps the first reading level clean -->
@@ -445,7 +452,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
                 annonce, avec une profonde tristesse, &agrave; l'ensemble de la communaut&eacute; chr&eacute;tienne,
                 le rappel &agrave; Dieu de leur bien-aim&eacute;(e),
                 <span class="deceased-name">{{ $nomDefunt }}</span>,
-                survenu le <strong>{{ $dateDeces }}</strong> &agrave; <strong>{{ $lieuDeces }}</strong>.
+                survenu le <strong>{{ $dateDeces }}</strong>@if($lieuDeces !== '') &agrave; <strong>{{ $lieuDeces }}</strong>@endif.
             </p>
             <p class="notice-paragraph">
                 En cette douloureuse &eacute;preuve, la famille sollicite vos pri&egrave;res et votre soutien spirituel.
@@ -475,8 +482,16 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
                 <td>
                     <div class="signature-role">Bureau des Conducteurs</div>
                     <div class="signature-rule"></div>
-                    <div class="signature-box"></div>
-                    <div class="signature-name">&nbsp;</div>
+                    <div class="signature-box">
+                        @if($bureauConducteurSignatureDataUri)
+                        <img src="{{ $bureauConducteurSignatureDataUri }}" alt="Signature Bureau" class="signature-image">
+                        @endif
+                    </div>
+                    @if($nomBureauConducteur)
+                    <div class="signature-name">{{ $nomBureauConducteur }}</div>
+                    @else
+                    <div class="signature-missing">Non renseigne</div>
+                    @endif
                 </td>
                 <td>
                     <div class="signature-role">Pasteur</div>
@@ -494,11 +509,6 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
                 </td>
             </tr>
         </table>
-
-        <!-- Footer for traceability -->
-        <div class="footer">
-            EMUCI - Temple du JUBILE de Cocody | Avis de deces | Ref. {{ $reference }} | Emis le {{ $dateEmission }}
-        </div>
     </div>
 </body>
 

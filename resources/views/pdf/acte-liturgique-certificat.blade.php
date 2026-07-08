@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
 
 <head>
@@ -556,10 +556,10 @@
                                 {{-- Image de signature si disponible --}}
                                 @if(!empty($signatureDataUri))
                                 <img src="{{ $signatureDataUri }}"
-                                    style="max-width:200px; max-height:60px;
+                                    style="max-width:220px; max-height:130px;
                                             display:block; margin:0 0 4mm;">
                                 @else
-                                <div style="height:60px; margin-bottom:4mm;"></div>
+                                <div style="height:130px; margin-bottom:4mm;"></div>
                                 @endif
 
                                 {{-- Nom du pasteur --}}

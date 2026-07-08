@@ -1,4 +1,4 @@
-@php
+﻿@php
 use Carbon\Carbon;
 
 $details = $acte->details ?? [];
@@ -12,6 +12,7 @@ $dateLieuNaissance = $details['date_naissance'] ?? ($details['lieu_naissance'] ?
 
 $conducteur = $acte->conducteur ?? null;
 $pasteur = $acte->pasteur ?? null;
+$bureauConducteur = $acte->bureauConducteur ?? null;
 $membre = $acte->membre ?? $createur;
 
 $nomConducteur = $conducteur
@@ -20,6 +21,17 @@ $nomConducteur = $conducteur
 $nomPasteur = $pasteur
 ? trim(($pasteur->prenom ?? '') . ' ' . ($pasteur->nom ?? ''))
 : '';
+$nomBureauConducteur = $bureauConducteur
+? trim(($bureauConducteur->prenom ?? '') . ' ' . ($bureauConducteur->nom ?? ''))
+: '';
+
+$sigFontSize = function (string $name): string {
+$len = mb_strlen($name);
+if ($len > 28) return '6.5px';
+if ($len > 22) return '8px';
+if ($len > 16) return '9px';
+return '10px';
+};
 
 $normalise = function (?string $value): string {
 if (!is_string($value) || $value === '') {
@@ -108,11 +120,12 @@ if (str_starts_with($signaturePath, 'data:image/')) {
 return $signaturePath;
 }
 
-$fullPath = storage_path('app/public/' . ltrim($signaturePath, '/'));
-if (!is_file($fullPath)) {
-return null;
+try {
+    if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($signaturePath)) return null;
+    $fullPath = \Illuminate\Support\Facades\Storage::disk('public')->path($signaturePath);
+} catch (\Throwable $e) {
+    return null;
 }
-
 $raw = @file_get_contents($fullPath);
 if ($raw === false) {
 return null;
@@ -131,13 +144,14 @@ return 'data:' . $mime . ';base64,' . base64_encode($raw);
 
 $signatureConducteurDataUri = $toSignatureDataUri($conducteur->signature_path ?? null);
 $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null);
+$signatureBureauConducteurDataUri = $signatureBureauConducteurDataUri ?? $toSignatureDataUri($bureauConducteur->signature_path ?? null);
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
 
 <head>
     <meta charset="UTF-8">
-    <title>Presentation de nouveau-ne</title>
+    <title>Présentation Enfant</title>
     <style>
         @page {
             margin: 20mm;
@@ -329,26 +343,23 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
         }
 
         .sig-stack {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            width: 100%;
         }
 
         .sig-space {
             height: 56px;
             width: 100%;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
             overflow: hidden;
             margin-top: 16px;
             margin-bottom: 12px;
         }
 
         .sig-image {
-            max-height: 54px;
-            max-width: 120px;
+            max-height: 130px;
+            max-width: 250px;
             object-fit: contain;
+            display: block;
+            margin: 0 auto;
         }
 
         .sig-label {
@@ -356,8 +367,10 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
             font-family: DejaVu Sans, Arial, sans-serif;
             font-weight: 700;
             font-size: 9.6px;
+            line-height: 1.3;
             text-transform: uppercase;
             letter-spacing: .8px;
+            height: 26px;
             margin-bottom: 6px;
         }
 
@@ -368,6 +381,7 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
             font-weight: 800;
             text-transform: uppercase;
             min-height: 14px;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -402,7 +416,7 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
                 </tr>
             </table>
 
-            <div class="title">PRESENTATION DE NOUVEAU-NE</div>
+            <div class="title">PRÉSENTATION ENFANT</div>
 
             <div class="field">
                 <span class="label">Classe Méthodiste :</span>
@@ -463,14 +477,18 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
                                 <img src="{{ $signatureConducteurDataUri }}" alt="Signature conducteur" class="sig-image">
                                 @endif
                             </div>
-                            <div class="sig-name">{{ $nomConducteur }}</div>
+                            <div class="sig-name" style="font-size: {{ $sigFontSize($nomConducteur) }};">{{ $nomConducteur }}</div>
                         </div>
                     </td>
                     <td>
                         <div class="sig-stack">
                             <div class="sig-label">Bureau des Conducteurs</div>
-                            <div class="sig-space"></div>
-                            <div class="sig-name"></div>
+                            <div class="sig-space">
+                                @if(!empty($signatureBureauConducteurDataUri))
+                                <img src="{{ $signatureBureauConducteurDataUri }}" alt="Signature Bureau" class="sig-image">
+                                @endif
+                            </div>
+                            <div class="sig-name" style="font-size: {{ $sigFontSize($nomBureauConducteur) }};">{{ $nomBureauConducteur }}</div>
                         </div>
                     </td>
                     <td>
@@ -481,7 +499,7 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
                                 <img src="{{ $signaturePasteurDataUri }}" alt="Signature pasteur" class="sig-image">
                                 @endif
                             </div>
-                            <div class="sig-name">{{ $nomPasteur }}</div>
+                            <div class="sig-name" style="font-size: {{ $sigFontSize($nomPasteur) }};">{{ $nomPasteur }}</div>
                         </div>
                     </td>
                 </tr>

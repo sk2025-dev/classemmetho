@@ -42,7 +42,11 @@ class AppServiceProvider extends ServiceProvider
         LoginHistory::observe(AuditObserver::class);
 
         // Configuration Inertia pour le loading screen et les performances
-        Inertia::version(fn() => md5_file(public_path('build/manifest.json')));
+        Inertia::version(function () {
+            $manifest = public_path('build/manifest.json');
+
+            return is_file($manifest) ? md5_file($manifest) : null;
+        });
 
         // Passer les données partagées à toutes les pages Inertia
         Inertia::share([

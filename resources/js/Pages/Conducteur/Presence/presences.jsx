@@ -391,16 +391,7 @@ export default function Presences({
                             </p>
                         </div>
                     </div>
-                    <button
-                        style={{
-                            ...S.btnPrimary,
-                            opacity: 0.9,
-                            cursor: "default",
-                        }}
-                        disabled
-                    >
-                        QR automatique (lecture seule)
-                    </button>
+
                 </div>
 
                 {canManagePresenceMarker && (

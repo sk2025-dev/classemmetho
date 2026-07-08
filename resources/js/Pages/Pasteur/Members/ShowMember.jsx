@@ -318,12 +318,27 @@ export default function ShowMember({ member, family, auth }) {
                                         icon={Briefcase}
                                         colorClass="emerald"
                                     />
-                                    <InfoField
-                                        label="Fonction Église"
-                                        value={member.fonction?.nom}
-                                        icon={Briefcase}
-                                        colorClass="emerald"
-                                    />
+                                    <div className="group relative bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-all duration-300">
+                                        <div className="flex items-start gap-4">
+                                            <div className="p-2.5 rounded-lg text-emerald-600 bg-emerald-50 flex-shrink-0">
+                                                <Briefcase className="w-5 h-5" />
+                                            </div>
+                                            <div className="flex-1 min-w-0 pt-1">
+                                                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Fonction(s) Église</p>
+                                                {member.fonctions?.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {member.fonctions.map(f => (
+                                                            <span key={f.id} className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100">
+                                                                {f.nom}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-300 font-normal text-sm">Non renseigné</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
                                     <InfoField
                                         label="Téléphone Sec."
                                         value={member.telephone2}

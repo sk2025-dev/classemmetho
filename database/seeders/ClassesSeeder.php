@@ -3,65 +3,15 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class ClassesSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
-     * Remplit la table classes avec les groupes/classes de l'église
+     * Les classes méthodistes proviennent de l'import Excel (getClasseId → firstOrCreate).
+     * Ce seeder ne pré-insère rien pour éviter les doublons avec les données réelles.
      */
     public function run(): void
     {
-        $classes = [
-            [
-                'nom' => 'Genese',
-            ],
-            [
-                'nom' => 'Romains'
-            ],
-            [
-                'nom' => 'Jerusalem',
-
-            ],
-            [
-                'nom' => 'Sion',
-
-            ],
-            [
-                'nom' => 'Ephese',
-
-            ],
-            [
-                'nom' => 'Bethanie',
-
-            ],
-            [
-                'nom' => 'Josue',
-
-            ],
-            [
-                'nom' => 'Abraham',
-
-            ],
-            [
-                'nom' => 'Noe',
-
-            ],
-            [
-                'nom' => 'Sarah',
-
-            ],
-        ];
-
-        foreach ($classes as $classe) {
-            DB::table('classes')->insertOrIgnore([
-                'nom' => $classe['nom'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        $this->command->info('Classes de l\'église importées avec succès!');
+        $this->command->info('ClassesSeeder : aucune classe pré-insérée — les classes sont créées automatiquement lors de l\'import Excel.');
     }
 }

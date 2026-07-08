@@ -58,8 +58,13 @@ $dateEmission = optional($acte->created_at)->format('d/m/Y') ?? now()->format('d
 $toSignatureDataUri = function (?string $signaturePath): ?string {
     if (empty($signaturePath) || !is_string($signaturePath)) return null;
     if (str_starts_with($signaturePath, 'data:image/')) return $signaturePath;
-    $fullPath = storage_path('app/public/' . ltrim($signaturePath, '/'));
-    if (!is_file($fullPath)) return null;
+    // Utiliser Storage facade pour gérer correctement les chemins (Windows/Linux)
+    try {
+        if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($signaturePath)) return null;
+        $fullPath = \Illuminate\Support\Facades\Storage::disk('public')->path($signaturePath);
+    } catch (\Throwable $e) {
+        return null;
+    }
     $raw = @file_get_contents($fullPath);
     if ($raw === false) return null;
     $ext  = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION) ?: 'png');
@@ -72,8 +77,65 @@ $toSignatureDataUri = function (?string $signaturePath): ?string {
     return 'data:' . $mime . ';base64,' . base64_encode($raw);
 };
 
-$signatureConducteurDataUri = $signatureConducteurDataUri ?? $toSignatureDataUri($conducteur->signature_path ?? null);
-$signaturePasteurDataUri    = $signaturePasteurDataUri    ?? $toSignatureDataUri($pasteur->signature_path    ?? null);
+$signatureConducteurDataUri       = $signatureConducteurDataUri       ?? $toSignatureDataUri($conducteur->signature_path ?? null);
+$signaturePasteurDataUri          = $signaturePasteurDataUri          ?? $toSignatureDataUri($pasteur->signature_path    ?? null);
+
+// Bureau des Conducteurs : utiliser bureau_conducteur_id de l'acte,
+// sinon chercher le premier utilisateur avec rôle bureau_conducteur.
+$bureauConducteur = $acte->bureauConducteur ?? null;
+if (!$bureauConducteur) {
+    $bureauConducteur = \App\Models\User::where('role', 'bureau_conducteur')
+        ->whereNotNull('signature_path')
+        ->first();
+}
+$nomBureauConducteur = $bureauConducteur
+    ? trim(($bureauConducteur->prenom ?? '') . ' ' . ($bureauConducteur->nom ?? ''))
+    : null;
+$signatureBureauConducteurDataUri = $signatureBureauConducteurDataUri ?? $toSignatureDataUri($bureauConducteur->signature_path ?? null);
+
+// ── Lien familial du membre concerné ──────────────────────────────────────
+$membreConcerne = $acte->membre ?? null;
+$createurActe   = $acte->createur ?? null;
+$lienFamilial   = '';
+if ($membreConcerne) {
+    $rel = trim((string) ($membreConcerne->relation ?? ''));
+    // On évite "lui-même" / "lui meme" car c'est incorrect pour le respo de famille
+    $relNorm = mb_strtolower(str_replace(['-', ' '], '', $rel), 'UTF-8');
+    if ($rel !== '' && !in_array($relNorm, ['luimeme', 'luimême'], true)) {
+        $lienFamilial = ucfirst($rel);
+    } elseif ($createurActe && $membreConcerne->id === $createurActe->id) {
+        // Même personne → afficher son rôle lisible
+        $lienFamilial = match ($membreConcerne->role ?? '') {
+            'responsable_famille' => 'Responsable de famille',
+            'conducteur'          => 'Conducteur',
+            'pasteur'             => 'Pasteur',
+            'bureau_conducteur'   => 'Bureau des Conducteurs',
+            default               => 'Membre de famille',
+        };
+    } else {
+        $lienFamilial = '—';
+    }
+}
+
+// ── Date / heure de validation du Conducteur (depuis l'historique) ────────
+$historiqueCondValidation = null;
+if ($acte->relationLoaded('historiques') && $acte->historiques->isNotEmpty()) {
+    $historiqueCondValidation = $acte->historiques
+        ->filter(function ($h) {
+            $role   = mb_strtolower((string) ($h->acteur?->role ?? ''), 'UTF-8');
+            $statut = $h->statut_nouveau ?? '';
+            return $role === 'conducteur'
+                && in_array($statut, ['TRANSMISE_AU_BUREAU_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR'], true);
+        })
+        ->sortBy('created_at')
+        ->first();
+}
+$dateValidationCond = $historiqueCondValidation
+    ? optional($historiqueCondValidation->created_at)->format('d/m/Y à H\hi')
+    : null;
+$nomValidateurCond  = ($historiqueCondValidation && $historiqueCondValidation->acteur)
+    ? trim(($historiqueCondValidation->acteur->prenom ?? '') . ' ' . ($historiqueCondValidation->acteur->nom ?? ''))
+    : null;
 
 $dateEvenementTexte = $_dateCarbon ? ucfirst($dateAnnonceTexte) : '—';
 $messageContent = trim((string) ($details['contenu'] ?? $details['titre'] ?? ''));
@@ -358,12 +420,12 @@ $checkboxesIntercession = [
             font-weight: 700;
             text-decoration: underline;
             display: block;
-            margin-bottom: 28px;
+            margin-bottom: 10px;
         }
         .sig-image {
             display: block;
-            max-height: 46px;
-            max-width: 130px;
+            max-height: 130px;
+            max-width: 250px;
             margin: 0 auto;
             object-fit: contain;
         }
@@ -385,6 +447,13 @@ $checkboxesIntercession = [
             color: #ef4444;
             font-style: italic;
             display: block;
+        }
+        .sig-date {
+            font-size: 9px;
+            color: #555;
+            font-style: italic;
+            display: block;
+            margin-top: 3px;
         }
     </style>
 </head>
@@ -432,8 +501,11 @@ $checkboxesIntercession = [
     {{-- ══ TITRE BLEU ══ --}}
     <div class="main-title">{{ $titreDocument }}</div>
 
-    {{-- ══ CHAMPS NOM / CLASSE / DATE ══ --}}
+    {{-- ══ CHAMPS NOM / LIEN FAMILIAL / CLASSE / DATE ══ --}}
     <div class="field-line"><b>Nom et Prénoms :</b>  {{ $nomComplet }}</div>
+    @if($lienFamilial && $lienFamilial !== '—')
+    <div class="field-line"><b>Lien familial :</b>  {{ $lienFamilial }}</div>
+    @endif
     <div class="field-line"><b>Classe Méthodiste :</b>  {{ $classe }}</div>
     <div class="field-line">
         <b>Pour le culte du :</b>
@@ -524,40 +596,44 @@ $checkboxesIntercession = [
 
     <div style="margin-top: 4px;">
 
-    <!-- {{-- ══ SIGNATURES ══ --}} -->
+    <!-- Signatures (3 colonnes : Conducteur · Bureau des Conducteurs · Pasteur) -->
     <table class="sig-table">
         <tr>
 
-            <!-- {{-- Conducteur --}} -->
+            <!-- Conducteur de la Classe -->
             <td>
                 <span class="sig-label">Conducteur de la Classe</span>
                 @if(!empty($signatureConducteurDataUri))
-                    <img src="{{ $signatureConducteurDataUri }}"
-                         alt="Signature Conducteur" class="sig-image">
+                    <img src="{{ $signatureConducteurDataUri }}" alt="Signature Conducteur" class="sig-image">
                 @endif
-                <!-- <span class="sig-line"></span> -->
-                @if($nomConducteur && $nomConducteur !== 'Conducteur non renseigné')
+                @if($nomValidateurCond)
+                    <span class="sig-name">{{ mb_strtoupper($nomValidateurCond, 'UTF-8') }}</span>
+                @elseif($nomConducteur && $nomConducteur !== 'Conducteur non renseigné')
                     <span class="sig-name">{{ mb_strtoupper($nomConducteur, 'UTF-8') }}</span>
                 @else
                     <span class="sig-missing">Non renseigné</span>
                 @endif
             </td>
 
-            <!-- {{-- Bureau des Conducteurs --}} -->
-            <!-- <td>
+            <!-- Bureau des Conducteurs -->
+            <td>
                 <span class="sig-label">Bureau des Conducteurs</span>
-                <span class="sig-line"></span>
-                <span class="sig-name">&nbsp;</span>
-            </td> -->
+                @if(!empty($signatureBureauConducteurDataUri))
+                    <img src="{{ $signatureBureauConducteurDataUri }}" alt="Signature Bureau" class="sig-image">
+                @endif
+                @if(!empty($nomBureauConducteur))
+                    <span class="sig-name">{{ mb_strtoupper($nomBureauConducteur, 'UTF-8') }}</span>
+                @else
+                    <span class="sig-missing">Non renseigné</span>
+                @endif
+            </td>
 
-            <!-- {{-- Pasteur --}} -->
+            <!-- Pasteur -->
             <td>
                 <span class="sig-label">Pasteur</span>
                 @if(!empty($signaturePasteurDataUri))
-                    <img src="{{ $signaturePasteurDataUri }}"
-                         alt="Signature Pasteur" class="sig-image">
+                    <img src="{{ $signaturePasteurDataUri }}" alt="Signature Pasteur" class="sig-image">
                 @endif
-                <span class="sig-line"></span>
                 @if($nomPasteur && $nomPasteur !== 'Pasteur non renseigné')
                     <span class="sig-name">{{ mb_strtoupper($nomPasteur, 'UTF-8') }}</span>
                 @else
