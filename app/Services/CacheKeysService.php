@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Cache;
  * Service de cache pour les données de référence
  * Réduit les N+1 queries et accélère les recherches
  */
-class CacheService
+class CacheKeysService
 {
     // TTL en secondes (24 heures)
     private const CACHE_TTL = 86400;

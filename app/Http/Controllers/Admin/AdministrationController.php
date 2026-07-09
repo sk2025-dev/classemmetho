@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Inscription;
@@ -27,6 +29,47 @@ use App\Http\Requests\Admin\UpdateMembreRequest;
 
 class AdministrationController extends Controller
 {
+    /**
+     * Trouver la fonction "président des conducteurs" de manière robuste (sans dépendre
+     * de la présence exacte des accents).
+     */
+    private function getPresidentConducteursFonction(): ?Fonction
+    {
+        // On cherche "président des conducteurs" de façon tolérante
+        // (accents, casse, espaces, variantes).
+        $target = 'president des conducteurs';
+
+        $normalize = function (string $value): string {
+            $ascii = Str::ascii($value);
+            $lower = strtolower($ascii);
+            // garder uniquement lettres/chiffres/espaces
+            $clean = preg_replace('/[^a-z0-9 ]+/', ' ', $lower) ?? '';
+            // réduire les espaces multiples
+            $clean = preg_replace('/\s+/', ' ', trim($clean)) ?? '';
+            return $clean;
+        };
+
+        $targetNormalized = $normalize($target);
+
+        $candidates = Fonction::query()
+            ->whereNotNull('nom')
+            ->get(['id', 'nom']);
+
+        $exact = $candidates->first(function (Fonction $fonction) use ($normalize, $targetNormalized) {
+            return $normalize((string) $fonction->nom) === $targetNormalized;
+        });
+
+        if ($exact) {
+            return $exact;
+        }
+
+        // Fallback: contient "president" ET "conducteurs"
+        return $candidates->first(function (Fonction $fonction) use ($normalize) {
+            $n = $normalize((string) $fonction->nom);
+            return str_contains($n, 'president') && str_contains($n, 'conducteurs');
+        });
+    }
+
     public function index()
     {
         // ═══════════════════════════════════════════════════════════════
@@ -579,6 +622,102 @@ class AdministrationController extends Controller
         $user->save();
 
         return back()->with('success', 'Membre modifié avec succès.');
+    }
+
+    /**
+     * Désigner un membre comme "président des conducteurs".
+     * Règle: il n'y en a qu'un seul à la fois (on le retire des autres).
+     */
+    public function assignPresidentConducteurs($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+            $presidentFonction = $this->getPresidentConducteursFonction();
+
+            if (!$presidentFonction) {
+                // Pour debug: on log les fonctions candidates.
+                $possible = Fonction::query()
+                    ->whereNotNull('nom')
+                    ->get(['id', 'nom']);
+                Log::warning('President conducteurs fonction introuvable', [
+                    'member_id' => $id,
+                    'possible_fonctions_count' => $possible->count(),
+                    'possible_fonctions_all' => $possible
+                        ->map(fn (Fonction $f) => [
+                            'id' => $f->id,
+                            'nom' => $f->nom,
+                        ])
+                        ->values()
+                        ->all(),
+                ]);
+                return back()->with('error', "Fonction 'président des conducteurs' introuvable.");
+            }
+
+            $presidentFonctionId = (int) $presidentFonction->id;
+
+            DB::transaction(function () use ($user, $presidentFonctionId) {
+                // Retirer la fonction des autres utilisateurs (pivot + fonction principale).
+                DB::table('fonction_user')
+                    ->where('fonction_id', $presidentFonctionId)
+                    ->where('user_id', '!=', $user->id)
+                    ->delete();
+
+                User::where('fonction_id', $presidentFonctionId)
+                    ->where('id', '!=', $user->id)
+                    ->update(['fonction_id' => null]);
+
+                // Assigner au membre sélectionné (pivot + fonction principale).
+                $user->fonctions()->syncWithoutDetaching([$presidentFonctionId]);
+                $user->fonction_id = $presidentFonctionId;
+                $user->save();
+            });
+
+            return back()->with('success', 'Président des conducteurs mis à jour.');
+        } catch (\Throwable $e) {
+            Log::error('assignPresidentConducteurs failed', [
+                'member_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Une erreur est survenue lors de la désignation du président des conducteurs.');
+        }
+    }
+
+    /**
+     * Retirer la fonction "président des conducteurs" d'un membre.
+     */
+    public function unassignPresidentConducteurs($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+            $presidentFonction = $this->getPresidentConducteursFonction();
+
+            if (!$presidentFonction) {
+                return back()->with('error', "Fonction 'président des conducteurs' introuvable.");
+            }
+
+            $presidentFonctionId = (int) $presidentFonction->id;
+
+            DB::transaction(function () use ($user, $presidentFonctionId) {
+                // Retirer la fonction du pivot.
+                $user->fonctions()->detach($presidentFonctionId);
+
+                // Retirer la fonction principale si c'est elle.
+                if ((int) $user->fonction_id === $presidentFonctionId) {
+                    $user->fonction_id = null;
+                    $user->save();
+                }
+            });
+
+            return back()->with('success', 'Président des conducteurs mis à jour.');
+        } catch (\Throwable $e) {
+            Log::error('unassignPresidentConducteurs failed', [
+                'member_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Une erreur est survenue lors de la suppression du président des conducteurs.');
+        }
     }
 
     public function destroyMembre($id)

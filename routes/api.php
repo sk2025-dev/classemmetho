@@ -10,7 +10,7 @@ use App\Http\Controllers\Api\VilleController;
 use App\Http\Controllers\Api\FonctionController;
 use App\Http\Controllers\Api\PhotoUploadController;
 use App\Http\Controllers\PhotoController;
-use App\Http\Controllers\API\MemberController;
+use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\AuthenticatedRegistrationController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\ExcelImportController;
