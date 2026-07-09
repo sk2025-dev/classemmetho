@@ -28,6 +28,9 @@ export default defineConfig({
                     if (id.includes('@react-google-maps')) {
                         return 'vendor-google-maps';
                     }
+                    if (id.includes('exceljs')) {
+                        return 'vendor-exceljs';
+                    }
                     if (id.includes('node_modules')) {
                         return 'vendor';
                     }

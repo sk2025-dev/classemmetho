@@ -3,8 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
 import html2pdf from 'html2pdf.js';
-import * as XLSX from 'xlsx';
 import { withBasePath } from '../../Utils/urlHelper';
+import { exportProgrammesWorkbook } from '../../Utils/excelExport';
 
 // Styles pour le tableau (conservés identiques)
 const tableStyles = `
@@ -847,19 +847,6 @@ export default function AllProgrammes() {
         'Statut': getStatus(event)
       }));
 
-      // Création d'une nouvelle feuille avec en-tête personnalisé
-      const ws = XLSX.utils.json_to_sheet([]);
-      
-      // Ajout des lignes d'en-tête avec la classe
-      XLSX.utils.sheet_add_aoa(ws, [
-        ['LISTE DES PROGRAMMES D\'ACTIVITÉS'],
-        [classDisplay],
-        [`Date de génération : ${currentDate} à ${currentTime}`],
-        [],
-        ['#', 'Date', 'Heure', 'Activités', 'Lieu', 'Orateur', 'Modérateur', 'Famille de réception', 'Statut']
-      ], { origin: 'A1' });
-      
-      // Ajout des données
       const dataRows = excelData.map(item => [
         item['#'],
         item['Date'],
@@ -871,34 +858,7 @@ export default function AllProgrammes() {
         item['Famille de réception'],
         item['Statut']
       ]);
-      
-      if (dataRows.length > 0) {
-        XLSX.utils.sheet_add_aoa(ws, dataRows, { origin: 'A6' });
-      }
-      
-      // Ajustement des largeurs de colonnes
-      ws['!cols'] = [
-        { wch: 5 },   // #
-        { wch: 25 },  // Date
-        { wch: 15 },  // Heure
-        { wch: 35 },  // Activités
-        { wch: 25 },  // Lieu
-        { wch: 20 },  // Orateur
-        { wch: 20 },  // Modérateur
-        { wch: 25 },  // Famille de réception
-        { wch: 12 }   // Statut
-      ];
-      
-      // Fusion des cellules pour le titre
-      if (!ws['!merges']) ws['!merges'] = [];
-      ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } });
-      ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 8 } });
-      ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 8 } });
-      
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Programmes');
-      
-      // Feuille de statistiques avec les informations de la classe
+
       const statsData = [
         { 'Statistique': 'Classe', 'Valeur': className },
         { 'Statistique': 'Total des programmes', 'Valeur': filteredProgrammes.length },
@@ -908,14 +868,21 @@ export default function AllProgrammes() {
         { 'Statistique': 'Date de génération', 'Valeur': new Date().toLocaleString('fr-FR') },
         { 'Statistique': 'Filtres appliqués', 'Valeur': `Recherche: ${filters.search || 'Aucune'} | Statut: ${filters.status} | Mois: ${filters.month} | Année: ${filters.year}` }
       ];
-      
-      const statsWs = XLSX.utils.json_to_sheet(statsData);
-      statsWs['!cols'] = [{ wch: 25 }, { wch: 30 }];
-      XLSX.utils.book_append_sheet(wb, statsWs, 'Statistiques');
-      
-      // Nom du fichier avec le nom de la classe
+
       const fileName = `programmes_${className.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+
+      await exportProgrammesWorkbook({
+        titleRows: [
+          'LISTE DES PROGRAMMES D\'ACTIVITÉS',
+          classDisplay,
+          `Date de génération : ${currentDate} à ${currentTime}`,
+        ],
+        headers: ['#', 'Date', 'Heure', 'Activités', 'Lieu', 'Orateur', 'Modérateur', 'Famille de réception', 'Statut'],
+        dataRows,
+        colWidths: [5, 25, 15, 35, 25, 20, 20, 25, 12],
+        statsRows: statsData,
+        filename: fileName,
+      });
       
       showToast('Excel téléchargé avec succès', 'success');
     } catch (error) {

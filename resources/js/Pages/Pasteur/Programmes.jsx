@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
-import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
 import { withBasePath } from '../../Utils/urlHelper';
+import { exportJsonToExcel } from '../../Utils/excelExport';
 
 // --- STYLES INTÉGRÉS ---
 const styles = `
@@ -1193,10 +1193,10 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
   };
 
   // Export Excel
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
       setIsExporting(true);
-      
+
       const exportData = sortedProgrammes.map((programme, index) => ({
         '#': index + 1,
         'Date': formatDateForTable(programme.start_date),
@@ -1209,26 +1209,13 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
         'Statut': getStatus(programme.start_date)
       }));
 
-      const ws = XLSX.utils.json_to_sheet(exportData);
-      
-      const colWidths = [
-        { wch: 5 },   // #
-        { wch: 15 },  // Date
-        { wch: 30 },  // Activités
-        { wch: 15 },  // Heure
-        { wch: 25 },  // Lieu
-        { wch: 20 },  // Orateur
-        { wch: 20 },  // Modérateur
-        { wch: 20 },  // Famille
-        { wch: 12 }   // Statut
-      ];
-      ws['!cols'] = colWidths;
+      await exportJsonToExcel(
+        exportData,
+        `Programmes_${classe.nom}`,
+        `programmes_${classe.nom}_${new Date().toISOString().split('T')[0]}.xlsx`,
+        [5, 15, 30, 15, 25, 20, 20, 20, 12]
+      );
 
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, `Programmes_${classe.nom}`);
-      
-      XLSX.writeFile(wb, `programmes_${classe.nom}_${new Date().toISOString().split('T')[0]}.xlsx`);
-      
       showToast(`Export Excel réussi pour la classe ${classe.nom}`, 'success');
     } catch (error) {
       console.error('Erreur lors de l\'export Excel:', error);

@@ -25,6 +25,7 @@
         "@heroicons/react": "^2.2.0",
         "@inertiajs/react": "^2.3.8",
         "@react-google-maps/api": "^2.20.8",
+        "exceljs": "^4.4.0",
         "framer-motion": "^12.26.2",
         "html2pdf.js": "^0.14.0",
         "jspdf": "^4.1.0",
@@ -35,7 +36,11 @@
         "react-dom": "^19.2.3",
         "react-select": "^5.10.2",
         "recharts": "^3.8.1",
-        "sonner": "^2.0.7",
-        "xlsx": "^0.18.5"
+        "sonner": "^2.0.7"
+    },
+    "overrides": {
+        "fast-csv": "4.3.6",
+        "tmp": "0.2.7",
+        "uuid": "^11.1.1"
     }
 }
