@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { ToastContainer } from "../../../Components/Toast";
 import useToast from "../../../Hooks/useToast";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 function formatDate(dateString) {
     if (!dateString) {
@@ -106,7 +107,7 @@ export default function ResponsableFamilleSondageShow({
     previousAnswers = {},
     previewMode = false,
     publicMode = false,
-    backHref = "/responsable-famille/sondages",
+    backHref = withBasePath("", "/responsable-famille/sondages"),
     headerTitle = null,
     headerSubtitle = null,
     badgeLabel = "Reponses anonymes",

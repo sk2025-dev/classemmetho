@@ -3,6 +3,7 @@
  * Utilisé pour charger les données côté frontend de manière sécurisée
  */
 import { useState, useEffect, useRef } from 'react'
+import { withBasePath } from '../Utils/urlHelper'
 
 export function useFetch(url, options = {}) {
     const [data, setData] = useState(null)
@@ -127,7 +128,7 @@ export function handleApiError(error) {
 
         if (status === 401) {
             // Non authentifié - rediriger vers login
-            window.location.href = '/login'
+            window.location.href = withBasePath('', '/login')
         } else if (status === 403) {
             // Accès refusé
             return 'Vous n\'avez pas la permission d\'accéder à cette ressource'

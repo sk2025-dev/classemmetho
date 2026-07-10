@@ -397,7 +397,7 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                                     <button
                                                         onClick={() =>
                                                             router.get(
-                                                                `/pasteur/members/${member.id}`,
+                                                                withBasePath("", `/pasteur/members/${member.id}`),
                                                             )
                                                         }
                                                         className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1.5 rounded transition-colors"
@@ -408,7 +408,7 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                                     <button
                                                         onClick={() =>
                                                             router.get(
-                                                                `/pasteur/members/${member.id}/edit`,
+                                                                withBasePath("", `/pasteur/members/${member.id}/edit`),
                                                             )
                                                         }
                                                         className="text-green-600 hover:text-green-800 hover:bg-green-50 p-1.5 rounded transition-colors"
@@ -425,7 +425,7 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                                                     )
                                                                 ) {
                                                                     router.delete(
-                                                                        `/members/${member.id}`,
+                                                                        withBasePath("", `/members/${member.id}`),
                                                                     );
                                                                 }
                                                             }}

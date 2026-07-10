@@ -1530,7 +1530,7 @@ setSelectedMember(normalized);
             formData.append("_method", "PUT");
 
             const response = await axios.post(
-                `/conducteur/members/${memberId}`,
+                withBasePath("", `/conducteur/members/${memberId}`),
                 formData,
             );
 
@@ -1590,7 +1590,7 @@ setSelectedMember(normalized);
 
             axios
                 .get(
-                    `/conducteur/check-email?email=${encodeURIComponent(email)}&exclude_id=${excludeId}`,
+                    withBasePath("", `/conducteur/check-email?email=${encodeURIComponent(email)}&exclude_id=${excludeId}`),
                     { signal: controller.signal },
                 )
                 .then((res) => {
@@ -1709,7 +1709,7 @@ setSelectedMember(normalized);
 
             setIsSubmitting(true);
             axios
-                .post("/conducteur/quick-member", formData)
+                .post(withBasePath("", "/conducteur/quick-member"), formData)
                 .then((response) => {
                     console.log("Succès!", response.data);
                     showSuccessToast("Le membre a bien ete ajoute.", 2500);
@@ -1794,7 +1794,7 @@ setSelectedMember(normalized);
         setToggleProcessing(true);
         try {
             const response = await axios.put(
-                `/conducteur/members/${id}/validate`,
+                withBasePath("", `/conducteur/members/${id}/validate`),
                 {},
             );
             if (response?.data?.success) {
@@ -1821,7 +1821,7 @@ setSelectedMember(normalized);
         setToggleProcessing(true);
         try {
             const response = await axios.put(
-                `/conducteur/members/${id}/reject`,
+                withBasePath("", `/conducteur/members/${id}/reject`),
                 {},
             );
             if (response?.data?.success) {

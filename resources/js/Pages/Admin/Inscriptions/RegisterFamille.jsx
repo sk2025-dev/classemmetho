@@ -1186,7 +1186,7 @@ export default function RegisterFamille({
             }
 
             const res = await axios.post(
-                "/admin/inscriptions/famille",
+                withBasePath("", "/admin/inscriptions/famille"),
                 formData,
                 {
                     headers: headers,

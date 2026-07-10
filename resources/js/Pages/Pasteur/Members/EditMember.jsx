@@ -306,7 +306,7 @@ export default function EditMember({ member, family }) {
 
             // Envoyer via router avec FormData
             router.post(
-                `/responsable-famille/members/${member.id}?_method=PUT`,
+                withBasePath("", `/responsable-famille/members/${member.id}?_method=PUT`),
                 formData,
                 {
                     onSuccess: () => {
@@ -365,7 +365,7 @@ export default function EditMember({ member, family }) {
 
             // Utiliser Inertia router.put() pour les données JSON
             router.put(
-                `/responsable-famille/members/${member.id}`,
+                withBasePath("", `/responsable-famille/members/${member.id}`),
                 submitData,
                 {
                     onSuccess: () => {

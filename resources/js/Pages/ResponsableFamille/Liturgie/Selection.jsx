@@ -72,10 +72,11 @@ function getPlaceholder(type) {
 }
 
 export default function Selection({
-    basePath = "/responsable-famille/liturgie",
+    basePath: basePathProp = "/responsable-famille/liturgie",
     actesEnCours = [],
     familyMembers = [],
 }) {
+    const basePath = withBasePath("", basePathProp);
     const [showAnnonceModal, setShowAnnonceModal] = useState(false);
     const [annonceStep, setAnnonceStep] = useState(1);
     const [annonceProcessing, setAnnonceProcessing] = useState(false);

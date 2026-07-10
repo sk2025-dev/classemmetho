@@ -1202,7 +1202,7 @@ const Annuaire = ({
             const { default: jsPDF } = await import("jspdf");
             const { default: autoTable } = await import("jspdf-autotable");
             const doc = new jsPDF({ orientation: "landscape" });
-            const logoPath = "/images/image.png";
+            const logoPath = withBasePath("", "/images/image.png");
             try {
                 const response = await fetch(logoPath);
                 if (response.ok) {

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X, Loader, ExternalLink } from "lucide-react";
+import { withBasePath } from "../Utils/urlHelper";
 
 /**
  * PaymentModal - Popup pour les paiements Paydunya
@@ -24,7 +25,7 @@ export function PaymentModal({
     const checkPaymentStatus = async () => {
         try {
             const res = await fetch(
-                `/responsable-famille/tresorerie/paiement/${paiementId}/verify`,
+                withBasePath("", `/responsable-famille/tresorerie/paiement/${paiementId}/verify`),
                 {
                     method: "GET",
                     headers: {

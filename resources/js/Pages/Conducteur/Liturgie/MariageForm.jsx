@@ -5,14 +5,17 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useToastWithErrorHandling } from "../../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../../Components/ToastContainer";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 export default function MariageForm({
-    backHref,
-    submitUrl,
+    backHref: backHrefProp,
+    submitUrl: submitUrlProp,
     familyMembers = [],
     classes = [],
     canSelectMember = false,
 }) {
+    const backHref = withBasePath("", backHrefProp);
+    const submitUrl = withBasePath("", submitUrlProp);
     const [processing, setProcessing] = useState(false);
     const [success, setSuccess] = useState(false);
     const [successMsg, setSuccessMsg] = useState("");

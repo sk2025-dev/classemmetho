@@ -333,7 +333,7 @@ export default function ResponsableFamillePrieresIndex({
         syncRequestStatus(requestId, status);
 
         router.patch(
-            `/responsable-famille/prieres/${requestId}/status`,
+            withBasePath("", `/responsable-famille/prieres/${requestId}/status`),
             { statut: status },
             {
                 preserveScroll: true,
@@ -395,7 +395,7 @@ export default function ResponsableFamillePrieresIndex({
         }
 
         router.post(
-            "/responsable-famille/prieres",
+            withBasePath("", "/responsable-famille/prieres"),
             {
                 sujet: trimmedSubject,
                 demande: trimmedMessage,
@@ -424,7 +424,7 @@ export default function ResponsableFamillePrieresIndex({
         }
 
         router.patch(
-            `/responsable-famille/prieres/${requestId}/commentaire`,
+            withBasePath("", `/responsable-famille/prieres/${requestId}/commentaire`),
             {
                 temoignage: draft,
                 reply_to_comment_id: replyTargets[requestId] ?? null,
@@ -447,7 +447,7 @@ export default function ResponsableFamillePrieresIndex({
 
     const handleMarkFulfilled = (requestId) => {
         router.patch(
-            `/responsable-famille/prieres/${requestId}/exaucee`,
+            withBasePath("", `/responsable-famille/prieres/${requestId}/exaucee`),
             {},
             {
                 preserveScroll: true,
@@ -460,7 +460,7 @@ export default function ResponsableFamillePrieresIndex({
 
     const handleMarkUnfulfilled = (requestId) => {
         router.patch(
-            `/responsable-famille/prieres/${requestId}/non-exaucee`,
+            withBasePath("", `/responsable-famille/prieres/${requestId}/non-exaucee`),
             {},
             { preserveScroll: true },
         );

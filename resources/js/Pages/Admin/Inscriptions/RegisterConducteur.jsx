@@ -1125,7 +1125,7 @@ export default function RegisterConducteur({
             }
 
             const res = await axios.post(
-                "/admin/inscriptions/conducteur",
+                withBasePath("", "/admin/inscriptions/conducteur"),
                 formData,
                 {
                     headers: headers,

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ToastContainer } from "../../../Components/Toast";
 import useToast from "../../../Hooks/useToast";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 function formatDate(dateString) {
     if (!dateString) {
@@ -181,7 +182,7 @@ export default function PublicSondageRespond({
         setIsSubmitting(true);
 
         router.post(
-            `/sondages/public/${publicToken}/reponses`,
+            withBasePath("", `/sondages/public/${publicToken}/reponses`),
             {
                 answers,
                 member: memberForm,

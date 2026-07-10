@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "@inertiajs/react";
 import { ArrowLeft, ChevronRight } from "lucide-react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 const ACTE_OPTIONS = [
     {
@@ -34,8 +35,9 @@ const ACTE_OPTIONS = [
 ];
 
 export default function Selection({
-    basePath = "/conducteur/liturgie",
+    basePath: basePathProp = "/conducteur/liturgie",
 }) {
+    const basePath = withBasePath("", basePathProp);
     return (
         <div
             className="min-h-screen py-10 px-4"

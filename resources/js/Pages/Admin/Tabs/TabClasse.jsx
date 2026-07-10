@@ -1017,7 +1017,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
             const loadMemberData = async () => {
                 try {
                     const response = await fetch(
-                        `/admin/membres/${memberData.id}`,
+                        withBasePath("", `/admin/membres/${memberData.id}`),
                     );
                     if (response.ok) {
                         const freshData = await response.json();
@@ -2264,8 +2264,8 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
         e.preventDefault();
         const action = isEditing ? put : post;
         const url = isEditing
-            ? `/admin/classes/${classeData.id}`
-            : "/admin/classes";
+            ? withBasePath("", `/admin/classes/${classeData.id}`)
+            : withBasePath("", "/admin/classes");
         action(url, {
             onSuccess: () => {
                 const message = isEditing
@@ -2573,7 +2573,7 @@ const TabClasses = ({
         const newStatus =
             selectedClasseForToggle.status === "active" ? "inactive" : "active";
         const textAction = newStatus === "inactive" ? "désactiver" : "activer";
-        const patchUrl = `/admin/classes/${selectedClasseForToggle.id}/status`;
+        const patchUrl = withBasePath("", `/admin/classes/${selectedClasseForToggle.id}/status`);
 
         console.log("📤 Envoi PATCH:", patchUrl);
         console.log("📊 Nouveau statut:", newStatus);

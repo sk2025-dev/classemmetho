@@ -4,6 +4,7 @@ import { Head } from '@inertiajs/react'
 import { ArrowLeft } from 'lucide-react'
 import useToast from '../../Hooks/useToast'
 import ToastContainer from '../../Components/ToastContainer'
+import { withBasePath } from '../../Utils/urlHelper'
 
 export default function ProfileShow({ user }) {
   const [activeTab, setActiveTab] = useState('info')
@@ -37,7 +38,7 @@ export default function ProfileShow({ user }) {
 
   const handleProfileSubmit = (e) => {
     e.preventDefault()
-    profileForm.post('/profile/update', {
+    profileForm.post(withBasePath('', '/profile/update'), {
       onSuccess: () => {
         profileForm.reset()
       },
@@ -46,7 +47,7 @@ export default function ProfileShow({ user }) {
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault()
-    passwordForm.post('/profile/password', {
+    passwordForm.post(withBasePath('', '/profile/password'), {
       onSuccess: () => {
         passwordForm.reset()
       },
@@ -55,7 +56,7 @@ export default function ProfileShow({ user }) {
 
   const handleSignatureSubmit = (e) => {
     e.preventDefault()
-    signatureForm.post('/profile/signature', {
+    signatureForm.post(withBasePath('', '/profile/signature'), {
       forceFormData: true,
       onSuccess: () => {
         signatureForm.reset()

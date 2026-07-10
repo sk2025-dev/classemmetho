@@ -1066,7 +1066,7 @@ export default function Index({
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             window.open(
-                                                                `/membre-famille/annonces/${ann.id}/fiche`,
+                                                                withBasePath("", `/membre-famille/annonces/${ann.id}/fiche`),
                                                                 "_blank",
                                                             );
                                                         }}
@@ -1663,7 +1663,7 @@ export default function Index({
                                     }}
                                     onClick={() =>
                                         window.open(
-                                            `/membre-famille/annonces/${selectedAnnonce.id}/fiche`,
+                                            withBasePath("", `/membre-famille/annonces/${selectedAnnonce.id}/fiche`),
                                             "_blank",
                                         )
                                     }

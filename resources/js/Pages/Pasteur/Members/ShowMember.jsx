@@ -239,7 +239,7 @@ export default function ShowMember({ member, family, auth }) {
                                     <button
                                         onClick={() =>
                                             router.get(
-                                                `/responsable-famille/members/${member.id}/edit`,
+                                                withBasePath("", `/responsable-famille/members/${member.id}/edit`),
                                             )
                                         }
                                         className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"

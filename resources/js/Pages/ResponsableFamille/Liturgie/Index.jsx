@@ -1287,7 +1287,7 @@ export default function Index({
                                                                 style={{ marginTop: 4 }}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    window.open(`/responsable-famille/annonces/${ann.id}/fiche`, "_blank");
+                                                                    window.open(withBasePath("", `/responsable-famille/annonces/${ann.id}/fiche`), "_blank");
                                                                 }}
                                                             >
                                                                 📄 Voir la fiche

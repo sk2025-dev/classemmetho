@@ -1,6 +1,7 @@
 ﻿import React from "react";
 import { useForm } from "@inertiajs/react";
 import { Link, router } from "@inertiajs/react";
+import { withBasePath } from "../../Utils/urlHelper";
 import {
     ArrowLeft,
     Save,
@@ -48,11 +49,11 @@ export default function EditFamily({ family, classes, villes, routeBase: routeBa
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post(`${routeBase}/family/update`);
+        post(withBasePath("", `${routeBase}/family/update`));
     };
 
     const handleCancel = () => {
-        router.get(`${routeBase}/inscriptions`);
+        router.get(withBasePath("", `${routeBase}/inscriptions`));
     };
 
     const Field = ({ label, icon: Icon, error, disabled, children }) => (
@@ -85,7 +86,7 @@ export default function EditFamily({ family, classes, villes, routeBase: routeBa
                 {/* Top nav */}
                 <div className="flex items-center justify-between mb-6">
                     <Link
-                        href={`${routeBase}/inscriptions`}
+                        href={withBasePath("", `${routeBase}/inscriptions`)}
                         className="inline-flex items-center gap-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full text-sm font-medium transition-all"
                     >
                         <ArrowLeft className="w-4 h-4" />

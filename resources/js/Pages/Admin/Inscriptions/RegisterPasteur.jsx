@@ -1381,9 +1381,12 @@ export default function RegisterFamille({
                 headers["X-CSRF-TOKEN"] = csrfToken;
             }
 
-            const apiRoute = targetRole === 'bureau_conducteur'
-                ? "/admin/inscriptions/bureau-conducteur"
-                : "/admin/inscriptions/pasteur";
+            const apiRoute = withBasePath(
+                "",
+                targetRole === 'bureau_conducteur'
+                    ? "/admin/inscriptions/bureau-conducteur"
+                    : "/admin/inscriptions/pasteur",
+            );
             const res = await axios.post(
                 apiRoute,
                 formData,

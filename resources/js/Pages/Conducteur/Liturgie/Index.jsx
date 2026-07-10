@@ -3917,7 +3917,7 @@ export default function Index({
                                                 "#3b82f6")
                                         }
                                         onClick={() => {
-                                            window.location.href = `/conducteur/annonces/${selectedAnnonce.id}/fiche`;
+                                            window.location.href = withBasePath("", `/conducteur/annonces/${selectedAnnonce.id}/fiche`);
                                         }}
                                     >
                                         <svg

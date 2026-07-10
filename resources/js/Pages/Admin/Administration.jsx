@@ -248,7 +248,7 @@ export default function AdminPage({
     const handleToggleMember = (member) => {
         const newStatus = member.is_active ? "inactif" : "actif";
         router.patch(
-            `/admin/membres/${member.id}/status`,
+            withBasePath("", `/admin/membres/${member.id}/status`),
             {
                 statut: newStatus,
             },
@@ -364,7 +364,7 @@ export default function AdminPage({
     const approve = () => {
         if (!selectedForValidation) return;
         router.put(
-            `/admin/status/${selectedForValidation.id}/inscription`,
+            withBasePath("", `/admin/status/${selectedForValidation.id}/inscription`),
             { status: "Approuvé" },
             {
                 onSuccess: () => {
@@ -383,7 +383,7 @@ export default function AdminPage({
     const reject = () => {
         if (!selectedForValidation) return;
         router.put(
-            `/admin/status/${selectedForValidation.id}/inscription`,
+            withBasePath("", `/admin/status/${selectedForValidation.id}/inscription`),
             { status: "Rejeté" },
             {
                 onSuccess: () => {

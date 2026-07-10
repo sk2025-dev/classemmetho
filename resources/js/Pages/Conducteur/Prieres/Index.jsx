@@ -394,7 +394,7 @@ export default function ConducteurPrieresIndex({
         syncRequestStatus(requestId, status);
 
         router.patch(
-            `/conducteur/prieres/${requestId}/status`,
+            withBasePath("", `/conducteur/prieres/${requestId}/status`),
             { statut: status },
             {
                 preserveScroll: true,
@@ -456,7 +456,7 @@ export default function ConducteurPrieresIndex({
         }
 
         router.post(
-            "/conducteur/prieres",
+            withBasePath("", "/conducteur/prieres"),
             {
                 sujet: trimmedSubject,
                 demande: trimmedMessage,
@@ -485,7 +485,7 @@ export default function ConducteurPrieresIndex({
         }
 
         router.patch(
-            `/conducteur/prieres/${requestId}/commentaire`,
+            withBasePath("", `/conducteur/prieres/${requestId}/commentaire`),
             {
                 temoignage: draft,
                 reply_to_comment_id: replyTargets[requestId] ?? null,
@@ -508,7 +508,7 @@ export default function ConducteurPrieresIndex({
 
     const handleMarkFulfilled = (requestId) => {
         router.patch(
-            `/conducteur/prieres/${requestId}/exaucee`,
+            withBasePath("", `/conducteur/prieres/${requestId}/exaucee`),
             {},
             {
                 preserveScroll: true,
@@ -521,7 +521,7 @@ export default function ConducteurPrieresIndex({
 
     const handleMarkUnfulfilled = (requestId) => {
         router.patch(
-            `/conducteur/prieres/${requestId}/non-exaucee`,
+            withBasePath("", `/conducteur/prieres/${requestId}/non-exaucee`),
             {},
             { preserveScroll: true },
         );

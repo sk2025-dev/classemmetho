@@ -1,6 +1,7 @@
 import { Head, router, usePage } from "@inertiajs/react";
 import { KeyRound, ShieldCheck, Users } from "lucide-react";
 import { useState } from "react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 function formatDate(dateString) {
     if (!dateString) {
@@ -35,7 +36,7 @@ export default function PublicSondageAccess({
         setIsSubmitting(true);
 
         router.post(
-            `/sondages/public/${publicToken}/acces`,
+            withBasePath("", `/sondages/public/${publicToken}/acces`),
             form,
             {
                 preserveScroll: true,

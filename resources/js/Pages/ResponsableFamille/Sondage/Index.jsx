@@ -6,6 +6,7 @@ import {
     formatPercentage,
     truncateDecimal,
 } from "../../../Utils/percentage";
+import { withBasePath } from "../../../Utils/urlHelper";
 import {
     ArrowLeft,
     BarChart3,
@@ -115,8 +116,8 @@ export default function ResponsableFamilleSondageIndex({
     sondages = [],
     classe = null,
     headTitle = "Sondages - Responsable Famille",
-    backHref = "/responsable-famille/dashboard",
-    detailBaseHref = "/responsable-famille/sondages",
+    backHref = withBasePath("", "/responsable-famille/dashboard"),
+    detailBaseHref = withBasePath("", "/responsable-famille/sondages"),
     showAudienceFilter = true,
 }) {
     const [currentPage, setCurrentPage] = useState(1);

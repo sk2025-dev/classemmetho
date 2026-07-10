@@ -1415,7 +1415,7 @@ export default function Index({
         try {
             setProcessing(true);
             const { data } = await axios.post(
-                `/pasteur/liturgie/${acteId}/ceremonie/decision`,
+                withBasePath("", `/pasteur/liturgie/${acteId}/ceremonie/decision`),
                 {
                     statut,
                     commentaire,
@@ -2771,7 +2771,7 @@ export default function Index({
                                                     </button>
                                                 )}
                                                 {!isActe && (
-                                                    <button className="btn-pdf" onClick={(e) => { e.stopPropagation(); window.open(`/pasteur/liturgie/${item.id}/fiche-priere`, '_blank'); }}>
+                                                    <button className="btn-pdf" onClick={(e) => { e.stopPropagation(); window.open(withBasePath("", `/pasteur/liturgie/${item.id}/fiche-priere`), '_blank'); }}>
                                                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                                         Télécharger fiche
                                                     </button>
@@ -3043,16 +3043,16 @@ export default function Index({
                                                     <button className="btn-pdf" onClick={() => finalizeActe(item)}>Marquer {finalLabelForType(item.type_acte)}</button>
                                                 )}
                                                 {isActe && ['deces', 'naissance'].includes(item.type_acte) && (
-                                                    <button className="btn-pdf" onClick={() => window.open(`/pasteur/liturgie/${item.id}/certificat`, '_blank')}>Télécharger la fiche</button>
+                                                    <button className="btn-pdf" onClick={() => window.open(withBasePath("", `/pasteur/liturgie/${item.id}/certificat`), '_blank')}>Télécharger la fiche</button>
                                                 )}
                                                 {!isActe && ['priere', 'grace'].includes(item.type_acte) && !item.statut?.includes('REFUS') && (
-                                                    <button className="btn-pdf" onClick={() => window.open(`/pasteur/liturgie/${item.id}/fiche-priere`, '_blank')}>Télécharger la fiche</button>
+                                                    <button className="btn-pdf" onClick={() => window.open(withBasePath("", `/pasteur/liturgie/${item.id}/fiche-priere`), '_blank')}>Télécharger la fiche</button>
                                                 )}
                                                 {isActe && item.type_acte === 'mariage' && ['CEREMONIE_VALIDE_PAR_PASTEUR', 'CEREMONIE_VALIDEE_PAR_PASTEUR'].includes(item.details?.ceremonie_statut) && (
-                                                    <button className="btn-pdf" onClick={() => window.open(`/pasteur/liturgie/${item.id}/certificat`, '_blank')}>Télécharger certificat</button>
+                                                    <button className="btn-pdf" onClick={() => window.open(withBasePath("", `/pasteur/liturgie/${item.id}/certificat`), '_blank')}>Télécharger certificat</button>
                                                 )}
                                                 {isActe && item.type_acte === 'bapteme' && item.details?.fiche_bapteme_envoyee && (
-                                                    <button className="btn-pdf" onClick={() => window.open(`/pasteur/liturgie/${item.id}/certificat`, '_blank')}>Télécharger certificat</button>
+                                                    <button className="btn-pdf" onClick={() => window.open(withBasePath("", `/pasteur/liturgie/${item.id}/certificat`), '_blank')}>Télécharger certificat</button>
                                                 )}
                                             </div>
                                         </div>
@@ -3563,7 +3563,7 @@ export default function Index({
                                                                                     className="btn-pdf"
                                                                                     onClick={() =>
                                                                                         window.open(
-                                                                                            `/pasteur/liturgie/${row.id}/certificat`,
+                                                                                            withBasePath("", `/pasteur/liturgie/${row.id}/certificat`),
                                                                                             "_blank",
                                                                                         )
                                                                                     }
@@ -4959,7 +4959,7 @@ export default function Index({
                                                         <td style={{ padding: "10px 14px" }}>
                                                             {d.can_download ? (
                                                                 <a
-                                                                    href={`/pasteur/liturgie/${d.id}/fiche`}
+                                                                    href={withBasePath("", `/pasteur/liturgie/${d.id}/fiche`)}
                                                                     target="_blank"
                                                                     rel="noreferrer"
                                                                     style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, background: "#1e2070", color: "#fff", fontSize: 12, fontWeight: 600, textDecoration: "none" }}

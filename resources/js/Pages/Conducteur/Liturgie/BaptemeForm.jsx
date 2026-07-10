@@ -4,13 +4,16 @@ import { Link } from "@inertiajs/react";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useToastWithErrorHandling } from "../../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../../Components/ToastContainer";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 export default function BaptemeForm({
-    backHref,
-    submitUrl,
+    backHref: backHrefProp,
+    submitUrl: submitUrlProp,
     familyMembers = [],
     canSelectMember = false,
 }) {
+    const backHref = withBasePath("", backHrefProp);
+    const submitUrl = withBasePath("", submitUrlProp);
     const [processing, setProcessing] = useState(false);
     const [success, setSuccess] = useState(false);
     const [successMsg, setSuccessMsg] = useState("");

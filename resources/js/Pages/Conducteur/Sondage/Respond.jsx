@@ -192,7 +192,7 @@ export default function ConducteurSondageRespond({
         setIsSubmitting(true);
 
         router.post(
-            `/conducteur/sondages/${survey.id}/reponses`,
+            withBasePath("", `/conducteur/sondages/${survey.id}/reponses`),
             { answers },
             {
                 preserveScroll: true,

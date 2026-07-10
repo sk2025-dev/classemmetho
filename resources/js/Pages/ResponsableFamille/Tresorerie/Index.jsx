@@ -1061,7 +1061,7 @@ function TabPaiement({
                     date_paiement: new Date().toISOString().slice(0, 10),
                 };
                 const res = await fetch(
-                    "/responsable-famille/tresorerie/paiements/initiate",
+                    withBasePath("", "/responsable-famille/tresorerie/paiements/initiate"),
                     {
                         method: "POST",
                         headers: {
@@ -1110,7 +1110,7 @@ function TabPaiement({
                         payMethod === "virement" ? virementForm.banque : null,
                 };
                 const res = await fetch(
-                    "/responsable-famille/tresorerie/paiements",
+                    withBasePath("", "/responsable-famille/tresorerie/paiements"),
                     {
                         method: "POST",
                         headers: {

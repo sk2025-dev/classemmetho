@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { router } from "@inertiajs/react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 // ==================== STYLES GLOBAUX ====================
 const GLOBAL_STYLES = `
@@ -1241,7 +1242,7 @@ export default function TabAnnuaire({
             const { default: jsPDF } = await import("jspdf");
             const { default: autoTable } = await import("jspdf-autotable");
             const doc = new jsPDF({ orientation: "landscape" });
-            const logoPath = "/images/image.png";
+            const logoPath = withBasePath("", "/images/image.png");
             try {
                 const response = await fetch(logoPath);
                 if (response.ok) {
