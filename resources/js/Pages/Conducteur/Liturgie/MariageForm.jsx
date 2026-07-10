@@ -4,6 +4,7 @@ import { Link } from "@inertiajs/react";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useToastWithErrorHandling } from "../../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../../Components/ToastContainer";
+import Select2Single from "../../../Components/Select2Single";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 import { withBasePath } from "../../../Utils/urlHelper";
 
@@ -210,22 +211,22 @@ export default function MariageForm({
 
                                 <div className="grid grid-cols-1 gap-4 mb-6">
                                     <Field label="Membre concerné *">
-                                        <select
+                                        <Select2Single
+                                            name="membre_id"
                                             value={form.membre_id}
                                             onChange={(e) =>
                                                 setForm((prev) => ({
                                                     ...prev,
                                                     membre_id: e.target.value,
                                                 }))
-                                            } 
-                                        >
-                                        <option value="">-- Sélectionner un membre --</option> 
-                                            {familyMembers.map((m) => (
-                                                <option key={m.id} value={m.id}>
-                                                    {m.prenom} {m.nom}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            }
+                                            options={familyMembers.map((m) => ({
+                                                value: m.id,
+                                                label: `${m.prenom} ${m.nom}`,
+                                            }))}
+                                            placeholder="-- Sélectionner un membre --"
+                                            isClearable={false}
+                                        />
                                         {errors.membre_id && (
                                             <Err>{errors.membre_id}</Err>
                                         )}

@@ -4,6 +4,7 @@ import { Link } from "@inertiajs/react";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useToastWithErrorHandling } from "../../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../../Components/ToastContainer";
+import Select2Single from "../../../Components/Select2Single";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 import { withBasePath } from "../../../Utils/urlHelper";
 
@@ -326,7 +327,8 @@ export default function DecesForm({
                                 {/* Sélection du membre concerné */}
                                 <div className="mb-6">
                                     <Field label="Membre concerné (personne décédée) *">
-                                        <select
+                                        <Select2Single
+                                            name="membre_id"
                                             value={form.membre_id}
                                             onChange={(e) =>
                                                 setForm((prev) => ({
@@ -334,18 +336,19 @@ export default function DecesForm({
                                                     membre_id: e.target.value,
                                                 }))
                                             }
-                                        >
-                                            <option value="">-- Sélectionner un membre --</option>
-                                            {familyMembers.map((m) => (
-                                                <option key={m.id} value={m.id}>
-                                                    {m.prenom} {m.nom}
-                                                </option>
-                                            ))}
-                                            <option value="autre">
-                                                ➕ Autre membre / Personne non
-                                                inscrite
-                                            </option>
-                                        </select>
+                                            options={[
+                                                ...familyMembers.map((m) => ({
+                                                    value: m.id,
+                                                    label: `${m.prenom} ${m.nom}`,
+                                                })),
+                                                {
+                                                    value: "autre",
+                                                    label: "➕ Autre membre / Personne non inscrite",
+                                                },
+                                            ]}
+                                            placeholder="-- Sélectionner un membre --"
+                                            isClearable={false}
+                                        />
                                         <p className="text-xs text-slate-500 mt-1.5">
                                             {form.membre_id === "autre"
                                                 ? "Vous pouvez saisir les informations d'une personne non inscrite"

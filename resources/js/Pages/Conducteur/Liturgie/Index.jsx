@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import { normalizePhotoUrl } from "@/Helpers/PhotoUrlHelper";
 import { withBasePath } from "../../../Utils/urlHelper";
+import Select2Single from "../../../Components/Select2Single";
 
 // Composant pour visualiser les fiches PDF par date
 function FichesMariageModal({ open, onClose, acte, ids, onEdit, onSent }) {
@@ -2290,18 +2291,16 @@ export default function Index({
                                                         Membre concerné
                                                         <span className="fi-hint"> (optionnel)</span>
                                                     </label>
-                                                    <select
-                                                        className="fi-input"
+                                                    <Select2Single
+                                                        name="flash_membre_id"
                                                         value={flashForm.membre_id}
                                                         onChange={(e) => setFlashForm((p) => ({ ...p, membre_id: e.target.value }))}
-                                                    >
-                                                        <option value="">-- Aucun membre spécifique --</option>
-                                                        {familyMembers.map((m) => (
-                                                            <option key={m.id} value={m.id}>
-                                                                {m.prenom} {m.nom}
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                                        options={familyMembers.map((m) => ({
+                                                            value: m.id,
+                                                            label: `${m.prenom} ${m.nom}`,
+                                                        }))}
+                                                        placeholder="-- Aucun membre spécifique --"
+                                                    />
                                                 </div>
 
                                                 {/* Message */}
@@ -2980,8 +2979,8 @@ export default function Index({
                                             </select>
                                         </Field>
                                         <Field label="Membre concerné" required>
-                                            <select
-                                                className="modal-input"
+                                            <Select2Single
+                                                name="create_membre_id"
                                                 value={createForm.membre_id}
                                                 onChange={(e) =>
                                                     setCreateForm((f) => ({
@@ -2990,20 +2989,13 @@ export default function Index({
                                                             e.target.value,
                                                     }))
                                                 }
-                                            >
-                                                <option value="">
-                                                    — Sélectionner un membre —
-                                                </option>
-                                                {familyMembers.map((member) => (
-                                                    <option
-                                                        key={member.id}
-                                                        value={member.id}
-                                                    >
-                                                        {member.prenom}{" "}
-                                                        {member.nom}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                options={familyMembers.map((member) => ({
+                                                    value: member.id,
+                                                    label: `${member.prenom} ${member.nom}`,
+                                                }))}
+                                                placeholder="— Sélectionner un membre —"
+                                                isClearable={false}
+                                            />
                                         </Field>
                                         <Field label="Date souhaitée" required>
                                             <input
@@ -3325,8 +3317,8 @@ export default function Index({
                                         </Field>
                                     )}
                                     <Field label="Membre concerné" required>
-                                        <select
-                                            className="ann-input"
+                                        <Select2Single
+                                            name="annonce_membre_id"
                                             value={annonceForm.membre_id}
                                             onChange={(e) =>
                                                 setAnnonceForm((prev) => ({
@@ -3334,19 +3326,13 @@ export default function Index({
                                                     membre_id: e.target.value,
                                                 }))
                                             }
-                                        >
-                                            <option value="">
-                                                -- Sélectionnez un membre --
-                                            </option>
-                                            {familyMembers.map((member) => (
-                                                <option
-                                                    key={member.id}
-                                                    value={member.id}
-                                                >
-                                                    {member.prenom} {member.nom}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            options={familyMembers.map((member) => ({
+                                                value: member.id,
+                                                label: `${member.prenom} ${member.nom}`,
+                                            }))}
+                                            placeholder="-- Sélectionnez un membre --"
+                                            isClearable={false}
+                                        />
                                     </Field>
                                     <Field
                                         label="Message de l'annonce"

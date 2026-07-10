@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
+import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     Download,
@@ -912,7 +913,7 @@ export default function ConducteurTresorerie({
         setLoading(true);
         try {
             await postJson(
-                `/conducteur/tresorerie/cotisations/${editCotisation.id}`,
+                withBasePath("", `/conducteur/tresorerie/cotisations/${editCotisation.id}`),
                 {
                     nom: editCotisation.nom,
                     periodicite: editCotisation.periodicite,
@@ -939,7 +940,7 @@ export default function ConducteurTresorerie({
         setLoading(true);
         try {
             await postJson(
-                `/conducteur/tresorerie/cotisations/${c.id}`,
+                withBasePath("", `/conducteur/tresorerie/cotisations/${c.id}`),
                 {},
                 "DELETE",
             );
@@ -1211,7 +1212,7 @@ export default function ConducteurTresorerie({
         try {
             setLoading(true);
             const response = await postJson(
-                "/conducteur/tresorerie/assign-tresorier",
+                withBasePath("", "/conducteur/tresorerie/assign-tresorier"),
                 { user_id: selectedMemberTresorier },
             );
             reloadWithToast(
@@ -1246,7 +1247,7 @@ export default function ConducteurTresorerie({
         try {
             setLoading(true);
             const response = await postJson(
-                "/conducteur/tresorerie/unassign-tresorier",
+                withBasePath("", "/conducteur/tresorerie/unassign-tresorier"),
                 {
                     user_id: tresorierClasse.id,
                     motif_retrait: motifRetraitTresorier,
@@ -3830,25 +3831,21 @@ export default function ConducteurTresorerie({
                     classe.
                 </div>
                 <FW label="Sélectionner un membre de la classe" span2>
-                    <select
+                    <Select2Single
+                        name="membre_tresorier"
                         value={selectedMemberTresorier}
                         onChange={(e) =>
                             setSelectedMemberTresorier(e.target.value)
                         }
-                        style={{
-                            ...inputStyle,
-                            cursor: "pointer",
-                        }}
-                    >
-                        <option value="">-- Choisir un membre --</option>
-                        {membresClasse
+                        options={membresClasse
                             .filter((m) => m.role === "membre_famille")
-                            .map((m) => (
-                                <option key={m.id} value={m.id}>
-                                    {m.nom} ({m.famille})
-                                </option>
-                            ))}
-                    </select>
+                            .map((m) => ({
+                                value: m.id,
+                                label: `${m.nom} (${m.famille})`,
+                            }))}
+                        placeholder="-- Choisir un membre --"
+                        isClearable={false}
+                    />
                 </FW>
                 <div
                     style={{
