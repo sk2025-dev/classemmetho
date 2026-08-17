@@ -15,6 +15,8 @@ class Classe extends Model
         'nom',
         'description',
         'conducteur',
+        'logo_path',
+        'has_tribus',
         'nombre_membres',
         'status',
     ];
@@ -64,6 +66,14 @@ class Classe extends Model
     public function programmes()
     {
         return $this->hasMany(SpecialEvent::class, 'class_id');
+    }
+
+    /**
+     * Tribus de la classe (uniquement pertinent si has_tribus est actif).
+     */
+    public function tribus()
+    {
+        return $this->hasMany(Tribu::class, 'classe_id');
     }
 
     /**

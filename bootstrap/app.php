@@ -33,6 +33,8 @@ return Application::configure(basePath: dirname(__DIR__))
             ApiUtf8Encoding::class,
         ]);
 
+        $middleware->statefulApi();
+
         $middleware->alias([
             'role' => CheckRole::class,
         ]);

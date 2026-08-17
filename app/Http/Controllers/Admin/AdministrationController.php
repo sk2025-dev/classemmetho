@@ -160,6 +160,8 @@ class AdministrationController extends Controller
                 'contact' => $c->contact,
                 'familles' => $c->familles,
                 'status' => $c->status ?? 'active',
+                'logo_url' => PhotoHelper::getImageUrl($c->logo_path),
+                'has_tribus' => (bool) $c->has_tribus,
                 'created_at' => $c->created_at ? $c->created_at->toISOString() : null,
                 'updated_at' => $c->updated_at ? $c->updated_at->toISOString() : null,
                 'membres_count' => $usersInClasse->count(),

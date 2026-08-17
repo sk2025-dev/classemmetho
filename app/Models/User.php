@@ -10,11 +10,12 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\GeneratesIdentifier;
 use App\Traits\TrackModifications;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, GeneratesIdentifier, SoftDeletes;
+    use HasFactory, Notifiable, GeneratesIdentifier, SoftDeletes, HasApiTokens;
     // DISABLED TrackModifications - causes issues with is_modified column
 
     // Attributs calculés en mémoire par TransferWorkflowService (non persistés en base)
@@ -56,6 +57,7 @@ class User extends Authenticatable
         // === RELATIONS ET SYSTÈME ===
         'family_id',
         'classe_id',
+        'tribu_id',
         'ville_id',
         'fonction_id',
         'role',
@@ -208,6 +210,14 @@ class User extends Authenticatable
     public function classe()
     {
         return $this->belongsTo(Classe::class, 'classe_id');
+    }
+
+    /**
+     * La tribu de cet utilisateur (classe Israël uniquement)
+     */
+    public function tribu()
+    {
+        return $this->belongsTo(Tribu::class, 'tribu_id');
     }
 
     /**

@@ -677,6 +677,23 @@ export default function MainLayout({ children, auth }) {
             )}
 
             <main>{children}</main>
+
+            {auth?.user?.classe?.logo_url && (
+                <div
+                    aria-hidden="true"
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        backgroundImage: `url(${auth.user.classe.logo_url})`,
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "bottom -5vh right -5vw",
+                        backgroundSize: "min(45vw, 480px)",
+                        opacity: 0.32,
+                        pointerEvents: "none",
+                        zIndex: 30,
+                    }}
+                />
+            )}
         </div>
     );
 }

@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\InscriptionController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ClasseController;
@@ -20,6 +21,13 @@ use App\Http\Controllers\Conducteur\TresorerieController as ConducteurTresorerie
 use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
 use App\Http\Controllers\ResponsableFamille\TresorerieController as ResponsableFamilleTresorerieController;
 
+// Authentification par token (appli mobile / clients sans session navigateur)
+Route::post('/auth/login', [AuthController::class, 'login']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/me', [AuthController::class, 'me']);
+});
+
 // Routes publiques (sans authentification)
 Route::get('/classes', [ClasseController::class, 'index']);
 Route::get('/familles', [FamilleController::class, 'index']);
@@ -36,7 +44,7 @@ Route::post('/payment', [PaymentController::class, 'store']);
 Route::post('/presence', [PresenceController::class, 'store']);
 
 // Route API standard documentée pour upload photo (authentifié)
-Route::middleware(['auth:web'])->post('/photo/upload', [PhotoController::class, 'upload']);
+Route::middleware(['auth:sanctum'])->post('/photo/upload', [PhotoController::class, 'upload']);
 
 // Routes d'adresses avec rate limiting
 Route::middleware(['throttle:60,1'])->group(function () {
@@ -45,7 +53,7 @@ Route::middleware(['throttle:60,1'])->group(function () {
     Route::post('/address/validate', [AddressController::class, 'validate']);
 });
 
-Route::middleware(['auth:web'])->group(function () {
+Route::middleware(['auth:sanctum'])->group(function () {
     // Inscriptions API
     Route::get('/inscriptions/pending', [InscriptionController::class, 'pending']);
     Route::get('/inscriptions/{id}', [InscriptionController::class, 'show']);

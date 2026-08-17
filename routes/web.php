@@ -8,6 +8,7 @@ use App\Http\Controllers\Conducteur\AnnuaireController as ConducteurAnnuaireCont
 use App\Http\Controllers\Conducteur\DashboardController as ConducteurDashboardController;
 use App\Http\Controllers\Conducteur\InscriptionsController as ConducteurInscriptionsController;
 use App\Http\Controllers\Conducteur\TresorerieController as ConducteurTresorerieController;
+use App\Http\Controllers\Conducteur\TribuController as ConducteurTribuController;
 use App\Http\Controllers\Conducteur\RegisterMemberController as RegisterMemberController;
 use App\Http\Controllers\Conducteur\QuickMemberController;
 use App\Http\Controllers\Conducteur\ProgrammesClasseController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Pasteur\ProgrammesPasteurController;
 use App\Http\Controllers\MembreFamille\AnnuaireController as MembreFamilleAnnuaireController;
 use App\Http\Controllers\MembreFamille\DashboardController as MembreFamilleDashboardController;
 use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
+use App\Http\Controllers\MembreFamille\TribuController as MembreFamilleTribuController;
 use App\Http\Controllers\MembreFamille\ProgrammesController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\Profile\ChangePasswordController;
@@ -154,7 +156,8 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // Routes pour les classes
-        Route::resource('/admin/classes', \App\Http\Controllers\Admin\ClasseController::class);
+        Route::resource('/admin/classes', \App\Http\Controllers\Admin\ClasseController::class)
+            ->parameters(['classes' => 'classe']);
         Route::patch('/admin/classes/{classe}/status', [\App\Http\Controllers\Admin\ClasseController::class, 'toggleStatus'])->name('classes.toggle-status');
 
         // Routes pour les fonctions
@@ -299,6 +302,17 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/conducteur/inscriptions/famille/store', [ConducteurInscriptionsController::class, 'storeFamily'])->name('conducteur.inscriptions.famille.store');
         Route::put('/conducteur/inscriptions/{inscriptionId}', [ConducteurInscriptionsController::class, 'updateInscription'])->name('conducteur.inscriptions.update');
         Route::delete('/conducteur/inscriptions/{memberId}', [ConducteurInscriptionsController::class, 'destroy'])->name('conducteur.inscriptions.destroy');
+
+        // Routes module Tribu (Conducteur) - classe Israël uniquement
+        Route::get('/conducteur/tribus', [ConducteurTribuController::class, 'index'])->name('conducteur.tribus.index');
+        Route::post('/conducteur/tribus', [ConducteurTribuController::class, 'store'])->name('conducteur.tribus.store');
+        Route::put('/conducteur/tribus/{tribu}', [ConducteurTribuController::class, 'update'])->name('conducteur.tribus.update');
+        Route::delete('/conducteur/tribus/{tribu}', [ConducteurTribuController::class, 'destroy'])->name('conducteur.tribus.destroy');
+        Route::post('/conducteur/tribus/{tribu}/membres', [ConducteurTribuController::class, 'assignMembre'])->name('conducteur.tribus.membres.assign');
+        Route::delete('/conducteur/tribus/{tribu}/membres/{user}', [ConducteurTribuController::class, 'removeMembre'])->name('conducteur.tribus.membres.remove');
+        Route::post('/conducteur/tribus/{tribu}/chef', [ConducteurTribuController::class, 'nommerChef'])->name('conducteur.tribus.chef.nommer');
+        Route::delete('/conducteur/tribus/{tribu}/chef', [ConducteurTribuController::class, 'retirerChef'])->name('conducteur.tribus.chef.retirer');
+        Route::get('/conducteur/tribus/{tribu}/finances', [ConducteurTribuController::class, 'finances'])->name('conducteur.tribus.finances');
 
         // Endpoint: récupérer/créer UserSacrement pour un utilisateur
         Route::get('/users/{id}/sacrements', [\App\Http\Controllers\UserSacrementController::class, 'show'])->name('users.sacrements');
@@ -633,6 +647,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/sondages/{id}', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('membre_famille.sondages.show');
         Route::post('/membre-famille/sondages/{id}/reponses', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'storeResponse'])->whereNumber('id')->name('membre_famille.sondages.responses.store');
         Route::get('/membre-famille/inscriptions', [\App\Http\Controllers\MembreFamille\InscriptionsController::class, 'index'])->name('membre_famille.inscriptions');
+        Route::get('/membre-famille/tribu', [MembreFamilleTribuController::class, 'index'])->name('membre_famille.tribu.index');
         Route::get('/membre-famille/profile/edit', [MembreFamilleProfileController::class, 'edit'])->name('membre_famille.profile.edit');
         Route::put('/membre-famille/profile/update', [MembreFamilleProfileController::class, 'update'])->name('membre_famille.profile.update');
         Route::get('/membre-famille/liturgie', [MembreFamilleLiturgieController::class, 'index'])->name('membre_famille.liturgie.index');

@@ -1695,21 +1695,29 @@ const ClasseDetailsModal = ({
                 {/* Header */}
                 <div className="px-8 py-5 border-b border-gray-100 bg-white/50 flex justify-between items-center shrink-0">
                     <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
-                        <span className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
-                            <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13 0h.01"
-                                />
-                            </svg>
-                        </span>
+                        {classe.logo_url ? (
+                            <img
+                                src={classe.logo_url}
+                                alt=""
+                                className="w-9 h-9 rounded-lg object-contain bg-white border border-gray-200 shrink-0"
+                            />
+                        ) : (
+                            <span className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                                <svg
+                                    className="w-5 h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13 0h.01"
+                                    />
+                                </svg>
+                            </span>
+                        )}
                         Membres de la classe : {classe.nom}
                     </h2>
                     <div className="flex items-center gap-4">
@@ -2246,27 +2254,54 @@ const ClasseDetailsModal = ({
 // --- Modal Formulaire (style identique à la page utilisateur) ---
 const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
     const isEditing = !!classeData;
-    const { data, setData, post, put, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset, clearErrors, transform } = useForm({
         nom: classeData?.nom || "",
         description: classeData?.description || "",
+        logo: null,
+        remove_logo: 0,
+        has_tribus: classeData?.has_tribus ? 1 : 0,
     });
+    const [logoPreview, setLogoPreview] = useState(classeData?.logo_url || null);
 
     useEffect(() => {
         if (isOpen) {
             setData({
                 nom: classeData?.nom || "",
                 description: classeData?.description || "",
+                logo: null,
+                remove_logo: 0,
+                has_tribus: classeData?.has_tribus ? 1 : 0,
             });
+            setLogoPreview(classeData?.logo_url || null);
+            clearErrors();
         }
     }, [isOpen, classeData, setData]);
 
+    const handleLogoChange = (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+            setLogoPreview(URL.createObjectURL(file));
+            setData((prev) => ({ ...prev, logo: file, remove_logo: 0 }));
+        }
+    };
+
+    const handleRemoveLogo = () => {
+        setLogoPreview(null);
+        setData((prev) => ({ ...prev, logo: null, remove_logo: 1 }));
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        const action = isEditing ? put : post;
         const url = isEditing
             ? withBasePath("", `/admin/classes/${classeData.id}`)
             : withBasePath("", "/admin/classes");
-        action(url, {
+        // Un envoi de fichier ne fonctionne pas en PUT (limitation PHP) :
+        // on poste toujours, en spoofant la méthode PUT via _method pour l'édition.
+        transform((data) =>
+            isEditing ? { ...data, _method: "put" } : data,
+        );
+        post(url, {
+            forceFormData: true,
             onSuccess: () => {
                 const message = isEditing
                     ? `Classe "${data.nom}" mise à jour avec succès !`
@@ -2377,6 +2412,66 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
                                 className="input-control resize-none"
                                 placeholder="Décrivez cette classe..."
                             ></textarea>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">
+                                Logo de la classe
+                            </label>
+                            <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 rounded-lg bg-white overflow-hidden border-2 border-blue-400 shadow-md shrink-0">
+                                        {logoPreview ? (
+                                            <img
+                                                src={logoPreview}
+                                                alt="Logo de la classe"
+                                                className="w-full h-full object-contain"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200" />
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleLogoChange}
+                                            className="file:py-1 file:px-2 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs text-xs"
+                                        />
+                                        {logoPreview && (
+                                            <button
+                                                type="button"
+                                                onClick={handleRemoveLogo}
+                                                className="text-xs font-semibold text-red-600 hover:text-red-700 text-left"
+                                            >
+                                                Retirer le logo
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            {errors.logo && (
+                                <p className="text-red-600 text-xs mt-1">
+                                    {errors.logo}
+                                </p>
+                            )}
+                        </div>
+                        <div className="form-group">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={!!data.has_tribus}
+                                    onChange={(e) =>
+                                        setData(
+                                            "has_tribus",
+                                            e.target.checked ? 1 : 0,
+                                        )
+                                    }
+                                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <span className="text-sm text-gray-700">
+                                    Classe organisée en tribus
+                                </span>
+                            </label>
                         </div>
                     </form>
                 </div>
@@ -2926,14 +3021,23 @@ const TabClasses = ({
                                             className="hover:bg-white/90 transition-all duration-200"
                                         >
                                             <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900 text-center">
-                                                <button
-                                                    onClick={() =>
-                                                        setSelectedClasse(row)
-                                                    }
-                                                    className="text-blue-600 hover:text-blue-900 hover:underline"
-                                                >
-                                                    {row.nom}
-                                                </button>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {row.logo_url && (
+                                                        <img
+                                                            src={row.logo_url}
+                                                            alt=""
+                                                            className="w-6 h-6 rounded object-contain bg-white border border-gray-200 shrink-0"
+                                                        />
+                                                    )}
+                                                    <button
+                                                        onClick={() =>
+                                                            setSelectedClasse(row)
+                                                        }
+                                                        className="text-blue-600 hover:text-blue-900 hover:underline"
+                                                    >
+                                                        {row.nom}
+                                                    </button>
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-center">
                                                 <span className="status-badge status-active">

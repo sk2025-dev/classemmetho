@@ -38,36 +38,9 @@ class PhotoHelper
     public static function getPhotoUrl(?string $photoPath, ?string $prenom = null, ?string $nom = null): string
     {
         // ✅ Si une photo existe, retourner son URL publique
-        if (!empty($photoPath)) {
-            $photoPath = trim($photoPath);
-
-            // Vérifier si c'est déjà une URL complète
-            if (str_starts_with($photoPath, 'http://') || str_starts_with($photoPath, 'https://')) {
-                return $photoPath;
-            }
-
-            // Déjà un chemin web public
-            if (str_starts_with($photoPath, '/storage/')) {
-                return self::toAppPath($photoPath);
-            }
-
-            // Chemin relatif "storage/..."
-            if (str_starts_with($photoPath, 'storage/')) {
-                return self::toAppPath('/' . $photoPath);
-            }
-
-            // Nettoyer un éventuel préfixe "public/"
-            $normalizedPath = str_starts_with($photoPath, 'public/')
-                ? substr($photoPath, 7)
-                : $photoPath;
-
-            // Vérifier si le fichier existe dans le stockage public
-            if (Storage::disk('public')->exists($normalizedPath)) {
-                return self::toAppPath('/storage/' . ltrim($normalizedPath, '/'));
-            }
-
-            // Fallback si le chemin existe mais pas en storage
-            return self::toAppPath('/storage/' . ltrim($normalizedPath, '/'));
+        $resolved = self::getImageUrl($photoPath);
+        if ($resolved !== null) {
+            return $resolved;
         }
 
         // ✅ Générer un avatar avec initiales si pas de photo
@@ -76,6 +49,44 @@ class PhotoHelper
 
         // Utiliser un service d'avatar (UI Avatars - service gratuit)
         return "https://ui-avatars.com/api/?name=" . urlencode($initials) . "&background=" . urlencode($bgColor) . "&color=fff&bold=true&size=128";
+    }
+
+    /**
+     * Résoudre le chemin stocké d'une image en URL publique complète.
+     * Retourne null si aucun chemin n'est fourni (pas de fallback avatar).
+     *
+     * @param string|null $path Le chemin du fichier image stocké
+     * @return string|null URL de l'image ou null si absente
+     */
+    public static function getImageUrl(?string $path): ?string
+    {
+        if (empty($path)) {
+            return null;
+        }
+
+        $path = trim($path);
+
+        // Vérifier si c'est déjà une URL complète
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        // Déjà un chemin web public
+        if (str_starts_with($path, '/storage/')) {
+            return self::toAppPath($path);
+        }
+
+        // Chemin relatif "storage/..."
+        if (str_starts_with($path, 'storage/')) {
+            return self::toAppPath('/' . $path);
+        }
+
+        // Nettoyer un éventuel préfixe "public/"
+        $normalizedPath = str_starts_with($path, 'public/')
+            ? substr($path, 7)
+            : $path;
+
+        return self::toAppPath('/storage/' . ltrim($normalizedPath, '/'));
     }
 
     /**

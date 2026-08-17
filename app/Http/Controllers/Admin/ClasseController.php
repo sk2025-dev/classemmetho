@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\PhotoHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Classe;
 use App\Models\Family;
@@ -31,6 +32,8 @@ class ClasseController extends Controller
                     'nombre_familles' => $c->families()->count(),
                     'nombre_membres' => $c->users()->where('role', '!=', 'admin')->count(),
                     'status' => $c->status ?? 'active',
+                    'logo_url' => PhotoHelper::getImageUrl($c->logo_path),
+                    'has_tribus' => (bool) $c->has_tribus,
                     'created_at' => $c->created_at?->format('d/m/Y H:i'),
                 ];
             });
@@ -103,6 +106,7 @@ class ClasseController extends Controller
             'contact' => $classe->contact ?? '',
             'commune' => $classe->commune ?? '',
             'status' => $classe->status ?? 'active',
+            'logo_url' => PhotoHelper::getImageUrl($classe->logo_path),
             'nombre_familles' => $classe->families->count(),
             'nombre_membres' => $classe->users->where('role', '!=', 'admin')->count(),
             'created_at' => $classe->created_at ? $classe->created_at->format('d/m/Y H:i') : '-',
@@ -143,7 +147,15 @@ class ClasseController extends Controller
             'nom' => 'required|string|max:255|unique:classes',
             'description' => 'nullable|string',
             'conducteur' => 'nullable|string|max:255',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'has_tribus' => 'nullable|boolean',
         ]);
+
+        if ($request->hasFile('logo')) {
+            $validated['logo_path'] = $request->file('logo')->store('classes/logos', 'public');
+        }
+        unset($validated['logo']);
+        $validated['has_tribus'] = $request->boolean('has_tribus');
 
         $classe = Classe::create($validated + ['status' => 'active']);
 
@@ -179,6 +191,8 @@ class ClasseController extends Controller
                 'description' => $classe->description,
                 'conducteur' => $classe->conducteur,
                 'status' => $classe->status ?? 'active',
+                'logo_url' => PhotoHelper::getImageUrl($classe->logo_path),
+                'has_tribus' => (bool) $classe->has_tribus,
             ],
         ]);
     }
@@ -193,12 +207,25 @@ class ClasseController extends Controller
             'description' => 'nullable|string',
             'conducteur' => 'nullable|string|max:255',
             'status' => 'nullable|in:active,inactive',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'remove_logo' => 'nullable|boolean',
+            'has_tribus' => 'nullable|boolean',
         ]);
+        $validated['has_tribus'] = $request->boolean('has_tribus');
 
         // Par défaut, si le statut n'est pas fourni, le garder inchangé
         if (!isset($validated['status'])) {
             $validated['status'] = $classe->status ?? 'active';
         }
+
+        if ($request->boolean('remove_logo')) {
+            PhotoHelper::deletePhoto($classe->logo_path);
+            $validated['logo_path'] = null;
+        } elseif ($request->hasFile('logo')) {
+            PhotoHelper::deletePhoto($classe->logo_path);
+            $validated['logo_path'] = $request->file('logo')->store('classes/logos', 'public');
+        }
+        unset($validated['logo'], $validated['remove_logo']);
 
         $classe->update($validated);
 

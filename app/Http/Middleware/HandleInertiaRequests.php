@@ -140,6 +140,8 @@ class HandleInertiaRequests extends Middleware
                     'classe' => $request->user()->classe ? [
                         'id' => $request->user()->classe->id,
                         'nom' => $request->user()->classe->nom,
+                        'logo_url' => PhotoHelper::getImageUrl($request->user()->classe->logo_path),
+                        'has_tribus' => (bool) $request->user()->classe->has_tribus,
                     ] : null,
                     'fonction' => $request->user()->fonction ? [
                         'id' => $request->user()->fonction->id,
