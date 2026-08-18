@@ -12,18 +12,23 @@ class Tribu extends Model
         'nom',
         'description',
         'classe_id',
-        'chef_id',
         'status',
     ];
+
+    public const MAX_CHEFS = 2;
 
     public function classe()
     {
         return $this->belongsTo(Classe::class, 'classe_id');
     }
 
-    public function chef()
+    /**
+     * Chefs de la tribu (jusqu'à 2, nommés par le conducteur de la classe).
+     */
+    public function chefs()
     {
-        return $this->belongsTo(User::class, 'chef_id');
+        return $this->belongsToMany(User::class, 'tribu_chefs', 'tribu_id', 'user_id')
+            ->withTimestamps();
     }
 
     public function membres()

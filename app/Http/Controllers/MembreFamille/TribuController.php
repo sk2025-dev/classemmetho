@@ -12,7 +12,7 @@ class TribuController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $user->loadMissing('classe', 'tribu.chef', 'tribu.membres');
+        $user->loadMissing('classe', 'tribu.chefs', 'tribu.membres');
 
         if (!$user->classe?->has_tribus) {
             abort(403, 'Le module tribu n\'est pas activé pour votre classe.');
@@ -26,17 +26,17 @@ class TribuController extends Controller
             ]);
         }
 
-        $isTribuChef = $tribu->chef_id === $user->id;
+        $isTribuChef = $tribu->chefs->contains('id', $user->id);
 
         return Inertia::render('MembreFamille/Tribu', [
             'tribu' => [
                 'id' => $tribu->id,
                 'nom' => $tribu->nom,
                 'description' => $tribu->description ?? '',
-                'chef' => $tribu->chef ? [
-                    'id' => $tribu->chef->id,
-                    'nom' => trim($tribu->chef->prenom . ' ' . $tribu->chef->nom),
-                ] : null,
+                'chefs' => $tribu->chefs->map(fn ($chef) => [
+                    'id' => $chef->id,
+                    'nom' => trim($chef->prenom . ' ' . $chef->nom),
+                ])->values(),
                 'membres' => $tribu->membres->map(fn ($membre) => [
                     'id' => $membre->id,
                     'nom' => trim($membre->prenom . ' ' . $membre->nom),

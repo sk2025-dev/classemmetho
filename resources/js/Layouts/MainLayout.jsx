@@ -686,7 +686,7 @@ export default function MainLayout({ children, auth }) {
                         inset: 0,
                         backgroundImage: `url(${auth.user.classe.logo_url})`,
                         backgroundRepeat: "no-repeat",
-                        backgroundPosition: "bottom -5vh right -5vw",
+                        backgroundPosition: "center",
                         backgroundSize: "min(45vw, 480px)",
                         opacity: 0.32,
                         pointerEvents: "none",

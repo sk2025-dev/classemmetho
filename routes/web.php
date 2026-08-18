@@ -305,14 +305,22 @@ Route::middleware(['auth'])->group(function () {
 
         // Routes module Tribu (Conducteur) - classe Israël uniquement
         Route::get('/conducteur/tribus', [ConducteurTribuController::class, 'index'])->name('conducteur.tribus.index');
+        Route::get('/conducteur/tribus/creer', [ConducteurTribuController::class, 'create'])->name('conducteur.tribus.create');
         Route::post('/conducteur/tribus', [ConducteurTribuController::class, 'store'])->name('conducteur.tribus.store');
+        Route::get('/conducteur/tribus/assigner', [ConducteurTribuController::class, 'affectation'])->name('conducteur.tribus.affectation');
+        Route::post('/conducteur/tribus/membres/bulk', [ConducteurTribuController::class, 'bulkAssignerMembresGlobal'])->name('conducteur.tribus.membres.bulk-global');
+        Route::get('/conducteur/tribus/finances', [ConducteurTribuController::class, 'financesOverview'])->name('conducteur.tribus.finances-overview');
+        Route::post('/conducteur/tribus/membres/relancer-tous', [ConducteurTribuController::class, 'relancerRetardataires'])->name('conducteur.tribus.membres.relancer-tous');
+        Route::post('/conducteur/tribus/membres/{user}/relancer', [ConducteurTribuController::class, 'relancerMembre'])->name('conducteur.tribus.membres.relancer');
         Route::put('/conducteur/tribus/{tribu}', [ConducteurTribuController::class, 'update'])->name('conducteur.tribus.update');
         Route::delete('/conducteur/tribus/{tribu}', [ConducteurTribuController::class, 'destroy'])->name('conducteur.tribus.destroy');
         Route::post('/conducteur/tribus/{tribu}/membres', [ConducteurTribuController::class, 'assignMembre'])->name('conducteur.tribus.membres.assign');
         Route::delete('/conducteur/tribus/{tribu}/membres/{user}', [ConducteurTribuController::class, 'removeMembre'])->name('conducteur.tribus.membres.remove');
         Route::post('/conducteur/tribus/{tribu}/chef', [ConducteurTribuController::class, 'nommerChef'])->name('conducteur.tribus.chef.nommer');
-        Route::delete('/conducteur/tribus/{tribu}/chef', [ConducteurTribuController::class, 'retirerChef'])->name('conducteur.tribus.chef.retirer');
+        Route::delete('/conducteur/tribus/{tribu}/chef/{user}', [ConducteurTribuController::class, 'retirerChef'])->name('conducteur.tribus.chef.retirer');
         Route::get('/conducteur/tribus/{tribu}/finances', [ConducteurTribuController::class, 'finances'])->name('conducteur.tribus.finances');
+        Route::get('/conducteur/tribus/{tribu}/assigner', [ConducteurTribuController::class, 'assigner'])->name('conducteur.tribus.assigner');
+        Route::post('/conducteur/tribus/{tribu}/membres/bulk', [ConducteurTribuController::class, 'bulkAssignerMembres'])->name('conducteur.tribus.membres.bulk');
 
         // Endpoint: récupérer/créer UserSacrement pour un utilisateur
         Route::get('/users/{id}/sacrements', [\App\Http\Controllers\UserSacrementController::class, 'show'])->name('users.sacrements');

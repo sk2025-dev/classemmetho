@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Link, router, useForm, Head } from "@inertiajs/react";
-import axios from "axios";
 import { withBasePath } from "../../Utils/urlHelper";
 import {
     X,
@@ -9,15 +8,13 @@ import {
     Crown,
     Pencil,
     Trash2,
-    UserPlus,
-    UserMinus,
+    UserCog,
     Layers,
     CheckCircle2,
-    ArrowRight,
     Search,
+    Wallet,
 } from "lucide-react";
 import DeleteConfirmationModal from "../../Components/DeleteConfirmationModal";
-import Select2Single from "../../Components/Select2Single";
 import useToast from "../../Hooks/useToast";
 import ToastContainer from "../../Components/ToastContainer";
 
@@ -215,272 +212,18 @@ const TribuFormModal = ({ isOpen, onClose, tribu, toast }) => {
     );
 };
 
-const TribuDetailModal = ({ tribu, isOpen, onClose, membresNonAffectes, toast }) => {
-    const [selectedMembre, setSelectedMembre] = useState("");
-    const [finances, setFinances] = useState(null);
-    const [loadingFinances, setLoadingFinances] = useState(false);
-    const [search, setSearch] = useState("");
-
-    useEffect(() => {
-        if (isOpen && tribu) {
-            setSelectedMembre("");
-            setSearch("");
-            setLoadingFinances(true);
-            axios
-                .get(withBasePath("", `/conducteur/tribus/${tribu.id}/finances`))
-                .then((res) => setFinances(res.data?.data || []))
-                .catch(() => setFinances([]))
-                .finally(() => setLoadingFinances(false));
-        }
-    }, [isOpen, tribu?.id]);
-
-    if (!isOpen || !tribu) return null;
-
-    const filteredFinances = (finances || []).filter((m) =>
-        m.nom.toLowerCase().includes(search.trim().toLowerCase()),
-    );
-
-    const handleAssign = (e) => {
-        e.preventDefault();
-        if (!selectedMembre) return;
-        router.post(
-            withBasePath("", `/conducteur/tribus/${tribu.id}/membres`),
-            { user_id: selectedMembre },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    toast.success("Membre affecté à la tribu.");
-                    setSelectedMembre("");
-                },
-                onError: () => toast.error("Erreur lors de l'affectation."),
-            },
-        );
-    };
-
-    const handleRemove = (userId) => {
-        router.delete(
-            withBasePath("", `/conducteur/tribus/${tribu.id}/membres/${userId}`),
-            {
-                preserveScroll: true,
-                onSuccess: () => toast.success("Membre retiré de la tribu."),
-                onError: () => toast.error("Erreur lors du retrait."),
-            },
-        );
-    };
-
-    const handleNommerChef = (userId) => {
-        router.post(
-            withBasePath("", `/conducteur/tribus/${tribu.id}/chef`),
-            { user_id: userId },
-            {
-                preserveScroll: true,
-                onSuccess: () => toast.success("Chef de tribu nommé."),
-                onError: () => toast.error("Erreur lors de la nomination."),
-            },
-        );
-    };
-
-    const handleRetirerChef = () => {
-        router.delete(withBasePath("", `/conducteur/tribus/${tribu.id}/chef`), {
-            preserveScroll: true,
-            onSuccess: () => toast.success("Chef de tribu retiré."),
-            onError: () => toast.error("Erreur lors du retrait du chef."),
-        });
-    };
-
-    return (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden border border-gray-100 max-h-[90vh] flex flex-col">
-                <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center shrink-0">
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <Users className="w-5 h-5 text-indigo-600" />
-                        {tribu.nom}
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                <div className="overflow-y-auto p-6 space-y-6">
-                    {/* Ajouter un membre */}
-                    <div>
-                        <h3 className="text-sm font-bold text-gray-700 mb-2">
-                            Affecter un membre
-                        </h3>
-                        <form onSubmit={handleAssign} className="flex gap-2 items-start">
-                            <div className="flex-1">
-                                <Select2Single
-                                    name="membre_a_affecter"
-                                    value={selectedMembre}
-                                    onChange={(e) =>
-                                        setSelectedMembre(e.target.value)
-                                    }
-                                    options={membresNonAffectes.map((m) => ({
-                                        value: m.id,
-                                        label: m.nom,
-                                    }))}
-                                    placeholder="Rechercher un membre non affecté..."
-                                    noOptionsMessage="Tous les membres sont déjà affectés"
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={!selectedMembre}
-                                className="btn btn-primary flex items-center gap-1 disabled:opacity-50"
-                            >
-                                <UserPlus className="w-4 h-4" /> Affecter
-                            </button>
-                        </form>
-                    </div>
-
-                    {/* Liste des membres */}
-                    <div>
-                        <div className="flex items-center justify-between mb-2 gap-4">
-                            <h3 className="text-sm font-bold text-gray-700">
-                                Membres de la tribu ({tribu.membres_count})
-                            </h3>
-                            {finances && finances.length > 0 && (
-                                <input
-                                    type="text"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Rechercher un membre..."
-                                    className="input-control max-w-xs"
-                                />
-                            )}
-                        </div>
-                        {finances === null ? (
-                            <p className="text-sm text-gray-400">Chargement...</p>
-                        ) : finances.length === 0 ? (
-                            <p className="text-sm text-gray-400">
-                                Aucun membre affecté pour le moment.
-                            </p>
-                        ) : filteredFinances.length === 0 ? (
-                            <p className="text-sm text-gray-400">
-                                Aucun membre ne correspond à "{search}".
-                            </p>
-                        ) : (
-                            <div className="overflow-x-auto rounded-xl border border-gray-100">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
-                                                Membre
-                                            </th>
-                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
-                                                Famille
-                                            </th>
-                                            <th className="text-right px-4 py-2 font-semibold text-gray-600">
-                                                Cotisation
-                                            </th>
-                                            <th className="text-right px-4 py-2 font-semibold text-gray-600">
-                                                Payé
-                                            </th>
-                                            <th className="text-right px-4 py-2 font-semibold text-gray-600">
-                                                Dû
-                                            </th>
-                                            <th className="text-center px-4 py-2 font-semibold text-gray-600">
-                                                Statut
-                                            </th>
-                                            <th className="px-4 py-2"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {filteredFinances.map((m) => (
-                                            <tr key={m.id}>
-                                                <td className="px-4 py-2 font-medium text-gray-800">
-                                                    <div className="flex items-center gap-2">
-                                                        {m.nom}
-                                                        {tribu.chef?.id === m.id && (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wide shrink-0">
-                                                                <Crown className="w-3 h-3" />
-                                                                Chef
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-2 text-gray-500">
-                                                    {m.famille}
-                                                </td>
-                                                <td className="px-4 py-2 text-right text-gray-700">
-                                                    {m.cotisation.toLocaleString()}
-                                                </td>
-                                                <td className="px-4 py-2 text-right text-green-700">
-                                                    {m.totalPaye.toLocaleString()}
-                                                </td>
-                                                <td className="px-4 py-2 text-right text-red-600">
-                                                    {m.totalDu.toLocaleString()}
-                                                </td>
-                                                <td className="px-4 py-2 text-center">
-                                                    <span
-                                                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                                            m.statut === "A JOUR"
-                                                                ? "bg-green-100 text-green-700"
-                                                                : "bg-amber-100 text-amber-700"
-                                                        }`}
-                                                    >
-                                                        {m.statut}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-2 text-right whitespace-nowrap">
-                                                    {tribu.chef?.id === m.id ? (
-                                                        <button
-                                                            onClick={handleRetirerChef}
-                                                            className="text-xs text-amber-600 hover:underline mr-3"
-                                                        >
-                                                            Retirer chef
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() =>
-                                                                handleNommerChef(m.id)
-                                                            }
-                                                            className="text-xs text-indigo-600 hover:underline mr-3"
-                                                        >
-                                                            Nommer chef
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() =>
-                                                            handleRemove(m.id)
-                                                        }
-                                                        className="text-xs text-red-600 hover:underline inline-flex items-center gap-1"
-                                                    >
-                                                        <UserMinus className="w-3 h-3" />
-                                                        Retirer
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 export default function Tribus({
     tribus = [],
-    membresNonAffectes = [],
     classeNom,
     stats = { nombreTribus: 0, totalMembres: 0, membresAJour: 0 },
 }) {
     const toast = useToast();
-    const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingTribu, setEditingTribu] = useState(null);
-    const [detailTribu, setDetailTribu] = useState(null);
     const [deletingTribu, setDeletingTribu] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [search, setSearch] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 6;
+    const itemsPerPage = 10;
 
     const filteredTribus = tribus.filter((tribu) => {
         const term = search.trim().toLowerCase();
@@ -488,7 +231,9 @@ export default function Tribus({
         return (
             tribu.nom.toLowerCase().includes(term) ||
             (tribu.description || "").toLowerCase().includes(term) ||
-            (tribu.chef?.nom || "").toLowerCase().includes(term)
+            (tribu.chefs || []).some((c) =>
+                c.nom.toLowerCase().includes(term),
+            )
         );
     });
 
@@ -568,15 +313,26 @@ export default function Tribus({
                                 </p>
                             </div>
                         </div>
-                        <button
-                            onClick={() => {
-                                setEditingTribu(null);
-                                setIsFormOpen(true);
-                            }}
-                            className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
-                        >
-                            <Plus className="w-5 h-5" /> Créer une tribu
-                        </button>
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <Link
+                                href={withBasePath("", "/conducteur/tribus/assigner")}
+                                className="bg-white text-indigo-700 hover:bg-indigo-50 px-5 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
+                            >
+                                <UserCog className="w-5 h-5" /> Affecter un membre
+                            </Link>
+                            <Link
+                                href={withBasePath("", "/conducteur/tribus/finances")}
+                                className="bg-white text-emerald-700 hover:bg-emerald-50 px-5 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
+                            >
+                                <Wallet className="w-5 h-5" /> Suivre les finances
+                            </Link>
+                            <Link
+                                href={withBasePath("", "/conducteur/tribus/creer")}
+                                className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
+                            >
+                                <Plus className="w-5 h-5" /> Créer une tribu
+                            </Link>
+                        </div>
                     </div>
 
                     {/* STATS */}
@@ -613,7 +369,7 @@ export default function Tribus({
                         />
                     </div>
 
-                    {/* GRID */}
+                    {/* TABLE */}
                     {tribus.length === 0 ? (
                         <div className="bg-white/90 rounded-2xl p-10 text-center text-gray-500">
                             Aucune tribu créée pour le moment.
@@ -623,112 +379,153 @@ export default function Tribus({
                             Aucune tribu ne correspond à "{search}".
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {paginatedTribus.map((tribu, idx) => {
-                                const palette =
-                                    TRIBE_PALETTE[idx % TRIBE_PALETTE.length];
-                                return (
-                                    <div
-                                        key={tribu.id}
-                                        className="group bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
-                                    >
-                                        <div
-                                            className="h-1.5"
-                                            style={{
-                                                background: `linear-gradient(90deg, ${palette.accent}, ${palette.accent}88)`,
-                                            }}
-                                        />
-                                        <div className="p-6">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <div
-                                                        className={`w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-lg shrink-0 ${palette.bg} ${palette.text}`}
-                                                    >
-                                                        {tribu.nom
-                                                            .charAt(0)
-                                                            .toUpperCase()}
-                                                    </div>
-                                                    <h3 className="text-lg font-bold text-gray-900 truncate">
-                                                        {tribu.nom}
-                                                    </h3>
-                                                </div>
-                                                <span
-                                                    className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${
-                                                        tribu.status === "active"
-                                                            ? "bg-green-100 text-green-700"
-                                                            : "bg-gray-100 text-gray-500"
-                                                    }`}
+                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="text-left px-5 py-3 font-semibold text-gray-600">
+                                                Tribu
+                                            </th>
+                                            <th className="text-left px-5 py-3 font-semibold text-gray-600">
+                                                Description
+                                            </th>
+                                            <th className="text-center px-5 py-3 font-semibold text-gray-600">
+                                                Membres
+                                            </th>
+                                            <th className="text-left px-5 py-3 font-semibold text-gray-600">
+                                                Chef
+                                            </th>
+                                            <th className="text-center px-5 py-3 font-semibold text-gray-600">
+                                                Statut
+                                            </th>
+                                            <th className="text-right px-5 py-3 font-semibold text-gray-600">
+                                                Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {paginatedTribus.map((tribu, idx) => {
+                                            const palette =
+                                                TRIBE_PALETTE[
+                                                    idx % TRIBE_PALETTE.length
+                                                ];
+                                            return (
+                                                <tr
+                                                    key={tribu.id}
+                                                    className="hover:bg-gray-50/80 transition-colors"
                                                 >
-                                                    {tribu.status === "active"
-                                                        ? "Active"
-                                                        : "Inactive"}
-                                                </span>
-                                            </div>
-
-                                            {tribu.description && (
-                                                <p className="text-sm text-gray-500 mb-4 line-clamp-2">
-                                                    {tribu.description}
-                                                </p>
-                                            )}
-
-                                            <div className="flex flex-wrap items-center gap-2 mb-5">
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">
-                                                    <Users className="w-3.5 h-3.5" />
-                                                    {tribu.membres_count} membre
-                                                    {tribu.membres_count > 1
-                                                        ? "s"
-                                                        : ""}
-                                                </span>
-                                                {tribu.chef ? (
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold">
-                                                        <Crown className="w-3.5 h-3.5" />
-                                                        {tribu.chef.nom}
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 text-gray-400 text-xs font-semibold italic">
-                                                        <Crown className="w-3.5 h-3.5" />
-                                                        Aucun chef nommé
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
-                                                <button
-                                                    onClick={() =>
-                                                        setDetailTribu(tribu)
-                                                    }
-                                                    className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-bold text-white rounded-xl py-2.5 transition-transform group-hover:scale-[1.02]"
-                                                    style={{
-                                                        background: `linear-gradient(135deg, ${palette.accent}, ${palette.accent}cc)`,
-                                                    }}
-                                                >
-                                                    Gérer
-                                                    <ArrowRight className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setEditingTribu(tribu);
-                                                        setIsFormOpen(true);
-                                                    }}
-                                                    className="p-2.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
-                                                    title="Modifier"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        setDeletingTribu(tribu)
-                                                    }
-                                                    className="p-2.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                                                    title="Supprimer"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                                    <td className="px-5 py-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div
+                                                                className={`w-9 h-9 rounded-lg flex items-center justify-center font-extrabold text-sm shrink-0 ${palette.bg} ${palette.text}`}
+                                                            >
+                                                                {tribu.nom
+                                                                    .charAt(0)
+                                                                    .toUpperCase()}
+                                                            </div>
+                                                            <span className="font-bold text-gray-900">
+                                                                {tribu.nom}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-5 py-3 text-gray-500 max-w-xs truncate">
+                                                        {tribu.description || (
+                                                            <span className="italic text-gray-300">
+                                                                —
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-3 text-center">
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">
+                                                            <Users className="w-3.5 h-3.5" />
+                                                            {tribu.membres_count}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-3">
+                                                        {tribu.chefs &&
+                                                        tribu.chefs.length >
+                                                            0 ? (
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {tribu.chefs.map(
+                                                                    (chef) => (
+                                                                        <span
+                                                                            key={
+                                                                                chef.id
+                                                                            }
+                                                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold"
+                                                                        >
+                                                                            <Crown className="w-3.5 h-3.5" />
+                                                                            {
+                                                                                chef.nom
+                                                                            }
+                                                                        </span>
+                                                                    ),
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 text-gray-400 text-xs font-semibold italic">
+                                                                <Crown className="w-3.5 h-3.5" />
+                                                                Aucun chef
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-3 text-center">
+                                                        <span
+                                                            className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                                                                tribu.status ===
+                                                                "active"
+                                                                    ? "bg-green-100 text-green-700"
+                                                                    : "bg-gray-100 text-gray-500"
+                                                            }`}
+                                                        >
+                                                            {tribu.status ===
+                                                            "active"
+                                                                ? "Active"
+                                                                : "Inactive"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-3">
+                                                        <div className="flex items-center justify-end gap-1.5">
+                                                            <Link
+                                                                href={withBasePath(
+                                                                    "",
+                                                                    `/conducteur/tribus/${tribu.id}/assigner`,
+                                                                )}
+                                                                className="text-xs font-bold text-indigo-600 hover:underline mr-2 whitespace-nowrap"
+                                                            >
+                                                                Gérer
+                                                            </Link>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setEditingTribu(
+                                                                        tribu,
+                                                                    )
+                                                                }
+                                                                className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                                title="Modifier"
+                                                            >
+                                                                <Pencil className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setDeletingTribu(
+                                                                        tribu,
+                                                                    )
+                                                                }
+                                                                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                title="Supprimer"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
 
@@ -743,17 +540,9 @@ export default function Tribus({
             </div>
 
             <TribuFormModal
-                isOpen={isFormOpen}
-                onClose={() => setIsFormOpen(false)}
+                isOpen={!!editingTribu}
+                onClose={() => setEditingTribu(null)}
                 tribu={editingTribu}
-                toast={toast}
-            />
-
-            <TribuDetailModal
-                tribu={detailTribu}
-                isOpen={!!detailTribu}
-                onClose={() => setDetailTribu(null)}
-                membresNonAffectes={membresNonAffectes}
                 toast={toast}
             />
 
