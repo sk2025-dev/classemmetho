@@ -13,6 +13,7 @@ import {
     CheckCircle2,
     Search,
     Wallet,
+    CalendarCheck,
 } from "lucide-react";
 import DeleteConfirmationModal from "../../Components/DeleteConfirmationModal";
 import useToast from "../../Hooks/useToast";
@@ -140,9 +141,6 @@ const TribuFormModal = ({ isOpen, onClose, tribu, toast }) => {
         action(url, {
             preserveScroll: true,
             onSuccess: () => {
-                toast.success(
-                    isEditing ? "Tribu mise à jour." : "Tribu créée avec succès.",
-                );
                 reset();
                 onClose();
             },
@@ -265,7 +263,6 @@ export default function Tribus({
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    toast.success("Tribu supprimée.");
                     setDeletingTribu(null);
                 },
                 onError: (errors) => {
@@ -325,6 +322,12 @@ export default function Tribus({
                                 className="bg-white text-emerald-700 hover:bg-emerald-50 px-5 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
                             >
                                 <Wallet className="w-5 h-5" /> Suivre les finances
+                            </Link>
+                            <Link
+                                href={withBasePath("", "/conducteur/tribus/presences")}
+                                className="bg-white text-sky-700 hover:bg-sky-50 px-5 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
+                            >
+                                <CalendarCheck className="w-5 h-5" /> Suivi des présences
                             </Link>
                             <Link
                                 href={withBasePath("", "/conducteur/tribus/creer")}

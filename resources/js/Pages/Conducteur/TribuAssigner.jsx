@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, router, Head } from "@inertiajs/react";
 import { withBasePath } from "../../Utils/urlHelper";
 import { EMPLOYMENT_STATUS_OPTIONS } from "../../Helpers/select2SingleOptions";
-import { getStatutBadge } from "../../Helpers/tribuStatutHelper";
 import {
     ArrowLeft,
     Crown,
@@ -12,13 +11,25 @@ import {
     UserMinus,
     UserCheck,
     UserPlus,
+    CalendarCheck,
     Search,
     X,
 } from "lucide-react";
 import Select2Single from "../../Components/Select2Single";
-import CotisationBadges from "../../Components/CotisationBadges";
+import ProfilePhoto from "../../Components/ProfilePhoto";
 import useToast from "../../Hooks/useToast";
 import ToastContainer from "../../Components/ToastContainer";
+import DeleteConfirmationModal from "../../Components/DeleteConfirmationModal";
+
+const ROLE_LABELS = {
+    membre_famille: "Membre de famille",
+    responsable_famille: "Responsable de famille",
+    conducteur: "Conducteur",
+    pasteur: "Pasteur",
+};
+const formatRole = (role) => ROLE_LABELS[role] || role || "-";
+const formatGenre = (genre) =>
+    genre === "M" ? "Masculin" : genre === "F" ? "Féminin" : "-";
 
 const FORM_STYLES = `
     :root {
@@ -99,7 +110,9 @@ export default function TribuAssigner({
     const itemsPerPageActuels = 10;
 
     const filteredActuels = membresActuels.filter((m) =>
-        m.nom.toLowerCase().includes(searchActuels.trim().toLowerCase()),
+        `${m.prenom} ${m.nom}`
+            .toLowerCase()
+            .includes(searchActuels.trim().toLowerCase()),
     );
 
     const totalPagesActuels = Math.max(
@@ -125,13 +138,18 @@ export default function TribuAssigner({
         }
     }, [totalPagesActuels, currentPageActuels]);
 
+    const [removingMembre, setRemovingMembre] = useState(null);
+    const [removing, setRemoving] = useState(false);
+
     const handleRemove = (userId) => {
+        setRemoving(true);
         router.delete(
             withBasePath("", `/conducteur/tribus/${tribu.id}/membres/${userId}`),
             {
                 preserveScroll: true,
-                onSuccess: () => toast.success("Membre retiré de la tribu."),
+                onSuccess: () => setRemovingMembre(null),
                 onError: () => toast.error("Erreur lors du retrait."),
+                onFinish: () => setRemoving(false),
             },
         );
     };
@@ -142,7 +160,6 @@ export default function TribuAssigner({
             { user_id: userId },
             {
                 preserveScroll: true,
-                onSuccess: () => toast.success("Chef de tribu nommé."),
                 onError: () => toast.error("Erreur lors de la nomination."),
             },
         );
@@ -153,7 +170,6 @@ export default function TribuAssigner({
             withBasePath("", `/conducteur/tribus/${tribu.id}/chef/${userId}`),
             {
                 preserveScroll: true,
-                onSuccess: () => toast.success("Chef de tribu retiré."),
                 onError: () => toast.error("Erreur lors du retrait du chef."),
             },
         );
@@ -169,7 +185,8 @@ export default function TribuAssigner({
     const [ageMin, setAgeMin] = useState("");
     const [ageMax, setAgeMax] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [addingId, setAddingId] = useState(null);
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [assigning, setAssigning] = useState(false);
     const itemsPerPage = 8;
 
     const villeOptions = villes.map((v) => ({ value: v.id, label: v.nom }));
@@ -180,6 +197,7 @@ export default function TribuAssigner({
         const max = ageMax !== "" ? parseInt(ageMax, 10) : null;
 
         return membresAAffecter.filter((m) => {
+            if (m.tribu_actuelle) return false;
             if (term && !m.nom.toLowerCase().includes(term)) return false;
             if (ville && m.ville !== ville) return false;
             if (profession && m.employment_status !== profession) return false;
@@ -207,17 +225,44 @@ export default function TribuAssigner({
         if (currentPage > totalPages) setCurrentPage(totalPages);
     }, [totalPages, currentPage]);
 
-    const handleAjouterMembre = (userId) => {
-        setAddingId(userId);
+    const toggleMembre = (id) => {
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const allPageSelected =
+        paginatedMembres.length > 0 &&
+        paginatedMembres.every((m) => selectedIds.has(m.id));
+
+    const toggleSelectAllPage = () => {
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (allPageSelected) {
+                paginatedMembres.forEach((m) => next.delete(m.id));
+            } else {
+                paginatedMembres.forEach((m) => next.add(m.id));
+            }
+            return next;
+        });
+    };
+
+    const handleAjouterSelection = () => {
+        if (selectedIds.size === 0) return;
+        setAssigning(true);
         router.post(
-            withBasePath("", `/conducteur/tribus/${tribu.id}/membres`),
-            { user_id: userId },
+            withBasePath("", `/conducteur/tribus/${tribu.id}/membres/bulk`),
+            { user_ids: Array.from(selectedIds) },
             {
                 preserveScroll: true,
-                onSuccess: () =>
-                    toast.success(`Membre affecté à ${tribu.nom}.`),
+                onSuccess: () => {
+                    setSelectedIds(new Set());
+                },
                 onError: () => toast.error("Erreur lors de l'affectation."),
-                onFinish: () => setAddingId(null),
+                onFinish: () => setAssigning(false),
             },
         );
     };
@@ -254,9 +299,9 @@ export default function TribuAssigner({
                                 </p>
                             )}
                         </div>
-                        {tribu.chefs && tribu.chefs.length > 0 && (
-                            <div className="ml-auto flex flex-wrap gap-2 justify-end">
-                                {tribu.chefs.map((chef) => (
+                        <div className="ml-auto flex flex-wrap gap-2 justify-end items-center">
+                            {tribu.chefs &&
+                                tribu.chefs.map((chef) => (
                                     <span
                                         key={chef.id}
                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-bold"
@@ -265,8 +310,17 @@ export default function TribuAssigner({
                                         {chef.nom}
                                     </span>
                                 ))}
-                            </div>
-                        )}
+                            <Link
+                                href={withBasePath(
+                                    "",
+                                    `/conducteur/tribus/${tribu.id}/presences`,
+                                )}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-indigo-700 hover:bg-indigo-50 text-sm font-bold shadow-lg"
+                            >
+                                <CalendarCheck className="w-4 h-4" />
+                                Suivi des présences
+                            </Link>
+                        </div>
                     </div>
 
                     {/* MEMBRES ACTUELS */}
@@ -317,19 +371,77 @@ export default function TribuAssigner({
                                     <thead className="bg-gray-50">
                                         <tr>
                                             <th className="text-left px-4 py-2 font-semibold text-gray-600">
-                                                Membre
+                                                N°
+                                            </th>
+                                            <th className="px-4 py-2"></th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Nom
+                                            </th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Prénom
+                                            </th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Code famille
+                                            </th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Code membre
+                                            </th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Email
+                                            </th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Téléphone
+                                            </th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Genre
+                                            </th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Rôle
+                                            </th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Fonction
+                                            </th>
+                                            <th className="text-center px-4 py-2 font-semibold text-gray-600">
+                                                Baptisé
+                                            </th>
+                                            <th className="text-center px-4 py-2 font-semibold text-gray-600">
+                                                1ère Comm.
+                                            </th>
+                                            <th className="text-center px-4 py-2 font-semibold text-gray-600">
+                                                Statut matrimonial
+                                            </th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Classe
                                             </th>
                                             <th className="text-left px-4 py-2 font-semibold text-gray-600">
                                                 Famille
                                             </th>
                                             <th className="text-left px-4 py-2 font-semibold text-gray-600">
-                                                Cotisation
+                                                Date Naiss.
                                             </th>
-                                            <th className="text-right px-4 py-2 font-semibold text-gray-600">
-                                                Payé
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Relation
                                             </th>
-                                            <th className="text-right px-4 py-2 font-semibold text-gray-600">
-                                                Dû
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Profession
+                                            </th>
+                                            <th className="text-center px-4 py-2 font-semibold text-gray-600">
+                                                Statut emploi
+                                            </th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Lieu Naiss.
+                                            </th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                N° CNI
+                                            </th>
+                                            <th className="text-center px-4 py-2 font-semibold text-gray-600">
+                                                Hors Comm.
+                                            </th>
+                                            <th className="text-center px-4 py-2 font-semibold text-gray-600">
+                                                Retrait
+                                            </th>
+                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                Date Retrait
                                             </th>
                                             <th className="text-center px-4 py-2 font-semibold text-gray-600">
                                                 Statut
@@ -338,12 +450,25 @@ export default function TribuAssigner({
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {paginatedActuels.map((m) => {
+                                        {paginatedActuels.map((m, idx) => {
                                             const estChef = chefIds.includes(
                                                 m.id,
                                             );
                                             return (
                                                 <tr key={m.id}>
+                                                    <td className="px-4 py-2 text-gray-400">
+                                                        {(currentPageActuels -
+                                                            1) *
+                                                            itemsPerPageActuels +
+                                                            idx +
+                                                            1}
+                                                    </td>
+                                                    <td className="px-4 py-2">
+                                                        <ProfilePhoto
+                                                            user={m}
+                                                            size="sm"
+                                                        />
+                                                    </td>
                                                     <td className="px-4 py-2 font-medium text-gray-800">
                                                         <div className="flex items-center gap-2">
                                                             {m.nom}
@@ -355,27 +480,139 @@ export default function TribuAssigner({
                                                             )}
                                                         </div>
                                                     </td>
+                                                    <td className="px-4 py-2 text-gray-700">
+                                                        {m.prenom}
+                                                    </td>
                                                     <td className="px-4 py-2 text-gray-500">
-                                                        {m.famille}
+                                                        {m.code_famille || "-"}
                                                     </td>
-                                                    <td className="px-4 py-2">
-                                                        <CotisationBadges
-                                                            cotisations={
-                                                                m.cotisations
-                                                            }
-                                                        />
+                                                    <td className="px-4 py-2 text-gray-500">
+                                                        {m.code_membre || "-"}
                                                     </td>
-                                                    <td className="px-4 py-2 text-right text-green-700">
-                                                        {m.totalPaye.toLocaleString()}
+                                                    <td className="px-4 py-2 text-gray-500">
+                                                        {m.email || "-"}
                                                     </td>
-                                                    <td className="px-4 py-2 text-right text-red-600">
-                                                        {m.totalDu.toLocaleString()}
+                                                    <td className="px-4 py-2 text-gray-500">
+                                                        {m.telephone || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-gray-500">
+                                                        {formatGenre(m.genre)}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-gray-500">
+                                                        {formatRole(m.role)}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-gray-500">
+                                                        {m.fonction || "Non renseigné"}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-center">
+                                                        {m.baptise ? (
+                                                            <span className="text-green-600 font-bold">
+                                                                Oui
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-gray-400">
+                                                                Non
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-center">
+                                                        {m.premiere_communion ? (
+                                                            <span className="text-green-600 font-bold">
+                                                                Oui
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-gray-400">
+                                                                Non
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="px-4 py-2 text-center">
                                                         <span
-                                                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatutBadge(m.statut).className}`}
+                                                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                                                m.statut_marital ===
+                                                                "Marié(e)"
+                                                                    ? "bg-green-100 text-green-700"
+                                                                    : m.statut_marital ===
+                                                                        "Célibataire"
+                                                                      ? "bg-blue-100 text-blue-700"
+                                                                      : m.statut_marital ===
+                                                                          "Veuf(ve)"
+                                                                        ? "bg-gray-200 text-gray-600"
+                                                                        : m.statut_marital ===
+                                                                            "Divorcé(e)"
+                                                                          ? "bg-orange-100 text-orange-700"
+                                                                          : "bg-purple-100 text-purple-700"
+                                                            }`}
                                                         >
-                                                            {getStatutBadge(m.statut).label}
+                                                            {m.statut_marital}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                                                        {m.classe || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                                                        {m.famille}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                                                        {m.date_naissance || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                                                        {m.relation || "Non renseigné"}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                                                        {m.profession || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-center whitespace-nowrap">
+                                                        {m.employment_status ? (
+                                                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
+                                                                {employmentLabel(
+                                                                    m.employment_status,
+                                                                )}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-gray-400">
+                                                                -
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                                                        {m.lieu_naissance || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                                                        {m.numero_cni || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-center">
+                                                        {m.hors_communaute ? (
+                                                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                                                                Oui
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-gray-400">
+                                                                Non
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-center">
+                                                        {m.retrait ? (
+                                                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                                                                Oui
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-gray-400">
+                                                                Non
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                                                        {m.date_retrait || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-center">
+                                                        <span
+                                                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${m.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                                                        >
+                                                            {m.is_active
+                                                                ? "Actif"
+                                                                : "Inactif"}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-2 text-right whitespace-nowrap">
@@ -412,7 +649,9 @@ export default function TribuAssigner({
                                                         )}
                                                         <button
                                                             onClick={() =>
-                                                                handleRemove(m.id)
+                                                                setRemovingMembre(
+                                                                    m,
+                                                                )
                                                             }
                                                             className="text-xs text-red-600 hover:underline inline-flex items-center gap-1"
                                                         >
@@ -510,56 +749,63 @@ export default function TribuAssigner({
                                     <table className="w-full text-sm">
                                         <thead className="bg-gray-50">
                                             <tr>
+                                                <th className="px-4 py-2 w-10">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={allPageSelected}
+                                                        onChange={toggleSelectAllPage}
+                                                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                    />
+                                                </th>
                                                 <th className="text-left px-4 py-2 font-semibold text-gray-600">
                                                     Membre
                                                 </th>
                                                 <th className="text-left px-4 py-2 font-semibold text-gray-600">
                                                     Critères
                                                 </th>
-                                                <th className="text-left px-4 py-2 font-semibold text-gray-600">
-                                                    Tribu actuelle
-                                                </th>
-                                                <th className="px-4 py-2"></th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
-                                            {paginatedMembres.map((m) => {
-                                                const dejaDansTribu =
-                                                    !!m.tribu_actuelle;
-                                                return (
+                                            {paginatedMembres.map((m) => (
                                                 <tr
                                                     key={m.id}
                                                     className={
-                                                        dejaDansTribu
-                                                            ? "bg-gray-50/70"
+                                                        selectedIds.has(m.id)
+                                                            ? "bg-indigo-50/60"
                                                             : ""
                                                     }
                                                 >
-                                                    <td
-                                                        className={`px-4 py-2 font-medium ${dejaDansTribu ? "text-gray-400" : "text-gray-800"}`}
-                                                    >
+                                                    <td className="px-4 py-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedIds.has(
+                                                                m.id,
+                                                            )}
+                                                            onChange={() =>
+                                                                toggleMembre(
+                                                                    m.id,
+                                                                )
+                                                            }
+                                                            className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-2 font-medium text-gray-800">
                                                         {m.nom}
                                                     </td>
                                                     <td className="px-4 py-2">
                                                         <div className="flex flex-wrap gap-1.5">
-                                                            <span
-                                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${dejaDansTribu ? "bg-gray-100 text-gray-400" : "bg-sky-50 text-sky-700"}`}
-                                                            >
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700">
                                                                 <MapPin className="w-3 h-3" />
                                                                 {m.ville ||
                                                                     "Non renseigné"}
                                                             </span>
-                                                            <span
-                                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${dejaDansTribu ? "bg-gray-100 text-gray-400" : "bg-violet-50 text-violet-700"}`}
-                                                            >
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-violet-50 text-violet-700">
                                                                 <Cake className="w-3 h-3" />
                                                                 {m.age !== null
                                                                     ? `${m.age} ans`
                                                                     : "Âge inconnu"}
                                                             </span>
-                                                            <span
-                                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${dejaDansTribu ? "bg-gray-100 text-gray-400" : "bg-emerald-50 text-emerald-700"}`}
-                                                            >
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700">
                                                                 <Briefcase className="w-3 h-3" />
                                                                 {employmentLabel(
                                                                     m.employment_status,
@@ -567,42 +813,8 @@ export default function TribuAssigner({
                                                             </span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2">
-                                                        {m.tribu_actuelle ? (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 text-[11px] font-semibold">
-                                                                {m.tribu_actuelle.nom}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-emerald-600 text-xs font-semibold">
-                                                                Non affecté
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-4 py-2 text-right">
-                                                        <button
-                                                            onClick={() =>
-                                                                handleAjouterMembre(
-                                                                    m.id,
-                                                                )
-                                                            }
-                                                            disabled={
-                                                                dejaDansTribu ||
-                                                                addingId === m.id
-                                                            }
-                                                            title={
-                                                                dejaDansTribu
-                                                                    ? `Déjà dans ${m.tribu_actuelle.nom}`
-                                                                    : undefined
-                                                            }
-                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-                                                        >
-                                                            <UserCheck className="w-3.5 h-3.5" />
-                                                            Ajouter
-                                                        </button>
-                                                    </td>
                                                 </tr>
-                                                );
-                                            })}
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>
@@ -614,6 +826,22 @@ export default function TribuAssigner({
                                         paginate={goToPage}
                                     />
                                 )}
+
+                                <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-100 flex-wrap">
+                                    <span className="text-sm font-semibold text-gray-600">
+                                        {selectedIds.size} membre(s) sélectionné(s)
+                                    </span>
+                                    <button
+                                        onClick={handleAjouterSelection}
+                                        disabled={
+                                            selectedIds.size === 0 || assigning
+                                        }
+                                        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                    >
+                                        <UserCheck className="w-4 h-4" />
+                                        Affecter la sélection à {tribu.nom}
+                                    </button>
+                                </div>
                             </>
                         )}
                         </div>
@@ -622,6 +850,21 @@ export default function TribuAssigner({
                     )}
                 </div>
             </div>
+
+            <DeleteConfirmationModal
+                isOpen={!!removingMembre}
+                title="Retirer ce membre"
+                itemName={
+                    removingMembre
+                        ? `${removingMembre.prenom} ${removingMembre.nom}`
+                        : ""
+                }
+                message={`Êtes-vous sûr de vouloir retirer ${removingMembre?.prenom} ${removingMembre?.nom} de la tribu ${tribu.nom} ?`}
+                confirmText="Retirer"
+                onConfirm={() => handleRemove(removingMembre.id)}
+                onCancel={() => setRemovingMembre(null)}
+                loading={removing}
+            />
         </>
     );
 }

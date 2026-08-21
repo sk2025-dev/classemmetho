@@ -310,6 +310,7 @@ export default function Select2Single({
     hasError = false,
     variant = "default",
     allowClearOption = true,
+    icon: Icon = null,
 }) {
     const menuPortalTarget =
         typeof document !== "undefined" ? document.body : null;
@@ -354,13 +355,27 @@ export default function Select2Single({
         });
     };
 
+    const baseStyles = buildStyles(variant, hasError);
+    const styles = Icon
+        ? {
+              ...baseStyles,
+              valueContainer: (provided, state) => ({
+                  ...baseStyles.valueContainer(provided, state),
+                  paddingLeft: "1.75rem",
+              }),
+          }
+        : baseStyles;
+
     return (
         <div
-            className="w-full"
+            className="w-full relative"
             data-field-name={name || normalizedFieldKey}
             data-error-target="true"
             id={!id && normalizedFieldKey ? normalizedFieldKey : undefined}
         >
+            {Icon ? (
+                <Icon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 z-10 h-4 w-4 text-slate-400" />
+            ) : null}
             <Select
                 inputId={id || normalizedFieldKey || undefined}
                 name={name}
@@ -371,7 +386,7 @@ export default function Select2Single({
                 isDisabled={disabled}
                 isClearable={isClearable}
                 isSearchable
-                styles={buildStyles(variant, hasError)}
+                styles={styles}
                 components={{
                     DropdownIndicator,
                     ClearIndicator,

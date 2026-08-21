@@ -688,7 +688,7 @@ export default function MainLayout({ children, auth }) {
                         backgroundRepeat: "no-repeat",
                         backgroundPosition: "center",
                         backgroundSize: "min(45vw, 480px)",
-                        opacity: 0.32,
+                        opacity: 0.12,
                         pointerEvents: "none",
                         zIndex: 30,
                     }}

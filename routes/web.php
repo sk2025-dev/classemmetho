@@ -310,6 +310,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/tribus/assigner', [ConducteurTribuController::class, 'affectation'])->name('conducteur.tribus.affectation');
         Route::post('/conducteur/tribus/membres/bulk', [ConducteurTribuController::class, 'bulkAssignerMembresGlobal'])->name('conducteur.tribus.membres.bulk-global');
         Route::get('/conducteur/tribus/finances', [ConducteurTribuController::class, 'financesOverview'])->name('conducteur.tribus.finances-overview');
+        Route::get('/conducteur/tribus/presences', [ConducteurTribuController::class, 'presencesOverview'])->name('conducteur.tribus.presences-overview');
         Route::post('/conducteur/tribus/membres/relancer-tous', [ConducteurTribuController::class, 'relancerRetardataires'])->name('conducteur.tribus.membres.relancer-tous');
         Route::post('/conducteur/tribus/membres/{user}/relancer', [ConducteurTribuController::class, 'relancerMembre'])->name('conducteur.tribus.membres.relancer');
         Route::put('/conducteur/tribus/{tribu}', [ConducteurTribuController::class, 'update'])->name('conducteur.tribus.update');
@@ -321,6 +322,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/tribus/{tribu}/finances', [ConducteurTribuController::class, 'finances'])->name('conducteur.tribus.finances');
         Route::get('/conducteur/tribus/{tribu}/assigner', [ConducteurTribuController::class, 'assigner'])->name('conducteur.tribus.assigner');
         Route::post('/conducteur/tribus/{tribu}/membres/bulk', [ConducteurTribuController::class, 'bulkAssignerMembres'])->name('conducteur.tribus.membres.bulk');
+        Route::get('/conducteur/tribus/{tribu}/presences', [ConducteurTribuController::class, 'presences'])->name('conducteur.tribus.presences');
 
         // Endpoint: récupérer/créer UserSacrement pour un utilisateur
         Route::get('/users/{id}/sacrements', [\App\Http\Controllers\UserSacrementController::class, 'show'])->name('users.sacrements');
@@ -460,6 +462,19 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:responsable_famille')->group(function () {
         Route::get('/responsable-famille/annuaire', [ResponsableFamilleAnnuaireController::class, 'index'])->name('responsable_famille.annuaire.index');
         Route::get('/responsable-famille/dashboard', [ResponsableFamilleDashboardController::class, 'index'])->name('responsable_famille.dashboard');
+        Route::get('/responsable-famille/tribu', [MembreFamilleTribuController::class, 'index'])->name('responsable_famille.tribu.index');
+        Route::get('/responsable-famille/tribu/finances', [MembreFamilleTribuController::class, 'finances'])->name('responsable_famille.tribu.finances');
+        Route::post('/responsable-famille/tribu/membres/{user}/relancer', [MembreFamilleTribuController::class, 'relancerMembre'])->name('responsable_famille.tribu.membres.relancer');
+        Route::post('/responsable-famille/tribu/membres/relancer-tous', [MembreFamilleTribuController::class, 'relancerTousRetardataires'])->name('responsable_famille.tribu.membres.relancer-tous');
+        Route::get('/responsable-famille/tribu/presences', [MembreFamilleTribuController::class, 'presences'])->name('responsable_famille.tribu.presences');
+        Route::post('/responsable-famille/tribu/presences/{activite}/membres/{membre}/justifier', [MembreFamilleTribuController::class, 'justifierAbsence'])->name('responsable_famille.tribu.presences.justifier');
+        Route::get('/responsable-famille/tribu/assigner', [MembreFamilleTribuController::class, 'assigner'])->name('responsable_famille.tribu.assigner');
+        Route::get('/responsable-famille/tribu/historique-transferts', [MembreFamilleTribuController::class, 'historique'])->name('responsable_famille.tribu.historique-transferts');
+        Route::post('/responsable-famille/tribu/demander-transfert', [MembreFamilleTribuController::class, 'demanderTransfert'])->name('responsable_famille.tribu.demander-transfert');
+        Route::post('/responsable-famille/tribu/demandes/{demande}/valider', [MembreFamilleTribuController::class, 'validerTransfert'])->name('responsable_famille.tribu.demandes.valider');
+        Route::post('/responsable-famille/tribu/demandes/{demande}/refuser', [MembreFamilleTribuController::class, 'refuserTransfert'])->name('responsable_famille.tribu.demandes.refuser');
+        Route::post('/responsable-famille/tribu/demandes/valider-plusieurs', [MembreFamilleTribuController::class, 'validerTransfertBulk'])->name('responsable_famille.tribu.demandes.valider-bulk');
+        Route::post('/responsable-famille/tribu/demandes/refuser-plusieurs', [MembreFamilleTribuController::class, 'refuserTransfertBulk'])->name('responsable_famille.tribu.demandes.refuser-bulk');
         Route::get('/responsable-famille/prieres', [\App\Http\Controllers\ResponsableFamille\Prieres\PrieresController::class, 'index'])->name('responsable_famille.prieres.index');
         Route::post('/responsable-famille/prieres', [\App\Http\Controllers\ResponsableFamille\Prieres\PrieresController::class, 'store'])->name('responsable_famille.prieres.store');
         Route::patch('/responsable-famille/prieres/{priere}/commentaire', [\App\Http\Controllers\ResponsableFamille\Prieres\PrieresController::class, 'updateTestimony'])->name('responsable_famille.prieres.testimony');
@@ -656,6 +671,18 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/membre-famille/sondages/{id}/reponses', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'storeResponse'])->whereNumber('id')->name('membre_famille.sondages.responses.store');
         Route::get('/membre-famille/inscriptions', [\App\Http\Controllers\MembreFamille\InscriptionsController::class, 'index'])->name('membre_famille.inscriptions');
         Route::get('/membre-famille/tribu', [MembreFamilleTribuController::class, 'index'])->name('membre_famille.tribu.index');
+        Route::get('/membre-famille/tribu/finances', [MembreFamilleTribuController::class, 'finances'])->name('membre_famille.tribu.finances');
+        Route::post('/membre-famille/tribu/membres/{user}/relancer', [MembreFamilleTribuController::class, 'relancerMembre'])->name('membre_famille.tribu.membres.relancer');
+        Route::post('/membre-famille/tribu/membres/relancer-tous', [MembreFamilleTribuController::class, 'relancerTousRetardataires'])->name('membre_famille.tribu.membres.relancer-tous');
+        Route::get('/membre-famille/tribu/presences', [MembreFamilleTribuController::class, 'presences'])->name('membre_famille.tribu.presences');
+        Route::post('/membre-famille/tribu/presences/{activite}/membres/{membre}/justifier', [MembreFamilleTribuController::class, 'justifierAbsence'])->name('membre_famille.tribu.presences.justifier');
+        Route::get('/membre-famille/tribu/assigner', [MembreFamilleTribuController::class, 'assigner'])->name('membre_famille.tribu.assigner');
+        Route::get('/membre-famille/tribu/historique-transferts', [MembreFamilleTribuController::class, 'historique'])->name('membre_famille.tribu.historique-transferts');
+        Route::post('/membre-famille/tribu/demander-transfert', [MembreFamilleTribuController::class, 'demanderTransfert'])->name('membre_famille.tribu.demander-transfert');
+        Route::post('/membre-famille/tribu/demandes/{demande}/valider', [MembreFamilleTribuController::class, 'validerTransfert'])->name('membre_famille.tribu.demandes.valider');
+        Route::post('/membre-famille/tribu/demandes/{demande}/refuser', [MembreFamilleTribuController::class, 'refuserTransfert'])->name('membre_famille.tribu.demandes.refuser');
+        Route::post('/membre-famille/tribu/demandes/valider-plusieurs', [MembreFamilleTribuController::class, 'validerTransfertBulk'])->name('membre_famille.tribu.demandes.valider-bulk');
+        Route::post('/membre-famille/tribu/demandes/refuser-plusieurs', [MembreFamilleTribuController::class, 'refuserTransfertBulk'])->name('membre_famille.tribu.demandes.refuser-bulk');
         Route::get('/membre-famille/profile/edit', [MembreFamilleProfileController::class, 'edit'])->name('membre_famille.profile.edit');
         Route::put('/membre-famille/profile/update', [MembreFamilleProfileController::class, 'update'])->name('membre_famille.profile.update');
         Route::get('/membre-famille/liturgie', [MembreFamilleLiturgieController::class, 'index'])->name('membre_famille.liturgie.index');

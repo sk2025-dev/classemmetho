@@ -104,6 +104,7 @@ export default function TribuAffectation({
         const max = ageMax !== "" ? parseInt(ageMax, 10) : null;
 
         return membres.filter((m) => {
+            if (m.tribu_actuelle) return false;
             if (term && !m.nom.toLowerCase().includes(term)) return false;
             if (ville && m.ville !== ville) return false;
             if (profession && m.employment_status !== profession) return false;
@@ -140,21 +141,17 @@ export default function TribuAffectation({
         });
     };
 
-    const assignablePaginatedMembres = paginatedMembres.filter(
-        (m) => !m.tribu_actuelle,
-    );
-
     const allPageSelected =
-        assignablePaginatedMembres.length > 0 &&
-        assignablePaginatedMembres.every((m) => selectedIds.has(m.id));
+        paginatedMembres.length > 0 &&
+        paginatedMembres.every((m) => selectedIds.has(m.id));
 
     const toggleSelectAllPage = () => {
         setSelectedIds((prev) => {
             const next = new Set(prev);
             if (allPageSelected) {
-                assignablePaginatedMembres.forEach((m) => next.delete(m.id));
+                paginatedMembres.forEach((m) => next.delete(m.id));
             } else {
-                assignablePaginatedMembres.forEach((m) => next.add(m.id));
+                paginatedMembres.forEach((m) => next.add(m.id));
             }
             return next;
         });
@@ -173,9 +170,6 @@ export default function TribuAffectation({
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    toast.success(
-                        `${selectedIds.size} membre(s) affecté(s) à ${tribuCibleNom}.`,
-                    );
                     setSelectedIds(new Set());
                 },
                 onError: () => toast.error("Erreur lors de l'affectation."),
@@ -306,94 +300,58 @@ export default function TribuAffectation({
                                                 <th className="text-left px-4 py-2 font-semibold text-gray-600">
                                                     Critères
                                                 </th>
-                                                <th className="text-left px-4 py-2 font-semibold text-gray-600">
-                                                    Tribu actuelle
-                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
-                                            {paginatedMembres.map((m) => {
-                                                const dejaAffecte =
-                                                    !!m.tribu_actuelle;
-                                                return (
-                                                    <tr
-                                                        key={m.id}
-                                                        className={
-                                                            dejaAffecte
-                                                                ? "bg-gray-50 opacity-60"
-                                                                : selectedIds.has(
-                                                                        m.id,
-                                                                    )
-                                                                  ? "bg-indigo-50/60"
-                                                                  : ""
-                                                        }
-                                                    >
-                                                        <td className="px-4 py-2">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={selectedIds.has(
-                                                                    m.id,
-                                                                )}
-                                                                disabled={
-                                                                    dejaAffecte
-                                                                }
-                                                                onChange={() =>
-                                                                    toggleMembre(
-                                                                        m.id,
-                                                                    )
-                                                                }
-                                                                title={
-                                                                    dejaAffecte
-                                                                        ? "Déjà affecté à une tribu"
-                                                                        : undefined
-                                                                }
-                                                                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
-                                                            />
-                                                        </td>
-                                                        <td
-                                                            className={`px-4 py-2 font-medium ${dejaAffecte ? "text-gray-500" : "text-gray-800"}`}
-                                                        >
-                                                            {m.nom}
-                                                        </td>
-                                                        <td className="px-4 py-2">
-                                                            <div className="flex flex-wrap gap-1.5">
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[11px] font-semibold">
-                                                                    <MapPin className="w-3 h-3" />
-                                                                    {m.ville ||
-                                                                        "Non renseigné"}
-                                                                </span>
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 text-[11px] font-semibold">
-                                                                    <Cake className="w-3 h-3" />
-                                                                    {m.age !== null
-                                                                        ? `${m.age} ans`
-                                                                        : "Âge inconnu"}
-                                                                </span>
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-semibold">
-                                                                    <Briefcase className="w-3 h-3" />
-                                                                    {employmentLabel(
-                                                                        m.employment_status,
-                                                                    )}
-                                                                </span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-2">
-                                                            {m.tribu_actuelle ? (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[11px] font-semibold">
-                                                                    {
-                                                                        m
-                                                                            .tribu_actuelle
-                                                                            .nom
-                                                                    }
-                                                                </span>
-                                                            ) : (
-                                                                <span className="text-gray-400 text-xs italic">
-                                                                    Non affecté
-                                                                </span>
+                                            {paginatedMembres.map((m) => (
+                                                <tr
+                                                    key={m.id}
+                                                    className={
+                                                        selectedIds.has(m.id)
+                                                            ? "bg-indigo-50/60"
+                                                            : ""
+                                                    }
+                                                >
+                                                    <td className="px-4 py-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedIds.has(
+                                                                m.id,
                                                             )}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
+                                                            onChange={() =>
+                                                                toggleMembre(
+                                                                    m.id,
+                                                                )
+                                                            }
+                                                            className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-2 font-medium text-gray-800">
+                                                        {m.nom}
+                                                    </td>
+                                                    <td className="px-4 py-2">
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[11px] font-semibold">
+                                                                <MapPin className="w-3 h-3" />
+                                                                {m.ville ||
+                                                                    "Non renseigné"}
+                                                            </span>
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 text-[11px] font-semibold">
+                                                                <Cake className="w-3 h-3" />
+                                                                {m.age !== null
+                                                                    ? `${m.age} ans`
+                                                                    : "Âge inconnu"}
+                                                            </span>
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-semibold">
+                                                                <Briefcase className="w-3 h-3" />
+                                                                {employmentLabel(
+                                                                    m.employment_status,
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>

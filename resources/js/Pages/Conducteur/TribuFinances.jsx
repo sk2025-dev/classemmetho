@@ -9,9 +9,14 @@ import {
     Layers,
     Search,
     Mail,
+    Eye,
+    X,
+    Receipt,
+    CreditCard,
+    Send,
+    MessageCircle,
 } from "lucide-react";
 import Select2Single from "../../Components/Select2Single";
-import CotisationBadges from "../../Components/CotisationBadges";
 import { getStatutBadge } from "../../Helpers/tribuStatutHelper";
 import useToast from "../../Hooks/useToast";
 import ToastContainer from "../../Components/ToastContainer";
@@ -91,6 +96,31 @@ const Pagination = ({ currentPage, totalPages, paginate }) => {
     );
 };
 
+const DEFAULT_RELANCE_MESSAGE =
+    "Nous vous rappelons qu'il vous reste des cotisations à régulariser. Merci de bien vouloir régulariser votre situation auprès du trésorier de votre classe dans les meilleurs délais.";
+
+// Compose le texte final (WhatsApp et aperçu) : message personnalisé + résumé
+// payé / reste / total, en restant bref (pas de détail ligne par ligne).
+const buildRelanceTexte = (membre, message) => {
+    const totalAttendu = (membre.totalPaye || 0) + (membre.totalDu || 0);
+    return [
+        `Bonjour ${membre.prenom || membre.nom},`,
+        "",
+        message,
+        "",
+        `💰 Payé : ${(membre.totalPaye || 0).toLocaleString()} F`,
+        `⏳ Reste à payer : ${(membre.totalDu || 0).toLocaleString()} F`,
+        `📊 Total attendu : ${totalAttendu.toLocaleString()} F`,
+        "",
+        "Merci de régulariser votre situation auprès du trésorier de votre classe.",
+    ].join("\n");
+};
+
+const buildWhatsAppLink = (telephone, text) => {
+    const digits = (telephone || "").replace(/\D/g, "");
+    return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+};
+
 // Couleurs de badge tribu, en rotation stable par tribu (mêmes teintes que la liste des tribus).
 const TRIBU_BADGE_COLORS = [
     "bg-indigo-50 text-indigo-700",
@@ -101,44 +131,81 @@ const TRIBU_BADGE_COLORS = [
     "bg-fuchsia-50 text-fuchsia-700",
 ];
 
+// "Aucun paiement" est plus clair que "en attente" quand rien n'a encore été
+// versé — que ce soit pour une cotisation précise (modale de détail) ou pour
+// l'ensemble d'un membre (colonne Statut du tableau).
+const statutBadge = (statut) =>
+    statut === "EN_ATTENTE"
+        ? { label: "Aucun paiement", className: "bg-gray-100 text-gray-500" }
+        : getStatutBadge(statut);
+
 export default function TribuFinances({
     tribus = [],
     classeNom,
-    stats = { totalCollecte: 0, totalDu: 0, nombreTribus: 0 },
+    stats = {
+        totalCollecte: 0,
+        totalDu: 0,
+        nombreTribus: 0,
+        nombreCotisations: 0,
+    },
 }) {
     const toast = useToast();
     const [search, setSearch] = useState("");
     const [tribuFiltre, setTribuFiltre] = useState("");
+    const [statutFiltre, setStatutFiltre] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [relancingId, setRelancingId] = useState(null);
     const [relancingTous, setRelancingTous] = useState(false);
+    const [showRelanceTousModal, setShowRelanceTousModal] = useState(false);
+    const [relanceTousMessage, setRelanceTousMessage] = useState(
+        DEFAULT_RELANCE_MESSAGE,
+    );
+    const [detailMembre, setDetailMembre] = useState(null);
+    const [relanceMembre, setRelanceMembre] = useState(null);
+    const [relanceMessage, setRelanceMessage] = useState(
+        DEFAULT_RELANCE_MESSAGE,
+    );
+    const [sendingRelance, setSendingRelance] = useState(false);
     const itemsPerPage = 12;
 
-    const relancerMembre = (userId) => {
-        setRelancingId(userId);
+    const openRelanceModal = (m) => {
+        setRelanceMembre(m);
+        setRelanceMessage(DEFAULT_RELANCE_MESSAGE);
+    };
+
+    const envoyerRelance = () => {
+        if (!relanceMembre) return;
+        setSendingRelance(true);
         router.post(
-            withBasePath("", `/conducteur/tribus/membres/${userId}/relancer`),
-            {},
+            withBasePath(
+                "",
+                `/conducteur/tribus/membres/${relanceMembre.id}/relancer`,
+            ),
+            { message: relanceMessage },
             {
                 preserveScroll: true,
-                onSuccess: () => toast.success("Rappel envoyé par email."),
+                onSuccess: () => setRelanceMembre(null),
                 onError: (errors) =>
                     toast.error(
                         errors?.error || "Erreur lors de l'envoi du rappel.",
                     ),
-                onFinish: () => setRelancingId(null),
+                onFinish: () => setSendingRelance(false),
             },
         );
+    };
+
+    const openRelanceTousModal = () => {
+        setRelanceTousMessage(DEFAULT_RELANCE_MESSAGE);
+        setShowRelanceTousModal(true);
     };
 
     const relancerTous = () => {
         setRelancingTous(true);
         router.post(
             withBasePath("", "/conducteur/tribus/membres/relancer-tous"),
-            {},
+            { message: relanceTousMessage },
             {
                 preserveScroll: true,
-                onSuccess: () => toast.success("Rappels envoyés."),
+                onSuccess: () => setShowRelanceTousModal(false),
                 onError: () => toast.error("Erreur lors de l'envoi des rappels."),
                 onFinish: () => setRelancingTous(false),
             },
@@ -154,6 +221,12 @@ export default function TribuFinances({
     }, [tribus]);
 
     const tribuOptions = tribus.map((t) => ({ value: t.id, label: t.nom }));
+
+    const statutOptions = [
+        { value: "A_JOUR", label: "À jour" },
+        { value: "EN_COURS", label: "En cours" },
+        { value: "EN_ATTENTE", label: "Aucun paiement" },
+    ];
 
     // Aplatit les tribus en une seule liste de membres, chacun avec sa tribu attachée.
     const tousLesMembres = useMemo(
@@ -175,9 +248,10 @@ export default function TribuFinances({
             if (term && !m.nom.toLowerCase().includes(term)) return false;
             if (tribuFiltre && String(m.tribuId) !== String(tribuFiltre))
                 return false;
+            if (statutFiltre && m.statut !== statutFiltre) return false;
             return true;
         });
-    }, [tousLesMembres, search, tribuFiltre]);
+    }, [tousLesMembres, search, tribuFiltre, statutFiltre]);
 
     const totalPages = Math.max(1, Math.ceil(filteredMembres.length / itemsPerPage));
     const paginatedMembres = filteredMembres.slice(
@@ -191,7 +265,7 @@ export default function TribuFinances({
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [search, tribuFiltre]);
+    }, [search, tribuFiltre, statutFiltre]);
 
     useEffect(() => {
         if (currentPage > totalPages) setCurrentPage(totalPages);
@@ -230,18 +304,15 @@ export default function TribuFinances({
                             </p>
                         </div>
                         <button
-                            onClick={relancerTous}
-                            disabled={relancingTous}
-                            className="ml-auto inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-indigo-700 hover:bg-indigo-50 text-sm font-bold shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                            onClick={openRelanceTousModal}
+                            className="ml-auto inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-indigo-700 hover:bg-indigo-50 text-sm font-bold shadow-lg"
                         >
                             <Mail className="w-4 h-4" />
-                            {relancingTous
-                                ? "Envoi en cours..."
-                                : "Relancer tous les retardataires"}
+                            Relancer tous les retardataires
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         <StatCard
                             icon={Wallet}
                             label="Total collecté"
@@ -259,6 +330,12 @@ export default function TribuFinances({
                             label="Tribus"
                             value={stats.nombreTribus}
                             gradient="linear-gradient(135deg, #6366f1, #4338ca)"
+                        />
+                        <StatCard
+                            icon={Receipt}
+                            label="Cotisations"
+                            value={stats.nombreCotisations}
+                            gradient="linear-gradient(135deg, #8b5cf6, #6d28d9)"
                         />
                     </div>
 
@@ -281,6 +358,13 @@ export default function TribuFinances({
                                 onChange={(e) => setTribuFiltre(e.target.value)}
                                 options={tribuOptions}
                                 placeholder="Filtrer par tribu..."
+                            />
+                            <Select2Single
+                                name="statut_filtre"
+                                value={statutFiltre}
+                                onChange={(e) => setStatutFiltre(e.target.value)}
+                                options={statutOptions}
+                                placeholder="Filtrer par statut..."
                             />
                         </div>
 
@@ -307,8 +391,8 @@ export default function TribuFinances({
                                                 <th className="text-left px-4 py-2 font-semibold text-gray-600">
                                                     Famille
                                                 </th>
-                                                <th className="text-left px-4 py-2 font-semibold text-gray-600">
-                                                    Cotisation
+                                                <th className="text-center px-4 py-2 font-semibold text-gray-600">
+                                                    Nombre de cotisations
                                                 </th>
                                                 <th className="text-right px-4 py-2 font-semibold text-gray-600">
                                                     Payé
@@ -319,7 +403,9 @@ export default function TribuFinances({
                                                 <th className="text-center px-4 py-2 font-semibold text-gray-600">
                                                     Statut
                                                 </th>
-                                                <th className="px-4 py-2"></th>
+                                                <th className="text-right px-4 py-2 font-semibold text-gray-600">
+                                                    Actions
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -351,12 +437,31 @@ export default function TribuFinances({
                                                     <td className="px-4 py-2 text-gray-500">
                                                         {m.famille}
                                                     </td>
-                                                    <td className="px-4 py-2">
-                                                        <CotisationBadges
-                                                            cotisations={
-                                                                m.cotisations
+                                                    <td className="px-4 py-2 text-center">
+                                                        {(() => {
+                                                            const nbEnCours =
+                                                                m.cotisations.filter(
+                                                                    (c) =>
+                                                                        c.du >
+                                                                        0,
+                                                                ).length;
+                                                            if (
+                                                                nbEnCours === 0
+                                                            ) {
+                                                                return (
+                                                                    <span className="text-gray-300 text-xs">
+                                                                        0
+                                                                    </span>
+                                                                );
                                                             }
-                                                        />
+                                                            return (
+                                                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold bg-amber-50 text-amber-700">
+                                                                    {
+                                                                        nbEnCours
+                                                                    }
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </td>
                                                     <td className="px-4 py-2 text-right text-green-700">
                                                         {m.totalPaye.toLocaleString()}
@@ -366,29 +471,38 @@ export default function TribuFinances({
                                                     </td>
                                                     <td className="px-4 py-2 text-center">
                                                         <span
-                                                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatutBadge(m.statut).className}`}
+                                                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statutBadge(m.statut).className}`}
                                                         >
-                                                            {getStatutBadge(m.statut).label}
+                                                            {statutBadge(m.statut).label}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-2 text-right whitespace-nowrap">
-                                                        {enRetard && (
+                                                        <div className="inline-flex items-center gap-2">
                                                             <button
                                                                 onClick={() =>
-                                                                    relancerMembre(
-                                                                        m.id,
+                                                                    setDetailMembre(
+                                                                        m,
                                                                     )
                                                                 }
-                                                                disabled={
-                                                                    relancingId ===
-                                                                    m.id
-                                                                }
-                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold shadow-sm"
                                                             >
-                                                                <Mail className="w-3.5 h-3.5" />
-                                                                Relancer
+                                                                <Eye className="w-3.5 h-3.5" />
+                                                                Voir
                                                             </button>
-                                                        )}
+                                                            {enRetard && (
+                                                                <button
+                                                                    onClick={() =>
+                                                                        openRelanceModal(
+                                                                            m,
+                                                                        )
+                                                                    }
+                                                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-bold"
+                                                                >
+                                                                    <Mail className="w-3.5 h-3.5" />
+                                                                    Relancer
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 );
@@ -409,6 +523,366 @@ export default function TribuFinances({
                     </div>
                 </div>
             </div>
+
+            {detailMembre && (
+                <div className="fixed inset-0 z-[95] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-2xl max-h-[85vh] rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col">
+                        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center shrink-0">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900">
+                                    {detailMembre.nom}
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    {detailMembre.tribuNom} ·{" "}
+                                    {detailMembre.famille}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setDetailMembre(null)}
+                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto space-y-6">
+                            {/* Résumé */}
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="rounded-xl bg-indigo-50 p-3 text-center">
+                                    <div className="text-xl font-extrabold text-indigo-700">
+                                        {detailMembre.cotisations.length}
+                                    </div>
+                                    <div className="text-[11px] font-bold text-indigo-500 uppercase tracking-wide">
+                                        Cotisation
+                                        {detailMembre.cotisations.length > 1
+                                            ? "s"
+                                            : ""}
+                                    </div>
+                                </div>
+                                <div className="rounded-xl bg-green-50 p-3 text-center">
+                                    <div className="text-xl font-extrabold text-green-700">
+                                        {detailMembre.totalPaye.toLocaleString()}
+                                    </div>
+                                    <div className="text-[11px] font-bold text-green-600 uppercase tracking-wide">
+                                        Total payé
+                                    </div>
+                                </div>
+                                <div className="rounded-xl bg-red-50 p-3 text-center">
+                                    <div className="text-xl font-extrabold text-red-700">
+                                        {detailMembre.totalDu.toLocaleString()}
+                                    </div>
+                                    <div className="text-[11px] font-bold text-red-600 uppercase tracking-wide">
+                                        Reste dû
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Détail par cotisation */}
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                    <Receipt className="w-4 h-4 text-gray-400" />
+                                    Détail des cotisations
+                                </h3>
+                                {detailMembre.cotisations.length === 0 ? (
+                                    <p className="text-sm text-gray-400">
+                                        Aucune cotisation ne concerne ce
+                                        membre.
+                                    </p>
+                                ) : (
+                                    <div className="overflow-x-auto rounded-xl border border-gray-100">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="text-left px-3 py-2 font-semibold text-gray-600">
+                                                        Cotisation
+                                                    </th>
+                                                    <th className="text-right px-3 py-2 font-semibold text-gray-600">
+                                                        Montant
+                                                    </th>
+                                                    <th className="text-right px-3 py-2 font-semibold text-gray-600">
+                                                        Payé
+                                                    </th>
+                                                    <th className="text-right px-3 py-2 font-semibold text-gray-600">
+                                                        Reste
+                                                    </th>
+                                                    <th className="text-center px-3 py-2 font-semibold text-gray-600">
+                                                        Statut
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {detailMembre.cotisations.map(
+                                                    (c, idx) => (
+                                                        <tr key={idx}>
+                                                            <td className="px-3 py-2 font-medium text-gray-800">
+                                                                {c.nom}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-right text-gray-600">
+                                                                {c.montant.toLocaleString()}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-right text-green-700">
+                                                                {c.paye.toLocaleString()}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-right text-red-600">
+                                                                {c.du.toLocaleString()}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-center">
+                                                                <span
+                                                                    className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${statutBadge(c.statut).className}`}
+                                                                >
+                                                                    {statutBadge(c.statut).label}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ),
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Historique des paiements */}
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                    <CreditCard className="w-4 h-4 text-gray-400" />
+                                    Historique des paiements (
+                                    {detailMembre.paiements.length})
+                                </h3>
+                                {detailMembre.paiements.length === 0 ? (
+                                    <p className="text-sm text-gray-400">
+                                        Aucun paiement enregistré pour ce
+                                        membre.
+                                    </p>
+                                ) : (
+                                    <div className="overflow-x-auto rounded-xl border border-gray-100">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="text-left px-3 py-2 font-semibold text-gray-600">
+                                                        Cotisation
+                                                    </th>
+                                                    <th className="text-right px-3 py-2 font-semibold text-gray-600">
+                                                        Montant
+                                                    </th>
+                                                    <th className="text-left px-3 py-2 font-semibold text-gray-600">
+                                                        Mode
+                                                    </th>
+                                                    <th className="text-left px-3 py-2 font-semibold text-gray-600">
+                                                        Date
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {detailMembre.paiements.map(
+                                                    (p) => (
+                                                        <tr key={p.id}>
+                                                            <td className="px-3 py-2 font-medium text-gray-800">
+                                                                {p.cotisation}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-right text-green-700">
+                                                                {p.montant.toLocaleString()}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-gray-500">
+                                                                {p.mode || "-"}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
+                                                                {p.date || "-"}
+                                                            </td>
+                                                        </tr>
+                                                    ),
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {relanceMembre && (
+                <div className="fixed inset-0 z-[95] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
+                        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900">
+                                    Envoyer un rappel
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    À {relanceMembre.nom}
+                                    {relanceMembre.email
+                                        ? ` · ${relanceMembre.email}`
+                                        : ""}
+                                    {relanceMembre.telephone
+                                        ? ` · ${relanceMembre.telephone}`
+                                        : ""}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setRelanceMembre(null)}
+                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 mb-1.5 block">
+                                    Message
+                                </label>
+                                <textarea
+                                    value={relanceMessage}
+                                    onChange={(e) =>
+                                        setRelanceMessage(e.target.value)
+                                    }
+                                    rows={4}
+                                    placeholder="Votre message..."
+                                    className="input-control"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 mb-1.5 block">
+                                    Aperçu de ce qui sera envoyé
+                                </label>
+                                <pre className="whitespace-pre-wrap break-words text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-xl p-3 font-sans">
+                                    {buildRelanceTexte(
+                                        relanceMembre,
+                                        relanceMessage,
+                                    )}
+                                </pre>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2 flex-wrap">
+                                <button
+                                    onClick={() => setRelanceMembre(null)}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-bold bg-white border border-gray-300 text-gray-800 hover:bg-gray-50"
+                                >
+                                    Annuler
+                                </button>
+                                <a
+                                    href={
+                                        relanceMembre.telephone
+                                            ? buildWhatsAppLink(
+                                                  relanceMembre.telephone,
+                                                  buildRelanceTexte(
+                                                      relanceMembre,
+                                                      relanceMessage,
+                                                  ),
+                                              )
+                                            : undefined
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={
+                                        relanceMembre.telephone
+                                            ? undefined
+                                            : "Aucun numéro de téléphone enregistré"
+                                    }
+                                    aria-disabled={!relanceMembre.telephone}
+                                    onClick={(e) => {
+                                        if (!relanceMembre.telephone)
+                                            e.preventDefault();
+                                    }}
+                                    className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white ${
+                                        relanceMembre.telephone
+                                            ? "bg-green-600 hover:bg-green-700"
+                                            : "bg-gray-300 cursor-not-allowed"
+                                    }`}
+                                >
+                                    <MessageCircle className="w-4 h-4" />
+                                    WhatsApp
+                                </a>
+                                <button
+                                    onClick={envoyerRelance}
+                                    disabled={
+                                        !relanceMessage.trim() ||
+                                        sendingRelance
+                                    }
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Send className="w-4 h-4" />
+                                    {sendingRelance
+                                        ? "Envoi..."
+                                        : "Envoyer par email"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showRelanceTousModal && (
+                <div className="fixed inset-0 z-[95] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
+                        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900">
+                                    Relancer tous les retardataires
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    Un email sera envoyé à chaque membre en
+                                    retard ayant une adresse email
+                                    enregistrée.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() =>
+                                    setShowRelanceTousModal(false)
+                                }
+                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 mb-1.5 block">
+                                    Message
+                                </label>
+                                <textarea
+                                    value={relanceTousMessage}
+                                    onChange={(e) =>
+                                        setRelanceTousMessage(e.target.value)
+                                    }
+                                    rows={6}
+                                    placeholder="Votre message..."
+                                    className="input-control"
+                                />
+                            </div>
+                            <p className="text-xs text-gray-400">
+                                Le résumé payé / reste à payer / total sera
+                                automatiquement ajouté à la suite de ce
+                                message dans chaque email, avec le nom de
+                                chaque destinataire.
+                            </p>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    onClick={() =>
+                                        setShowRelanceTousModal(false)
+                                    }
+                                    className="px-5 py-2.5 rounded-xl text-sm font-bold bg-white border border-gray-300 text-gray-800 hover:bg-gray-50"
+                                >
+                                    Annuler
+                                </button>
+                                <button
+                                    onClick={relancerTous}
+                                    disabled={
+                                        !relanceTousMessage.trim() ||
+                                        relancingTous
+                                    }
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Send className="w-4 h-4" />
+                                    {relancingTous
+                                        ? "Envoi en cours..."
+                                        : "Envoyer à tous"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

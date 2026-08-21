@@ -17,7 +17,11 @@
                     <tr>
                         <td style="padding:32px; color:#111827; font-size:14px; line-height:1.6;">
                             <p>Bonjour <strong>{{ $user->prenom }} {{ $user->nom }}</strong>,</p>
-                            <p>Nous vous rappelons qu'il vous reste des cotisations à régulariser :</p>
+                            @if (!empty($customMessage))
+                                <p>{!! nl2br(e($customMessage)) !!}</p>
+                            @else
+                                <p>Nous vous rappelons qu'il vous reste des cotisations à régulariser :</p>
+                            @endif
 
                             <table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse; margin:16px 0; font-size:13px;">
                                 <thead>
@@ -38,10 +42,21 @@
                                 </tbody>
                             </table>
 
-                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fef3c7; border-radius:8px; margin:16px 0;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
                                 <tr>
-                                    <td style="padding:16px; color:#92400e; font-weight:bold; font-size:15px;">
-                                        Total dû : {{ number_format($totalDu, 0, ',', ' ') }} F
+                                    <td width="33%" style="background-color:#ecfdf5; border-radius:8px; padding:12px; text-align:center;">
+                                        <div style="color:#15803d; font-weight:bold; font-size:15px;">{{ number_format($totalPaye ?? 0, 0, ',', ' ') }} F</div>
+                                        <div style="color:#15803d; font-size:11px; text-transform:uppercase;">Payé</div>
+                                    </td>
+                                    <td width="4"></td>
+                                    <td width="33%" style="background-color:#fef3c7; border-radius:8px; padding:12px; text-align:center;">
+                                        <div style="color:#92400e; font-weight:bold; font-size:15px;">{{ number_format($totalDu, 0, ',', ' ') }} F</div>
+                                        <div style="color:#92400e; font-size:11px; text-transform:uppercase;">Reste dû</div>
+                                    </td>
+                                    <td width="4"></td>
+                                    <td width="33%" style="background-color:#eef2ff; border-radius:8px; padding:12px; text-align:center;">
+                                        <div style="color:#4338ca; font-weight:bold; font-size:15px;">{{ number_format($totalAttendu ?? $totalDu, 0, ',', ' ') }} F</div>
+                                        <div style="color:#4338ca; font-size:11px; text-transform:uppercase;">Total</div>
                                     </td>
                                 </tr>
                             </table>

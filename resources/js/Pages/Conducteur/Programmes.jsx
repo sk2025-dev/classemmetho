@@ -2869,7 +2869,7 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
 };
 
 // --- EVENT PLANNER MODAL ---
-const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoading = false }) => {
+const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoading = false, showToast }) => {
   const [activities, setActivities] = useState([{ 
     title: '', 
     start_date: '', 
@@ -2941,13 +2941,13 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
   const handleSubmit = async (e) => {
     e.preventDefault();
     const validActivities = activities.filter(a => a.title.trim() !== '' && a.start_date !== '');
-    if (validActivities.length === 0) { 
-      alert('Veuillez remplir au moins une activité avec un titre et une date de début'); 
-      return; 
+    if (validActivities.length === 0) {
+      showToast('Veuillez remplir au moins une activité avec un titre et une date de début', 'error');
+      return;
     }
     for (const activity of validActivities) {
       if (activity.end_date && activity.end_date < activity.start_date) {
-        alert(`L'activité "${activity.title}" a une date de fin antérieure à la date de début`);
+        showToast(`L'activité "${activity.title}" a une date de fin antérieure à la date de début`, 'error');
         return;
       }
     }
@@ -3131,7 +3131,7 @@ const ImportExcelModal = ({ isOpen, onClose, onImport, isLoading = false, progre
 };
 
 // --- ADD MEDIA MODALE AVEC OPTION "IMAGE À LA UNE" ---
-const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [], preselectedEventId = null }) => {
+const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [], preselectedEventId = null, showToast }) => {
   const [mediaType, setMediaType] = useState('photo');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -3205,17 +3205,17 @@ const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [],
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (mediaType === 'video' && !videoUrl.trim()) { 
-      alert('Veuillez saisir l\'URL de la vidéo (YouTube, Vimeo, etc.)'); 
-      return; 
+    if (mediaType === 'video' && !videoUrl.trim()) {
+      showToast('Veuillez saisir l\'URL de la vidéo (YouTube, Vimeo, etc.)', 'error');
+      return;
     }
-    if (mediaType === 'photo' && files.length === 0) { 
-      alert('Veuillez sélectionner au moins une photo'); 
-      return; 
+    if (mediaType === 'photo' && files.length === 0) {
+      showToast('Veuillez sélectionner au moins une photo', 'error');
+      return;
     }
-    if (!title.trim()) { 
-      alert('Veuillez saisir un titre'); 
-      return; 
+    if (!title.trim()) {
+      showToast('Veuillez saisir un titre', 'error');
+      return;
     }
     
     const formData = new FormData();
@@ -4851,7 +4851,7 @@ export default function Programmes() {
         </div>
       )}
       
-      <EventPlannerModal isOpen={isEventModalOpen} onClose={closeEventModal} onSave={handleSaveEventModal} editingEvent={editingEvent} isLoading={isLoading} />
+      <EventPlannerModal isOpen={isEventModalOpen} onClose={closeEventModal} onSave={handleSaveEventModal} editingEvent={editingEvent} isLoading={isLoading} showToast={showToast} />
       <ImportExcelModal isOpen={isImportModalOpen} onClose={closeImportModal} onImport={handleImportEvents} isLoading={isLoading} progress={importProgress} />
 
       {/* Modale QR Code */}
@@ -4896,7 +4896,7 @@ export default function Programmes() {
           </div>
         </div>
       )}
-      <AddMediaModal isOpen={isAddMediaModalOpen} onClose={closeAddMediaModal} onAdd={handleAddMedia} isLoading={isLoading} events={allEvents} preselectedEventId={preselectedEventId} />
+      <AddMediaModal isOpen={isAddMediaModalOpen} onClose={closeAddMediaModal} onAdd={handleAddMedia} isLoading={isLoading} events={allEvents} preselectedEventId={preselectedEventId} showToast={showToast} />
 
       {/* ── MODAL PHOTO EN DIRECT ── */}
       {isLivePhotoModalOpen && livePhotoEvent && (() => {

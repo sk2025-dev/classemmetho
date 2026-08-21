@@ -254,7 +254,6 @@ class TresorerieController extends Controller
 
         $cotisationsCreees = Cotisation::query()
             ->where('classe_id', $classeId)
-            ->where('created_by', $user->id)
             ->orderByDesc('created_at')
             ->get()
             ->map(function (Cotisation $cotisation) {
