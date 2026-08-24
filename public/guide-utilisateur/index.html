@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guide Jubilé — Sommaire</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root {
+    --ink: #1c1330; --ink-soft: #4b4162; --paper: #faf8fc; --surface: #ffffff;
+    --surface-2: #f4f1fa; --line: #e6e1f0; --accent: #5a3fd6; --accent-strong: #4630ad;
+    --accent-ink: #ffffff; --gold: #93711a; --gold-soft: #f6ecc9; --mono-bg: #f1eef8;
+    --chip: #ece7f8; --shadow: 0 1px 2px rgba(28,19,48,.06), 0 8px 24px -12px rgba(28,19,48,.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #f1edf9; --ink-soft: #c3b9dc; --paper: #150f21; --surface: #1d1730;
+      --surface-2: #241d38; --line: #33294f; --accent: #a793f7; --accent-strong: #c3b3fb;
+      --accent-ink: #150f21; --gold: #e2c463; --gold-soft: #362c14; --mono-bg: #241d38;
+      --chip: #2a2242; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #f1edf9; --ink-soft: #c3b9dc; --paper: #150f21; --surface: #1d1730;
+    --surface-2: #241d38; --line: #33294f; --accent: #a793f7; --accent-strong: #c3b3fb;
+    --accent-ink: #150f21; --gold: #e2c463; --gold-soft: #362c14; --mono-bg: #241d38;
+    --chip: #2a2242; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: "Public Sans", ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.6; }
+  a { color: inherit; text-decoration: none; }
+  h1, h2 { font-family: "Fraunces", Georgia, serif; text-wrap: balance; margin: 0; }
+
+  .topbar { display: flex; align-items: center; gap: 14px; padding: 18px 24px; border-bottom: 1px solid var(--line); }
+  .mark { width: 34px; height: 34px; border-radius: 9px; flex: none; background: linear-gradient(155deg, var(--accent), var(--gold)); display: flex; align-items: center; justify-content: center; color: var(--accent-ink); font-family: "Fraunces", serif; font-weight: 700; font-size: 17px; }
+  .brand b { font-family: "Fraunces", serif; font-weight: 700; font-size: 17px; display: block; }
+  .brand span { font-size: 12.5px; color: var(--ink-soft); }
+
+  main { max-width: 880px; margin: 0 auto; padding: 64px 24px 100px; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); background: var(--gold-soft); padding: 5px 11px; border-radius: 999px; margin-bottom: 18px; }
+  h1 { font-size: clamp(30px, 4vw, 42px); font-weight: 700; margin-bottom: 14px; }
+  p.lead { font-size: 17.5px; color: var(--ink-soft); max-width: 62ch; margin: 0 0 40px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .card {
+    display: flex; flex-direction: column; gap: 8px;
+    border: 1px solid var(--line); background: var(--surface); border-radius: 14px;
+    padding: 22px; box-shadow: var(--shadow); transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(28,19,48,.08), 0 14px 32px -14px rgba(28,19,48,.28); }
+  .card .role-icon {
+    width: 40px; height: 40px; border-radius: 10px; background: var(--chip); color: var(--accent-strong);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .card h2 { font-size: 19px; font-weight: 700; }
+  .card p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+  .card .scope { font-size: 12px; font-weight: 600; color: var(--accent-strong); text-transform: uppercase; letter-spacing: .04em; margin-top: auto; padding-top: 10px; }
+
+  footer { max-width: 880px; margin: 0 auto; padding: 0 24px 60px; color: var(--ink-soft); font-size: 13px; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="mark">J</div>
+    <div class="brand"><b>Jubilé</b><span>Guide d'utilisation</span></div>
+  </div>
+  <main>
+    <span class="eyebrow">5 rôles documentés</span>
+    <h1>Guide d'utilisation de la plateforme Jubilé</h1>
+    <p class="lead">Un guide illustré par rôle, construit à partir de captures d'écran réelles de l'application. Choisissez le rôle que vous souhaitez découvrir.</p>
+    <div class="grid">
+      <a class="card" href="admin.html">
+        <div class="role-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+        <h2>Administrateur</h2>
+        <p>Gestion des comptes, données de référence du système et vue paroissiale complète.</p>
+        <span class="scope">11 classes</span>
+      </a>
+      <a class="card" href="membre-famille.html">
+        <div class="role-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <h2>Membre de famille</h2>
+        <p>Le rôle le plus répandu : suivi de ses présences, cotisations et démarches.</p>
+        <span class="scope">Mon foyer</span>
+      </a>
+      <a class="card" href="responsable-famille.html">
+        <div class="role-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <h2>Responsable de famille</h2>
+        <p>Pilote tout le foyer : inscriptions, présences et trésorerie de chaque membre.</p>
+        <span class="scope">Mon foyer</span>
+      </a>
+      <a class="card" href="conducteur.html">
+        <div class="role-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg></div>
+        <h2>Conducteur</h2>
+        <p>Administre une classe entière : tribus, présences, trésorerie et démarches.</p>
+        <span class="scope">1 classe</span>
+      </a>
+      <a class="card" href="pasteur.html">
+        <div class="role-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+        <h2>Pasteur</h2>
+        <p>Gouvernance pastorale sur les 11 classes : validation des actes, trésorerie et présences consolidées.</p>
+        <span class="scope">11 classes</span>
+      </a>
+    </div>
+  </main>
+  <footer>Guide réalisé à partir de captures réelles de la plateforme Jubilé, sur des comptes de démonstration créés pour l'occasion.</footer>
+</body>
+</html>
