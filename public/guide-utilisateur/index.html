@@ -57,6 +57,20 @@
   .card .scope { font-size: 12px; font-weight: 600; color: var(--accent-strong); text-transform: uppercase; letter-spacing: .04em; margin-top: auto; padding-top: 10px; }
 
   footer { max-width: 880px; margin: 0 auto; padding: 0 24px 60px; color: var(--ink-soft); font-size: 13px; }
+
+  .section-head { display: flex; align-items: baseline; gap: 12px; margin: 48px 0 16px; }
+  .section-head h2 { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); font-family: "Public Sans", sans-serif; }
+  .section-head .rule { flex: 1; height: 1px; background: var(--line); }
+
+  .doc-card {
+    display: flex; align-items: center; gap: 16px;
+    border: 1px solid var(--line); background: var(--surface); border-radius: 14px;
+    padding: 20px 22px; box-shadow: var(--shadow); transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .doc-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(28,19,48,.08), 0 14px 32px -14px rgba(28,19,48,.28); }
+  .doc-card .role-icon { background: var(--gold-soft); color: var(--gold); width: 44px; height: 44px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex: none; }
+  .doc-card h2 { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
+  .doc-card p { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
 </style>
 </head>
 <body>
@@ -100,6 +114,15 @@
         <span class="scope">11 classes</span>
       </a>
     </div>
+
+    <div class="section-head"><h2>Document officiel</h2><div class="rule"></div></div>
+    <a class="doc-card" href="guide-officiel-pdf.html">
+      <div class="role-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+      <div>
+        <h2>Guide Utilisateur — version PDF officielle</h2>
+        <p>150 pages, rédigées par N'Goran Ahou Ange Desiree (v1.0, avril 2026) — reproduites ici telles quelles, sans modification.</p>
+      </div>
+    </a>
   </main>
   <footer>Guide réalisé à partir de captures réelles de la plateforme Jubilé, sur des comptes de démonstration créés pour l'occasion.</footer>
 </body>
