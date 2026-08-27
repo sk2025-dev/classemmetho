@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Link, usePage, router } from "@inertiajs/react";
 import MiniCalendar from "@/Components/MiniCalendar";
+import Select2Single from "@/Components/Select2Single";
 import { withBasePath } from "../../../Utils/urlHelper";
 
 function Pagination({ paginator }) {
@@ -132,6 +133,7 @@ export default function Index({
     actes = [],
     historique = [],
     familyMembers = [],
+    allMembers = [],
     annonces: rawAnnonces = [],
     annoncesHistorique: rawAnnoncesHistorique = [],
     calendarEvents = [],
@@ -234,6 +236,8 @@ export default function Index({
     const [activeAnnonce, setActiveAnnonce] = useState(null);
     const [annModal, setAnnModal] = useState(null);
     const [annCommentaire, setAnnCommentaire] = useState("");
+    const [rescheduleForm, setRescheduleForm] = useState({ date_annonce: "", heure_culte: "", motif: "" });
+    const [reschedulingProcessing, setReschedulingProcessing] = useState(false);
     const [selectedAnnIds, setSelectedAnnIds] = useState([]);
     const [annHistPage, setAnnHistPage] = useState(1);
     const annHistPerPage = 6;
@@ -1767,6 +1771,14 @@ export default function Index({
         setActiveAnnonce(ann);
         setAnnCommentaire("");
         setAnnModal(name);
+        if (name === "reschedule" && ann) {
+            const rawDate = ann.date_souhaitee || ann.date_annonce || "";
+            setRescheduleForm({
+                date_annonce: rawDate ? String(rawDate).slice(0, 10) : "",
+                heure_culte: ann.details?.heure_culte || "",
+                motif: "",
+            });
+        }
         if (name === "create") {
             setAnnonceForm({
                 type_annonce: "",
@@ -1901,6 +1913,55 @@ export default function Index({
             );
         } finally {
             setProcessing(false);
+        }
+    };
+
+    const submitReschedule = async () => {
+        if (!activeAnnonce) return;
+        if (!rescheduleForm.date_annonce) {
+            notify("Veuillez choisir une date.");
+            return;
+        }
+        if (!rescheduleForm.motif.trim()) {
+            notify("Veuillez motiver ce changement de date/heure.");
+            return;
+        }
+        try {
+            setReschedulingProcessing(true);
+            const { data } = await axios.post(
+                withBasePath(
+                    "",
+                    `/pasteur/annonces/${activeAnnonce.id}/reprogrammer`,
+                ),
+                rescheduleForm,
+            );
+            const updated = data?.annonce;
+            setAnnonces((prev) =>
+                prev.map((a) =>
+                    a.id === activeAnnonce.id
+                        ? {
+                              ...a,
+                              date_souhaitee:
+                                  updated?.date_souhaitee ||
+                                  rescheduleForm.date_annonce,
+                              details: {
+                                  ...a.details,
+                                  heure_culte: rescheduleForm.heure_culte,
+                              },
+                          }
+                        : a,
+                ),
+            );
+            closeAnnModal();
+            notify(
+                "✅ Date/heure modifiées et la chaîne (chef de famille, conducteur, bureau des conducteurs) a été notifiée.",
+            );
+        } catch (error) {
+            notify(
+                error?.response?.data?.message || "Une erreur est survenue.",
+            );
+        } finally {
+            setReschedulingProcessing(false);
         }
     };
 
@@ -2730,8 +2791,16 @@ export default function Index({
                                                             <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                                                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                                                             </svg>
-                                                            {formatDate(item.date_souhaitee || item.created_at)}
+                                                            {formatDateWithDay(item.date_souhaitee || item.created_at)}
                                                         </span>
+                                                        {!isActe && item.details?.heure_culte && (
+                                                            <span>
+                                                                <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                                    <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" />
+                                                                </svg>
+                                                                {item.details.heure_culte}
+                                                            </span>
+                                                        )}
                                                         <span>{item.reference || '—'}</span>
                                                     </div>
                                                     {!isActe && (item.details?.contenu || item.message) && (
@@ -2774,6 +2843,12 @@ export default function Index({
                                                     <button className="btn-pdf" onClick={(e) => { e.stopPropagation(); window.open(withBasePath("", `/pasteur/liturgie/${item.id}/fiche-priere`), '_blank'); }}>
                                                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                                         Télécharger fiche
+                                                    </button>
+                                                )}
+                                                {!isActe && (
+                                                    <button className="btn-pdf" onClick={(e) => { e.stopPropagation(); openAnnModal('reschedule', item); }}>
+                                                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                                                        Modifier date/heure
                                                     </button>
                                                 )}
                                                 <button className="btn-refuse-sm" onClick={() => isActe ? openModal('refuse', item) : openAnnModal('refuse', item)}>
@@ -3774,7 +3849,7 @@ export default function Index({
                                                 })()}
                                                 <DetailRow
                                                     label="Date souhaitée"
-                                                    value={formatDate(
+                                                    value={formatDateWithDay(
                                                         activeActe.date_souhaitee ||
                                                         activeActe.details?.date_souhaitee ||
                                                         activeActe.details?.date_presentation ||
@@ -3783,6 +3858,12 @@ export default function Index({
                                                         activeActe.date_annonce,
                                                     )}
                                                 />
+                                                {activeActe.details?.heure_culte && (
+                                                    <DetailRow
+                                                        label="Heure du culte"
+                                                        value={activeActe.details.heure_culte}
+                                                    />
+                                                )}
                                                 <div className="modal-sep">
                                                     Détails soumis
                                                 </div>
@@ -5142,6 +5223,51 @@ export default function Index({
                                     }
                                 />
                             )}
+                            {(() => {
+                                const conducteurNote = (activeAnnonce.historiques || [])
+                                    .filter((h) => h.statut_nouveau === "TRANSMISE_AU_BUREAU_CONDUCTEUR")
+                                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
+                                    ?.commentaire;
+                                return conducteurNote ? (
+                                    <DetailRow
+                                        label="Note du conducteur"
+                                        value={<span style={{ fontStyle: "italic" }}>{conducteurNote}</span>}
+                                    />
+                                ) : null;
+                            })()}
+                            <DetailRow
+                                label="Validé par (Bureau des conducteurs)"
+                                value={
+                                    activeAnnonce.bureauConducteur
+                                        ? `${activeAnnonce.bureauConducteur.prenom} ${activeAnnonce.bureauConducteur.nom}`
+                                        : "—"
+                                }
+                            />
+                            {activeAnnonce.bureauConducteur?.telephone && (
+                                <DetailRow
+                                    label="Tél. Bureau des conducteurs"
+                                    value={
+                                        <a
+                                            href={`tel:${activeAnnonce.bureauConducteur.telephone}`}
+                                            style={{ color: "#2563eb", fontWeight: 600, textDecoration: "none" }}
+                                        >
+                                            📞 {activeAnnonce.bureauConducteur.telephone}
+                                        </a>
+                                    }
+                                />
+                            )}
+                            {(() => {
+                                const bureauNote = (activeAnnonce.historiques || [])
+                                    .filter((h) => h.statut_nouveau === "TRANSMISE_AU_PASTEUR")
+                                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
+                                    ?.commentaire;
+                                return bureauNote ? (
+                                    <DetailRow
+                                        label="Note du Bureau des conducteurs"
+                                        value={<span style={{ fontStyle: "italic" }}>{bureauNote}</span>}
+                                    />
+                                ) : null;
+                            })()}
                             {activeAnnonce.date_annonce && (
                                 <DetailRow
                                     label="Date événement"
@@ -5414,8 +5540,8 @@ export default function Index({
                                         </Field>
                                     )}
                                     <Field label="Membre concerné" required>
-                                        <select
-                                            className="ann-input"
+                                        <Select2Single
+                                            name="membre_id"
                                             value={annonceForm.membre_id}
                                             onChange={(e) =>
                                                 setAnnonceForm((f) => ({
@@ -5423,16 +5549,13 @@ export default function Index({
                                                     membre_id: e.target.value,
                                                 }))
                                             }
-                                        >
-                                            <option value="">
-                                                -- Sélectionnez un membre --
-                                            </option>
-                                            {familyMembers.map((m) => (
-                                                <option key={m.id} value={m.id}>
-                                                    {m.prenom} {m.nom}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            options={allMembers.map((m) => ({
+                                                value: m.id,
+                                                label: `${m.prenom} ${m.nom}`,
+                                            }))}
+                                            placeholder="Rechercher un membre..."
+                                            noOptionsMessage="Aucun membre trouvé"
+                                        />
                                     </Field>
                                     <Field
                                         label="Message de l'annonce"
@@ -5865,6 +5988,117 @@ export default function Index({
                 </div>
             )}
 
+            {annModal === "reschedule" && activeAnnonce && (
+                <div className="modal-overlay open" onClick={closeAnnModal}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-head">
+                            <div className="modal-head-left">
+                                <div className="modal-head-icon gold">
+                                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                                    </svg>
+                                </div>
+                                <div className="modal-title">
+                                    Modifier la date / l'heure
+                                </div>
+                            </div>
+                            <button className="modal-close" onClick={closeAnnModal}>
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="modal-acte-recap">
+                                <span className="modal-acte-emoji" style={{ fontSize: 26 }}>🗓️</span>
+                                <div>
+                                    <div className="modal-acte-name">
+                                        {activeAnnonce.membre
+                                            ? `${activeAnnonce.membre.prenom} ${activeAnnonce.membre.nom}`
+                                            : "—"}
+                                    </div>
+                                    <div className="modal-acte-ref">{activeAnnonce.reference}</div>
+                                </div>
+                            </div>
+                            <p className="modal-help">
+                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Le chef de famille, le conducteur et le Bureau
+                                des conducteurs seront notifiés du changement.
+                            </p>
+                            <div className="modal-field">
+                                <label className="modal-label">Date du culte</label>
+                                <input
+                                    type="date"
+                                    className="modal-textarea"
+                                    style={{ minHeight: "auto" }}
+                                    value={rescheduleForm.date_annonce}
+                                    onChange={(e) =>
+                                        setRescheduleForm((f) => ({
+                                            ...f,
+                                            date_annonce: e.target.value,
+                                        }))
+                                    }
+                                />
+                            </div>
+                            <div className="modal-field">
+                                <label className="modal-label">
+                                    Heure du culte{" "}
+                                    <span className="modal-optional">(optionnelle)</span>
+                                </label>
+                                <input
+                                    type="time"
+                                    className="modal-textarea"
+                                    style={{ minHeight: "auto" }}
+                                    value={rescheduleForm.heure_culte}
+                                    onChange={(e) =>
+                                        setRescheduleForm((f) => ({
+                                            ...f,
+                                            heure_culte: e.target.value,
+                                        }))
+                                    }
+                                />
+                            </div>
+                            <div className="modal-field">
+                                <label className="modal-label">
+                                    Motif du changement{" "}
+                                    <span className="modal-required">*</span>
+                                </label>
+                                <textarea
+                                    className="modal-textarea"
+                                    value={rescheduleForm.motif}
+                                    onChange={(e) =>
+                                        setRescheduleForm((f) => ({
+                                            ...f,
+                                            motif: e.target.value,
+                                        }))
+                                    }
+                                    placeholder="Expliquez la raison de ce changement de date/heure…"
+                                />
+                            </div>
+                        </div>
+                        <div className="modal-foot">
+                            <button className="btn-modal btn-ghost" onClick={closeAnnModal}>
+                                Annuler
+                            </button>
+                            <button
+                                className="btn-modal btn-gold"
+                                disabled={
+                                    reschedulingProcessing ||
+                                    !rescheduleForm.motif.trim()
+                                }
+                                onClick={submitReschedule}
+                            >
+                                {reschedulingProcessing
+                                    ? "Enregistrement..."
+                                    : "Enregistrer et notifier"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {annModal === "publish_choice" && activeAnnonce && (
                 <div className="modal-overlay open" onClick={closeAnnModal}>
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -6169,6 +6403,14 @@ function formatDate(value) {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return value;
     return d.toLocaleDateString("fr-FR");
+}
+
+function formatDateWithDay(value) {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    const jour = d.toLocaleDateString("fr-FR", { weekday: "long" });
+    return `${jour.charAt(0).toUpperCase()}${jour.slice(1)} ${d.toLocaleDateString("fr-FR")}`;
 }
 
 function formatDateTime(value) {

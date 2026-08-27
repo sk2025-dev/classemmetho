@@ -13,6 +13,7 @@ class Paiement extends Model
     public const MODE_MOBILE_MONEY = 'MOBILE_MONEY';
     public const MODE_ESPECES = 'ESPECES';
     public const MODE_VIREMENT = 'VIREMENT';
+    public const MODE_CHEQUE = 'CHEQUE';
 
     /* ── Statuts (anciens, gardés pour compatibilité) ── */
     public const STATUT_PAYE = 'PAYE';

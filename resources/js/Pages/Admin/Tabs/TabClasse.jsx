@@ -1635,6 +1635,7 @@ const ClasseDetailsModal = ({
     classe,
     familles = [],
     membres = [],
+    roleFilter = null,
     onViewMember,
     onEditMember,
     onToggleMember,
@@ -1649,7 +1650,9 @@ const ClasseDetailsModal = ({
 
     const membresDeLaClasse = membres.filter(
         (membre) =>
-            membre.classe_id === classe.id || membre.classe_nom === classe.nom,
+            (membre.classe_id === classe.id ||
+                membre.classe_nom === classe.nom) &&
+            (!roleFilter || membre.role === roleFilter),
     );
     const membresEnrichis = membresDeLaClasse.map((membre) => {
         const familleMembre = familles.find(
@@ -1718,7 +1721,10 @@ const ClasseDetailsModal = ({
                                 </svg>
                             </span>
                         )}
-                        Membres de la classe : {classe.nom}
+                        {roleFilter === "conducteur"
+                            ? "Conducteurs de la classe"
+                            : "Membres de la classe"}{" "}
+                        : {classe.nom}
                     </h2>
                     <div className="flex items-center gap-4">
                         <div className="text-sm font-medium text-gray-600">
@@ -2259,9 +2265,14 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
         description: classeData?.description || "",
         logo: null,
         remove_logo: 0,
+        cachet: null,
+        remove_cachet: 0,
+        theme_texte: classeData?.theme_texte || "",
         has_tribus: classeData?.has_tribus ? 1 : 0,
+        carte_virtuelle_active: classeData?.carte_virtuelle_active ? 1 : 0,
     });
     const [logoPreview, setLogoPreview] = useState(classeData?.logo_url || null);
+    const [cachetPreview, setCachetPreview] = useState(classeData?.cachet_url || null);
 
     useEffect(() => {
         if (isOpen) {
@@ -2270,9 +2281,14 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
                 description: classeData?.description || "",
                 logo: null,
                 remove_logo: 0,
+                cachet: null,
+                remove_cachet: 0,
+                theme_texte: classeData?.theme_texte || "",
                 has_tribus: classeData?.has_tribus ? 1 : 0,
+                carte_virtuelle_active: classeData?.carte_virtuelle_active ? 1 : 0,
             });
             setLogoPreview(classeData?.logo_url || null);
+            setCachetPreview(classeData?.cachet_url || null);
             clearErrors();
         }
     }, [isOpen, classeData, setData]);
@@ -2288,6 +2304,19 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
     const handleRemoveLogo = () => {
         setLogoPreview(null);
         setData((prev) => ({ ...prev, logo: null, remove_logo: 1 }));
+    };
+
+    const handleCachetChange = (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+            setCachetPreview(URL.createObjectURL(file));
+            setData((prev) => ({ ...prev, cachet: file, remove_cachet: 0 }));
+        }
+    };
+
+    const handleRemoveCachet = () => {
+        setCachetPreview(null);
+        setData((prev) => ({ ...prev, cachet: null, remove_cachet: 1 }));
     };
 
     const handleSubmit = (e) => {
@@ -2456,6 +2485,71 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
                             )}
                         </div>
                         <div className="form-group">
+                            <label className="form-label">
+                                Cachet de la classe (tampon)
+                            </label>
+                            <div className="p-3 bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg border border-emerald-200">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full bg-white overflow-hidden border-2 border-emerald-400 shadow-md shrink-0">
+                                        {cachetPreview ? (
+                                            <img
+                                                src={cachetPreview}
+                                                alt="Cachet de la classe"
+                                                className="w-full h-full object-contain"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200" />
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleCachetChange}
+                                            className="file:py-1 file:px-2 file:rounded file:bg-emerald-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-emerald-700 file:transition-colors file:text-xs text-xs"
+                                        />
+                                        {cachetPreview && (
+                                            <button
+                                                type="button"
+                                                onClick={handleRemoveCachet}
+                                                className="text-xs font-semibold text-red-600 hover:text-red-700 text-left"
+                                            >
+                                                Retirer le cachet
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            {errors.cachet && (
+                                <p className="text-red-600 text-xs mt-1">
+                                    {errors.cachet}
+                                </p>
+                            )}
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">
+                                Thème de la carte virtuelle (verset)
+                            </label>
+                            <textarea
+                                rows="2"
+                                value={data.theme_texte}
+                                onChange={(e) =>
+                                    setData("theme_texte", e.target.value)
+                                }
+                                className="input-control resize-none"
+                                placeholder="Ex : « Qui enverrai-je, et qui marchera pour nous ? Me voici, envoie-moi » – Ésaïe 6:8"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Laisser vide pour utiliser le thème par défaut
+                                du site.
+                            </p>
+                            {errors.theme_texte && (
+                                <p className="text-red-600 text-xs mt-1">
+                                    {errors.theme_texte}
+                                </p>
+                            )}
+                        </div>
+                        <div className="form-group">
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input
                                     type="checkbox"
@@ -2470,6 +2564,24 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
                                 />
                                 <span className="text-sm text-gray-700">
                                     Classe organisée en tribus
+                                </span>
+                            </label>
+                        </div>
+                        <div className="form-group">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={!!data.carte_virtuelle_active}
+                                    onChange={(e) =>
+                                        setData(
+                                            "carte_virtuelle_active",
+                                            e.target.checked ? 1 : 0,
+                                        )
+                                    }
+                                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <span className="text-sm text-gray-700">
+                                    Carte virtuelle de membre activée
                                 </span>
                             </label>
                         </div>
@@ -2551,6 +2663,8 @@ const TabClasses = ({
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingClasse, setEditingClasse] = useState(null);
     const [selectedClasse, setSelectedClasse] = useState(null);
+    const [classeDetailsRoleFilter, setClasseDetailsRoleFilter] =
+        useState(null);
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
     const [selectedClasseForDelete, setSelectedClasseForDelete] =
         useState(null);
@@ -3030,19 +3144,42 @@ const TabClasses = ({
                                                         />
                                                     )}
                                                     <button
-                                                        onClick={() =>
-                                                            setSelectedClasse(row)
-                                                        }
+                                                        onClick={() => {
+                                                            setSelectedClasse(
+                                                                row,
+                                                            );
+                                                            setClasseDetailsRoleFilter(
+                                                                null,
+                                                            );
+                                                        }}
                                                         className="text-blue-600 hover:text-blue-900 hover:underline"
                                                     >
                                                         {row.nom}
                                                     </button>
+                                                    {row.has_tribus && (
+                                                        <span
+                                                            className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full text-xs font-bold shrink-0"
+                                                            title="Classe organisée en tribus"
+                                                        >
+                                                            Tribus
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-center">
-                                                <span className="status-badge status-active">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedClasse(row);
+                                                        setClasseDetailsRoleFilter(
+                                                            "conducteur",
+                                                        );
+                                                    }}
+                                                    className="status-badge status-active hover:brightness-95 cursor-pointer"
+                                                    title="Voir les conducteurs de cette classe"
+                                                >
                                                     {row.conducteurs_count}
-                                                </span>
+                                                </button>
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-center">
                                                 <span
@@ -3147,11 +3284,14 @@ const TabClasses = ({
                                                         onDelete={() =>
                                                             openDeleteAlert(row)
                                                         }
-                                                        onView={() =>
+                                                        onView={() => {
                                                             setSelectedClasse(
                                                                 row,
-                                                            )
-                                                        }
+                                                            );
+                                                            setClasseDetailsRoleFilter(
+                                                                null,
+                                                            );
+                                                        }}
                                                         onToggle={() => {
                                                             setSelectedClasseForToggle(
                                                                 row,
@@ -3209,10 +3349,14 @@ const TabClasses = ({
 
                 <ClasseDetailsModal
                     isOpen={!!selectedClasse}
-                    onClose={() => setSelectedClasse(null)}
+                    onClose={() => {
+                        setSelectedClasse(null);
+                        setClasseDetailsRoleFilter(null);
+                    }}
                     classe={selectedClasse}
                     familles={famillesData}
                     membres={membresData}
+                    roleFilter={classeDetailsRoleFilter}
                     onViewMember={setViewingMember}
                     onEditMember={setEditingMember}
                     onToggleMember={openMemberToggleAlert}

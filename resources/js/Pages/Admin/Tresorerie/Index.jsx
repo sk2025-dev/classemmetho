@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
+import FimecoImportPanel from "../../../Components/Fimeco/FimecoImportPanel";
 import {
     BarChart3,
     TrendingUp,
@@ -22,6 +23,7 @@ export default function AdminTresorerie({
     cotisations: cotisationsProp,
     paiementsRecents: paiementsRecentsProp,
     dons: donsProp,
+    isFimecoResponsable = true,
 }) {
     const [activeTab, setActiveTab] = useState("dashboard");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -463,6 +465,7 @@ export default function AdminTresorerie({
 
                         {activeTab === "fimeco" && (
                             <div className="space-y-6">
+                                {isFimecoResponsable && <FimecoImportPanel />}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
                                         <p className="text-sm text-blue-900 font-semibold">

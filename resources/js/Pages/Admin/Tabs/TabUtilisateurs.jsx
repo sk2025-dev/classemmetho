@@ -2061,6 +2061,7 @@ const TabUtilisateurs = ({
     const [showToggleAlert, setShowToggleAlert] = useState(false);
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
     const [showPresidentAlert, setShowPresidentAlert] = useState(false);
+    const [showSecretariatAlert, setShowSecretariatAlert] = useState(false);
     const [selectedMember, setSelectedMember] = useState(null);
     const [toasts, setToasts] = useState([]);
     const toast = useToast({ toasts, setToasts });
@@ -2290,6 +2291,42 @@ const TabUtilisateurs = ({
         }
 
         setShowPresidentAlert(false);
+        setSelectedMember(null);
+    };
+
+    const isSecretariat = (member) => member?.role === "secretariat";
+
+    const openSecretariatAlert = (member) => {
+        setSelectedMember(member);
+        setShowSecretariatAlert(true);
+    };
+
+    const handleSecretariatConfirm = () => {
+        if (!selectedMember) return;
+        const member = selectedMember;
+        const isSecr = isSecretariat(member);
+        const url = withBasePath("", `/admin/membres/${member.id}/secretariat`);
+
+        const options = {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(
+                    isSecr
+                        ? `${member.prenom} ${member.nom} n'est plus au secrétariat.`
+                        : `${member.prenom} ${member.nom} a été désigné au secrétariat.`,
+                );
+                router.reload({ only: ["membres", "dataByType"] });
+            },
+            onError: () => toast.error("Une erreur est survenue, veuillez réessayer."),
+        };
+
+        if (isSecr) {
+            router.delete(url, options);
+        } else {
+            router.post(url, {}, options);
+        }
+
+        setShowSecretariatAlert(false);
         setSelectedMember(null);
     };
 
@@ -3091,6 +3128,35 @@ const TabUtilisateurs = ({
                                                             />
                                                         </button>
                                                     )}
+                                                    {["membre_famille", "responsable_famille", "secretariat"].includes(m.role) && (
+                                                        <button
+                                                            onClick={() =>
+                                                                openSecretariatAlert(m)
+                                                            }
+                                                            className="p-2 rounded-lg transition-all"
+                                                            style={{
+                                                                backgroundColor: isSecretariat(m)
+                                                                    ? "rgba(37, 99, 235, 0.15)"
+                                                                    : "rgba(37, 99, 235, 0.1)",
+                                                                border:
+                                                                    "2px solid rgba(37, 99, 235, 0.2)",
+                                                                filter: "none",
+                                                            }}
+                                                            title={
+                                                                isSecretariat(m)
+                                                                    ? "Retirer du secrétariat"
+                                                                    : "Désigner au secrétariat"
+                                                            }
+                                                        >
+                                                            <Briefcase
+                                                                className={`w-5 h-5 ${
+                                                                    isSecretariat(m)
+                                                                        ? "text-blue-600 fill-blue-500"
+                                                                        : "text-blue-600"
+                                                                }`}
+                                                            />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => openDeleteAlert(m)}
                                                         className="p-2 rounded-lg transition-all"
@@ -3204,6 +3270,31 @@ const TabUtilisateurs = ({
                     }
                     type={
                         isPresidentConducteurs(selectedMember)
+                            ? "warning"
+                            : "success"
+                    }
+                />
+                <AlertModal
+                    isOpen={showSecretariatAlert}
+                    onClose={() => setShowSecretariatAlert(false)}
+                    onConfirm={handleSecretariatConfirm}
+                    title={
+                        isSecretariat(selectedMember)
+                            ? "Retirer du secrétariat"
+                            : "Désigner au secrétariat"
+                    }
+                    message={
+                        isSecretariat(selectedMember)
+                            ? `Retirer "${selectedMember?.prenom} ${selectedMember?.nom}" du secrétariat ?`
+                            : `Désigner "${selectedMember?.prenom} ${selectedMember?.nom}" au secrétariat ? Cette personne recevra une notification à chaque validation pastorale.`
+                    }
+                    confirmText={
+                        isSecretariat(selectedMember)
+                            ? "Retirer"
+                            : "Désigner"
+                    }
+                    type={
+                        isSecretariat(selectedMember)
                             ? "warning"
                             : "success"
                     }

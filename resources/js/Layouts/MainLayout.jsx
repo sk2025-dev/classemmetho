@@ -18,6 +18,7 @@ function AppHeader({ auth, onLogout, basePath }) {
             pasteur: "Pasteur",
             bureau_conducteur: "Bureau des Conducteurs",
             conducteur: "Conducteur",
+            secretariat: "Secrétariat",
             responsable: "Responsable",
             responsable_famille: "Responsable Famille",
             membre_famille: "Membre Famille",

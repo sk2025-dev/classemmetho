@@ -644,6 +644,7 @@ export default function RespoFamilleDashboard(props) {
     };
     const activites = props.activites ?? [];
     const presencesByActivity = props.presences ?? {};
+    const isPresenceMarker = props.isPresenceMarker ?? false;
     const toActivityKey = (id) =>
         id === null || id === undefined ? null : String(id);
 
@@ -976,19 +977,40 @@ export default function RespoFamilleDashboard(props) {
                         </div>
                     </div>
                 </div>
-                <div
-                    style={{
-                        background: "rgba(255,255,255,0.12)",
-                        border: "1px solid rgba(255,255,255,0.25)",
-                        color: "white",
-                        borderRadius: 10,
-                        padding: "8px 12px",
-                        fontSize: 12,
-                        fontWeight: 600,
-                    }}
-                >
-                    Pointage reserve au conducteur
-                </div>
+                {isPresenceMarker ? (
+                    <Link
+                        href={withBasePath("", "/membre-famille/presences/marquage")}
+                        style={{
+                            background: "#c6a800",
+                            border: "1px solid #c6a800",
+                            color: "white",
+                            borderRadius: 10,
+                            padding: "8px 14px",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            textDecoration: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                        }}
+                    >
+                        Marquer les présences
+                    </Link>
+                ) : (
+                    <div
+                        style={{
+                            background: "rgba(255,255,255,0.12)",
+                            border: "1px solid rgba(255,255,255,0.25)",
+                            color: "white",
+                            borderRadius: 10,
+                            padding: "8px 12px",
+                            fontSize: 12,
+                            fontWeight: 600,
+                        }}
+                    >
+                        Pointage reserve au conducteur
+                    </div>
+                )}
             </div>
 
             {/* KPI Cards */}

@@ -10,6 +10,7 @@ import TabUtilisateurs from "./Tabs/TabUtilisateurs";
 import TabFamille from "./Tabs/TabFamille";
 import TabClasses from "./Tabs/TabClasse";
 import TabFonctions from "./Tabs/TabFonctions";
+import TabCarteVirtuelle from "./Tabs/TabCarteVirtuelle";
 import { withBasePath } from "../../Utils/urlHelper";
 
 export default function AdminPage({
@@ -22,6 +23,7 @@ export default function AdminPage({
     availableClasses: initialAvailableClasses = [], // ✅ Classes disponibles
     availableFonctions: initialAvailableFonctions = [], // ✅ Fonctions disponibles
     total_users_count = 0, // ✅ Total global des personnes
+    carteVirtuelleTheme = "",
 }) {
     // Lire le query param 'tab' depuis l'URL pour conserver l'onglet actif après un reload
     const urlParams = new URLSearchParams(window.location.search);
@@ -43,6 +45,7 @@ export default function AdminPage({
         { id: "familles", label: "Familles" },
         { id: "classes", label: "Classes" },
         { id: "fonctions", label: "Fonctions" },
+        { id: "carte", label: "Carte virtuelle" },
     ];
 
     // Toast state
@@ -516,6 +519,13 @@ export default function AdminPage({
                         onAdd={handleAddFonction}
                         onUpdate={handleUpdateFonction}
                         onDelete={handleDeleteFonction}
+                        onSuccess={toast.success}
+                    />
+                )}
+
+                {activeTab === "carte" && (
+                    <TabCarteVirtuelle
+                        theme={carteVirtuelleTheme}
                         onSuccess={toast.success}
                     />
                 )}

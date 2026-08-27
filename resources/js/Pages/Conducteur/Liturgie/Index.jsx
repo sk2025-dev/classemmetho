@@ -495,6 +495,7 @@ export default function Index({
     annonces: rawAnnonces = [],
     calendarEvents = [],
     flashInfoPropres = [],
+    authUserId = null,
 }) {
     // ...existing code...
     // Modal pour fiches PDF mariage
@@ -593,7 +594,6 @@ export default function Index({
     const [annonceComment, setAnnonceComment] = useState("");
     const [annonceProcessing, setAnnonceProcessing] = useState(false);
     const [annSelectedIds, setAnnSelectedIds] = useState(() => new Set());
-    const [myAnnonceCreator, setMyAnnonceCreator] = useState(null); // Track who is creating annonces
     // création d'annonces par le conducteur
     const [annonceForm, setAnnonceForm] = useState({
         type_annonce: "",
@@ -937,13 +937,11 @@ export default function Index({
         });
     }, [localAnnonces, quickFilter, searchNeedle]);
 
-    // Helper pour identifier les annonces créées par le conducteur
+    // Helper pour identifier les annonces créées par le conducteur connecté
     const isMyAnnonce = (ann) => {
-        if (!myAnnonceCreator) return false;
+        if (!authUserId) return false;
         return (
-            ann.createur?.id === myAnnonceCreator.id ||
-            (ann.createur?.prenom === myAnnonceCreator.prenom &&
-                ann.createur?.nom === myAnnonceCreator.nom)
+            ann.createur?.id === authUserId || ann.created_by === authUserId
         );
     };
 
@@ -1007,22 +1005,6 @@ export default function Index({
         setLocalAnnonces(rawAnnonces);
     }, [rawAnnonces]);
 
-    // Detect conductor's own annonces on initial load
-    useEffect(() => {
-        if (!myAnnonceCreator && rawAnnonces.length > 0) {
-            // Look for an annonce created by a conductor (not a responsable)
-            const conductorAnnonce = rawAnnonces.find(
-                (a) =>
-                    a.createur?.role === "conducteur" ||
-                    a.createur?.fonction?.nom
-                        ?.toLowerCase()
-                        .includes("conducteur"),
-            );
-            if (conductorAnnonce?.createur) {
-                setMyAnnonceCreator(conductorAnnonce.createur);
-            }
-        }
-    }, [rawAnnonces]);
 
     useEffect(() => {
         setCreateForm((prev) => ({
@@ -1105,7 +1087,7 @@ export default function Index({
             }
             setCreateForm(defaultCreateForm());
             closeModal();
-            showToast(res.data?.message || "Demande transmise au pasteur.");
+            showToast(res.data?.message || "Demande transmise au Bureau des conducteurs.");
         } catch (e) {
             showToast(
                 e?.response?.data?.message || "Échec de la création de l'acte.",
@@ -1548,10 +1530,6 @@ export default function Index({
                 statut: "SOUMISE",
                 created_at: new Date().toISOString(),
             };
-            // Track the creator of this annonce for filtering later
-            if (!myAnnonceCreator && newA.createur) {
-                setMyAnnonceCreator(newA.createur);
-            }
             setLocalAnnonces((prev) => [newA, ...prev]);
             closeAnnonceModal();
             setAnnoncesSubTab("mine");
@@ -1767,7 +1745,7 @@ export default function Index({
                             </div>
                             <div className="kpi-number">{stats.transmises}</div>
                             <div className="kpi-label">
-                                Transmises au pasteur
+                                Transmises au Bureau des conducteurs
                             </div>
                             <div className="kpi-bar">
                                 <div
@@ -1940,6 +1918,34 @@ export default function Index({
                                     />
                                 </svg>
                                 Mes demandes d'acte
+                            </button>
+                            <button
+                                className={`tab ${tab === "annonces" ? "active" : ""}`}
+                                onClick={() => {
+                                    setTab("annonces");
+                                    setAnnoncesSubTab("mine");
+                                }}
+                            >
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+                                    />
+                                </svg>
+                                Prières & annonces
+                                {annMines.length > 0 && (
+                                    <span className="tab-count">
+                                        {annMines.length}
+                                    </span>
+                                )}
                             </button>
                             {/* ★ ONGLET FLASH INFO ★ */}
                             <button
@@ -2450,7 +2456,8 @@ export default function Index({
                                     </div>
                                     {modal === "create" && (
                                         <div className="modal-sub">
-                                            Demande transmise au pasteur
+                                            Demande transmise au Bureau des
+                                            conducteurs
                                         </div>
                                     )}
                                 </div>
@@ -3113,7 +3120,7 @@ export default function Index({
                                     </svg>
                                     {processing
                                         ? "Transmission..."
-                                        : "Transmettre au pasteur"}
+                                        : "Transmettre au Bureau des conducteurs"}
                                 </button>
                             )}
                             {modal === "refuse" && (
@@ -3610,7 +3617,7 @@ export default function Index({
                                         {annonceModal === "detail"
                                             ? "Détail de l'annonce"
                                             : annonceModal === "approve"
-                                              ? "Transmettre au pasteur"
+                                              ? "Transmettre au Bureau des conducteurs"
                                               : "Refuser l'annonce"}
                                     </div>
                                     <div
@@ -3830,6 +3837,7 @@ export default function Index({
                                     </svg>
                                     <span>
                                         Circuit : <strong>Conducteur</strong> →{" "}
+                                        <strong>Bureau des conducteurs</strong> →{" "}
                                         <strong>Pasteur</strong> →{" "}
                                         <strong>Publication</strong>
                                     </span>
@@ -3873,9 +3881,14 @@ export default function Index({
                                 </div>
                             )}
 
-                            {/* Bouton télécharger fiche pour TRANSMISE_AU_PASTEUR */}
-                            {selectedAnnonce.statut ===
-                                "TRANSMISE_AU_PASTEUR" && (
+                            {/* Bouton télécharger fiche dès transmission au Bureau des conducteurs */}
+                            {[
+                                "TRANSMISE_AU_BUREAU_CONDUCTEUR",
+                                "TRANSMISE_AU_PASTEUR",
+                                "VALIDEE",
+                                "PUBLIEE",
+                                "ARCHIVEE",
+                            ].includes(selectedAnnonce.statut) && (
                                 <div style={{ marginTop: 16 }}>
                                     <button
                                         style={{
@@ -4016,7 +4029,8 @@ export default function Index({
                                                     d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
                                                 />
                                             </svg>
-                                            Transmettre au pasteur
+                                            Transmettre au Bureau des
+                                            conducteurs
                                         </button>
                                         <button
                                             className="btn-modal btn-modal-red"

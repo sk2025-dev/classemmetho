@@ -40,21 +40,28 @@ class TribuController extends Controller
         $isTribuChef = $tribu->chefs->contains('id', $user->id);
 
         // Le chef voit le profil complet de tous les membres de sa tribu (hors
-        // lui-même). Un membre ordinaire ne voit que les membres de sa propre
-        // famille (même logique qu'un responsable de famille consultant ses
-        // membres de famille).
+        // lui-même). Un membre ordinaire voit la liste de toute la tribu mais
+        // uniquement les infos de contact de base (nom, prénom, téléphone, email, photo).
         if ($isTribuChef) {
             $membres = collect(ConducteurTribuController::buildMembresActuelsProfil($tribu))
                 ->reject(fn (array $membre) => $membre['id'] === $user->id)
                 ->values();
         } else {
-            $membresFamille = $user->family_id
-                ? User::query()->where('family_id', $user->family_id)->orderBy('nom')->orderBy('prenom')->get()
-                : collect([$user]);
-            $membres = $membresFamille->map(fn (User $membre) => [
-                'id' => $membre->id,
-                'nom' => trim($membre->prenom . ' ' . $membre->nom),
-            ])->values();
+            $membres = $tribu->membres()
+                ->where('id', '!=', $user->id)
+                ->orderBy('nom')
+                ->orderBy('prenom')
+                ->get(['id', 'nom', 'prenom', 'telephone', 'email', 'photo_path', 'profile_photo_url'])
+                ->map(fn (User $membre) => [
+                    'id' => $membre->id,
+                    'nom' => $membre->nom,
+                    'prenom' => $membre->prenom,
+                    'telephone' => $membre->telephone,
+                    'email' => $membre->email,
+                    'photo_path' => $membre->photo_path,
+                    'profile_photo_url' => $membre->profile_photo_url,
+                ])
+                ->values();
         }
 
         $autresTribus = self::buildAutresTribusOptions($tribu);
@@ -81,7 +88,7 @@ class TribuController extends Controller
                 'membres' => $membres,
             ],
             'isTribuChef' => $isTribuChef,
-            'membresScope' => $isTribuChef ? 'tribu' : 'famille',
+            'membresScope' => 'tribu',
             'autresTribus' => $autresTribus,
             'demandeEnCours' => $demandeEnCours ? [
                 'id' => $demandeEnCours->id,

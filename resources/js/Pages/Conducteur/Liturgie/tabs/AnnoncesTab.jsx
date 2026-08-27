@@ -93,7 +93,7 @@ export default function AnnoncesTab({
                                 {annoncesSubTab === "pending"
                                     ? "Soumises par les responsables de famille"
                                     : annoncesSubTab === "done"
-                                      ? "Transmises au pasteur ou refusées"
+                                      ? "Transmises au Bureau, au pasteur, ou refusées"
                                       : "Les annonces que vous avez créées"}
                             </div>
                         </div>
@@ -234,6 +234,9 @@ export default function AnnoncesTab({
                             );
                             const isPending =
                                 ann.statut === "SOUMISE";
+                            const isBureau =
+                                ann.statut ===
+                                "TRANSMISE_AU_BUREAU_CONDUCTEUR";
                             const isTrans =
                                 ann.statut ===
                                 "TRANSMISE_AU_PASTEUR";
@@ -362,6 +365,12 @@ export default function AnnoncesTab({
                                             <span className="badge badge-soumise">
                                                 <span className="badge-dot" />
                                                 À TRAITER
+                                            </span>
+                                        )}
+                                        {isBureau && (
+                                            <span className="badge badge-transmis">
+                                                <span className="badge-dot" />
+                                                AU BUREAU
                                             </span>
                                         )}
                                         {isTrans && (
@@ -589,6 +598,23 @@ export default function AnnoncesTab({
                                         Vous validez
                                     </strong>
                                     <span>Contenu analysé</span>
+                                </div>
+                            </div>
+                            <div className="circuit-step">
+                                <div
+                                    className="circuit-dot pending"
+                                    style={{ fontSize: 10 }}
+                                >
+                                    🏛
+                                </div>
+                                <div className="circuit-line" />
+                                <div className="circuit-text">
+                                    <strong>
+                                        Président des conducteurs
+                                    </strong>
+                                    <span>
+                                        Bureau des conducteurs
+                                    </span>
                                 </div>
                             </div>
                             <div className="circuit-step">

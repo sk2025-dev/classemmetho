@@ -24,6 +24,7 @@ import {
     X,
     Users,
     Briefcase,
+    CreditCard,
 } from "lucide-react";
 import { resolveMemberPhotoUrl } from "../../Helpers/PhotoHelper";
 import { sanitizeUppercasePrenom } from "../../Helpers/nameSanitizers";
@@ -267,22 +268,31 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
                 )}
 
                 {/* Header */}
-                <div className="flex items-center gap-4 mb-6">
-                    <button
-                        type="button"
-                        onClick={() => window.history.back()}
-                        className="p-2 bg-white/90 backdrop-blur-xl rounded-full border border-white/50 shadow-lg hover:shadow-xl hover:bg-white transition-all"
-                    >
-                        <ArrowLeft className="w-5 h-5 text-gray-700" />
-                    </button>
-                    <div>
-                        <h1 className="text-3xl font-bold text-white drop-shadow-lg">
-                            Modifier Mon Profil
-                        </h1>
-                        <p className="text-white/80 text-sm">
-                            Mettez à jour vos informations personnelles
-                        </p>
+                <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
+                    <div className="flex items-center gap-4">
+                        <button
+                            type="button"
+                            onClick={() => window.history.back()}
+                            className="p-2 bg-white/90 backdrop-blur-xl rounded-full border border-white/50 shadow-lg hover:shadow-xl hover:bg-white transition-all"
+                        >
+                            <ArrowLeft className="w-5 h-5 text-gray-700" />
+                        </button>
+                        <div>
+                            <h1 className="text-3xl font-bold text-white drop-shadow-lg">
+                                Modifier Mon Profil
+                            </h1>
+                            <p className="text-white/80 text-sm">
+                                Mettez à jour vos informations personnelles
+                            </p>
+                        </div>
                     </div>
+                    <a
+                        href={withBasePath("", "/ma-carte-virtuelle")}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/90 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:bg-white transition-all text-sm font-bold text-gray-800"
+                    >
+                        <CreditCard className="w-4 h-4 text-amber-600" />
+                        Voir ma carte virtuelle
+                    </a>
                 </div>
 
                 {/* Form */}

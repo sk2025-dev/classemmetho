@@ -161,7 +161,10 @@ class AdministrationController extends Controller
                 'familles' => $c->familles,
                 'status' => $c->status ?? 'active',
                 'logo_url' => PhotoHelper::getImageUrl($c->logo_path),
+                'cachet_url' => PhotoHelper::getImageUrl($c->cachet_path),
+                'theme_texte' => $c->theme_texte,
                 'has_tribus' => (bool) $c->has_tribus,
+                'carte_virtuelle_active' => (bool) $c->carte_virtuelle_active,
                 'created_at' => $c->created_at ? $c->created_at->toISOString() : null,
                 'updated_at' => $c->updated_at ? $c->updated_at->toISOString() : null,
                 'membres_count' => $usersInClasse->count(),
@@ -478,6 +481,10 @@ class AdministrationController extends Controller
             'availableClasses' => $availableClasses,
             'availableFonctions' => $availableFonctions,
             'total_users_count' => $totalUsersCount,  // ✅ Total global des personnes
+            'carteVirtuelleTheme' => \App\Models\SiteSetting::get(
+                \App\Http\Controllers\Admin\SiteSettingController::CARTE_THEME_KEY,
+                \App\Http\Controllers\Admin\SiteSettingController::CARTE_THEME_DEFAULT,
+            ),
         ]);
     }
 
@@ -664,5 +671,40 @@ class AdministrationController extends Controller
         }
 
         return back()->with('success', 'Président des conducteurs retiré avec succès.');
+    }
+
+    /**
+     * Désigne un membre comme secrétariat : reçoit une notification à chaque
+     * validation pastorale d'une demande de prière, et peut l'archiver ou
+     * l'imprimer.
+     */
+    public function assignSecretariat($id)
+    {
+        $user = User::findOrFail($id);
+
+        if (!in_array($user->role, ['membre_famille', 'responsable_famille'], true)) {
+            return back()->with('error', 'Seul un membre ou responsable de famille peut être désigné secrétariat.');
+        }
+
+        // Retirer le statut de responsable de famille : sinon le middleware
+        // CheckRole continue de donner accès au module Responsable Famille
+        // via ce booléen, indépendamment du rôle.
+        $user->update([
+            'role' => 'secretariat',
+            'is_family_responsible' => false,
+        ]);
+
+        return back()->with('success', 'Secrétariat désigné avec succès.');
+    }
+
+    public function unassignSecretariat($id)
+    {
+        $user = User::findOrFail($id);
+
+        if ($user->role === 'secretariat') {
+            $user->update(['role' => 'membre_famille']);
+        }
+
+        return back()->with('success', 'Secrétariat retiré avec succès.');
     }
 }

@@ -76,6 +76,8 @@ function ActeCard({ acte, onValidate, onRefuse, isProcessing, selected, onToggle
     const [expanded, setExpanded] = useState(false);
     const [motifRefus, setMotifRefus] = useState("");
     const [showRefuseForm, setShowRefuseForm] = useState(false);
+    const [commentaireValidation, setCommentaireValidation] = useState("");
+    const [showValidateForm, setShowValidateForm] = useState(false);
 
     const type = (acte.type_acte || "").toLowerCase();
     const col = typeColor(type);
@@ -83,6 +85,12 @@ function ActeCard({ acte, onValidate, onRefuse, isProcessing, selected, onToggle
     const conducteurName = acte.conducteur
         ? `${acte.conducteur.prenom || ""} ${acte.conducteur.nom || ""}`.trim()
         : "—";
+
+    const handleValidate = () => {
+        onValidate(acte.id, commentaireValidation);
+        setShowValidateForm(false);
+        setCommentaireValidation("");
+    };
 
     const handleRefuse = () => {
         if (!motifRefus.trim()) return;
@@ -198,15 +206,23 @@ function ActeCard({ acte, onValidate, onRefuse, isProcessing, selected, onToggle
 
             {/* Actions */}
             <div className="p-4 flex flex-col gap-3">
-                {!showRefuseForm ? (
+                {!showRefuseForm && !showValidateForm ? (
                     <div className="flex items-center gap-2 flex-wrap">
                         <a
-                            href={withBasePath("", `/president-conducteurs/liturgie/${acte.id}/fiche-conducteur?preview=1`)}
+                            href={withBasePath(
+                                "",
+                                ["grace", "priere"].includes(type)
+                                    ? `/president-conducteurs/liturgie/${acte.id}/fiche-priere?preview=1`
+                                    : `/president-conducteurs/liturgie/${acte.id}/fiche-conducteur?preview=1`,
+                            )}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-gray-300 text-gray-700 bg-white rounded-lg hover:bg-gray-50 transition-colors"
                         >
-                            <FileText size={13} /> Fiche conducteur
+                            <FileText size={13} />{" "}
+                            {["grace", "priere"].includes(type)
+                                ? "Fiche prière"
+                                : "Fiche conducteur"}
                         </a>
 
                         <div className="flex items-center gap-2 ml-auto">
@@ -218,12 +234,42 @@ function ActeCard({ acte, onValidate, onRefuse, isProcessing, selected, onToggle
                                 <XCircle size={14} /> Refuser
                             </button>
                             <button
-                                onClick={() => onValidate(acte.id)}
+                                onClick={() => setShowValidateForm(true)}
                                 disabled={isProcessing}
                                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-purple-700 text-white rounded-lg hover:bg-purple-800 transition-colors disabled:opacity-50 shadow-sm"
                             >
                                 <Send size={14} />
                                 {isProcessing ? "Traitement..." : "Valider → Pasteur"}
+                            </button>
+                        </div>
+                    </div>
+                ) : showValidateForm ? (
+                    <div className="space-y-2">
+                        <label className="block text-xs font-semibold text-purple-700">
+                            Motivation{" "}
+                            <span className="text-gray-400 font-normal">(optionnel)</span>
+                        </label>
+                        <textarea
+                            value={commentaireValidation}
+                            onChange={(e) => setCommentaireValidation(e.target.value)}
+                            rows={3}
+                            placeholder="Ajouter une note pour le pasteur (facultatif)..."
+                            className="w-full text-sm border border-purple-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
+                        />
+                        <div className="flex items-center gap-2 justify-end">
+                            <button
+                                onClick={() => { setShowValidateForm(false); setCommentaireValidation(""); }}
+                                className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={handleValidate}
+                                disabled={isProcessing}
+                                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-purple-700 text-white rounded-lg hover:bg-purple-800 transition-colors disabled:opacity-50"
+                            >
+                                <Send size={13} />
+                                {isProcessing ? "Traitement..." : "Confirmer → Pasteur"}
                             </button>
                         </div>
                     </div>
@@ -416,12 +462,12 @@ export default function TabValidationActes({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [historiqueSearch]);
 
-    const handleValidate = async (id) => {
+    const handleValidate = async (id, commentaire = "") => {
         try {
             setProcessing(true);
             await axios.post(
                 withBasePath("", `/president-conducteurs/liturgie/${id}/transition`),
-                { statut: "TRANSMISE_AU_PASTEUR", commentaire: "" }
+                { statut: "TRANSMISE_AU_PASTEUR", commentaire }
             );
             setLocalActes((prev) => prev.filter((a) => a.id !== id));
             showToast("✅ Acte validé et transmis au Pasteur.");

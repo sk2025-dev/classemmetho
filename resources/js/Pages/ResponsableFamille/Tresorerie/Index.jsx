@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import {
     CreditCard,
     DollarSign,
@@ -15,8 +15,11 @@ import {
     AlertTriangle,
     X,
     ChevronDown,
+    Award,
+    Pencil,
 } from "lucide-react";
 import { PaymentModal } from "../../../Components/PaymentModal";
+import FimecoImportPanel from "../../../Components/Fimeco/FimecoImportPanel";
 import { withBasePath } from "../../../Utils/urlHelper";
 
 
@@ -1245,7 +1248,7 @@ function TabPaiement({
                     <div
                         style={{
                             display: "grid",
-                            gridTemplateColumns: "1fr 1fr 1fr",
+                            gridTemplateColumns: "1fr 1fr 1fr 1fr",
                             gap: 8,
                         }}
                     >
@@ -1425,6 +1428,61 @@ function TabPaiement({
                                             height="4"
                                             rx="1"
                                             fill="#b5d4f4"
+                                        />
+                                    </svg>
+                                ),
+                            },
+                            {
+                                id: "cheque",
+                                label: "Chèque",
+                                logo: (
+                                    <svg
+                                        viewBox="0 0 48 48"
+                                        width="32"
+                                        height="32"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <rect
+                                            width="48"
+                                            height="48"
+                                            rx="10"
+                                            fill="#fdeee0"
+                                        />
+                                        <rect
+                                            x="6"
+                                            y="12"
+                                            width="36"
+                                            height="24"
+                                            rx="3"
+                                            fill="#c9701d"
+                                        />
+                                        <rect
+                                            x="10"
+                                            y="17"
+                                            width="20"
+                                            height="3"
+                                            rx="1.5"
+                                            fill="#fdeee0"
+                                        />
+                                        <rect
+                                            x="10"
+                                            y="23"
+                                            width="28"
+                                            height="2.5"
+                                            rx="1.25"
+                                            fill="#f0b482"
+                                        />
+                                        <path
+                                            d="M12 31 C14 28.5 16 33 18 30.5 C20 28 22 32 24 29.5"
+                                            stroke="#fdeee0"
+                                            strokeWidth="1.5"
+                                            fill="none"
+                                        />
+                                        <circle
+                                            cx="34"
+                                            cy="30"
+                                            r="4"
+                                            fill="#f0b482"
                                         />
                                     </svg>
                                 ),
@@ -2510,9 +2568,52 @@ export default function ResponsableFamilleFinances({
     historiquePaiements: historiqueProp,
     donsFamille: donsProp,
     notifications: notifsProp,
+    fimecoSouscription: fimecoSouscriptionProp,
+    isFimecoResponsable,
 }) {
     const [activeTab, setActiveTab] = useState("fimeco");
     const [openReceipt, setOpenReceipt] = useState(null);
+    const [fimecoEditing, setFimecoEditing] = useState(false);
+    const [fimecoInput, setFimecoInput] = useState("");
+    const [fimecoSaving, setFimecoSaving] = useState(false);
+
+    const fimecoSouscription = fimecoSouscriptionProp || {
+        annee: new Date().getFullYear(),
+        montant_souscrit: 0,
+        montant_paye: 0,
+        montant_restant: 0,
+    };
+
+    const handleSaveFimecoSouscription = async () => {
+        const montant = parseInt(fimecoInput, 10);
+        if (isNaN(montant) || montant < 0) {
+            alert("Veuillez saisir un montant valide.");
+            return;
+        }
+        setFimecoSaving(true);
+        try {
+            const res = await fetch(
+                withBasePath("", "/responsable-famille/tresorerie/fimeco-souscription"),
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": getCsrfToken(),
+                        Accept: "application/json",
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({ montant_souscrit: montant }),
+                },
+            );
+            if (!res.ok) throw new Error();
+            setFimecoEditing(false);
+            router.reload({ only: ["fimecoSouscription"] });
+        } catch (e) {
+            alert("Erreur lors de l'enregistrement de la souscription.");
+        } finally {
+            setFimecoSaving(false);
+        }
+    };
 
     const familyInfo = familyInfoProp || null;
     const membres = Array.isArray(membresProp) ? membresProp : [];
@@ -2816,12 +2917,223 @@ export default function ResponsableFamilleFinances({
                     {/* Tab content */}
                     <div style={{ padding: 24 }}>
                         {activeTab === "fimeco" && (
-                            <TabCotisations
-                                title="Cotisations FIMECO"
-                                cotisations={fimecoCotisations}
-                                historiquePaiements={historique}
-                                familyInfo={familyInfo}
-                            />
+                            <>
+                                {isFimecoResponsable && <FimecoImportPanel />}
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        flexWrap: "wrap",
+                                        gap: 16,
+                                        padding: "16px 20px",
+                                        borderRadius: 16,
+                                        border: "1px solid #F3E8C9",
+                                        background:
+                                            "linear-gradient(135deg,#FFFBEA,#FFFFFF)",
+                                        marginBottom: 20,
+                                    }}
+                                >
+                                    <div>
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 8,
+                                                fontSize: 13,
+                                                fontWeight: 800,
+                                                color: "#2C2C2A",
+                                            }}
+                                        >
+                                            <Award size={15} color="#B6851A" />
+                                            Souscription FIMECO {fimecoSouscription.annee}
+                                        </div>
+                                        <p
+                                            style={{
+                                                fontSize: 12,
+                                                color: "#6B7280",
+                                                marginTop: 4,
+                                            }}
+                                        >
+                                            Montant que votre famille s'engage à verser
+                                            cette année.
+                                        </p>
+                                    </div>
+
+                                    {fimecoEditing ? (
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 8,
+                                            }}
+                                        >
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                autoFocus
+                                                value={fimecoInput}
+                                                onChange={(e) =>
+                                                    setFimecoInput(e.target.value)
+                                                }
+                                                placeholder="Montant en FCFA"
+                                                style={{
+                                                    padding: "8px 12px",
+                                                    borderRadius: 10,
+                                                    border: "1.5px solid #D3D1C7",
+                                                    fontSize: 13,
+                                                    width: 150,
+                                                }}
+                                            />
+                                            <button
+                                                onClick={handleSaveFimecoSouscription}
+                                                disabled={fimecoSaving}
+                                                style={{
+                                                    padding: "8px 14px",
+                                                    borderRadius: 10,
+                                                    border: "none",
+                                                    background: "#B6851A",
+                                                    color: "#fff",
+                                                    fontWeight: 700,
+                                                    fontSize: 12,
+                                                    cursor: fimecoSaving
+                                                        ? "not-allowed"
+                                                        : "pointer",
+                                                }}
+                                            >
+                                                {fimecoSaving
+                                                    ? "…"
+                                                    : "Enregistrer"}
+                                            </button>
+                                            <button
+                                                onClick={() => setFimecoEditing(false)}
+                                                style={{
+                                                    padding: "8px 10px",
+                                                    borderRadius: 10,
+                                                    border: "1px solid #D3D1C7",
+                                                    background: "#fff",
+                                                    color: "#6B7280",
+                                                    fontSize: 12,
+                                                    cursor: "pointer",
+                                                }}
+                                            >
+                                                Annuler
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 24,
+                                            }}
+                                        >
+                                            <div style={{ textAlign: "right" }}>
+                                                <div
+                                                    style={{
+                                                        fontSize: 10,
+                                                        fontWeight: 700,
+                                                        color: "#9CA3AF",
+                                                        textTransform: "uppercase",
+                                                    }}
+                                                >
+                                                    Souscrit
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: 16,
+                                                        fontWeight: 800,
+                                                        color: "#2C2C2A",
+                                                    }}
+                                                >
+                                                    {fmtCurrency(
+                                                        fimecoSouscription.montant_souscrit,
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: "right" }}>
+                                                <div
+                                                    style={{
+                                                        fontSize: 10,
+                                                        fontWeight: 700,
+                                                        color: "#9CA3AF",
+                                                        textTransform: "uppercase",
+                                                    }}
+                                                >
+                                                    Payé
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: 16,
+                                                        fontWeight: 800,
+                                                        color: "#15803D",
+                                                    }}
+                                                >
+                                                    {fmtCurrency(
+                                                        fimecoSouscription.montant_paye,
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: "right" }}>
+                                                <div
+                                                    style={{
+                                                        fontSize: 10,
+                                                        fontWeight: 700,
+                                                        color: "#9CA3AF",
+                                                        textTransform: "uppercase",
+                                                    }}
+                                                >
+                                                    Reste
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: 16,
+                                                        fontWeight: 800,
+                                                        color:
+                                                            fimecoSouscription.montant_restant >
+                                                            0
+                                                                ? "#B91C1C"
+                                                                : "#15803D",
+                                                    }}
+                                                >
+                                                    {fmtCurrency(
+                                                        fimecoSouscription.montant_restant,
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setFimecoInput(
+                                                        String(
+                                                            fimecoSouscription.montant_souscrit ||
+                                                                "",
+                                                        ),
+                                                    );
+                                                    setFimecoEditing(true);
+                                                }}
+                                                title="Modifier ma souscription"
+                                                style={{
+                                                    padding: 8,
+                                                    borderRadius: 10,
+                                                    border: "1px solid #F3E8C9",
+                                                    background: "#fff",
+                                                    color: "#B6851A",
+                                                    cursor: "pointer",
+                                                    display: "flex",
+                                                }}
+                                            >
+                                                <Pencil size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                                <TabCotisations
+                                    title="Cotisations FIMECO"
+                                    cotisations={fimecoCotisations}
+                                    historiquePaiements={historique}
+                                    familyInfo={familyInfo}
+                                />
+                            </>
                         )}
                         {activeTab === "mes_cotisations" && (
                             <TabCotisations

@@ -33,6 +33,7 @@ class TresorerieController extends Controller
                 'cotisations' => [],
                 'campagnes' => [],
                 'paiementsRecents' => [],
+                'isFimecoResponsable' => true,
             ]);
         }
 
@@ -149,11 +150,13 @@ class TresorerieController extends Controller
                     'mode' => match ($paiement->mode_paiement) {
                         Paiement::MODE_ESPECES => 'Espèces',
                         Paiement::MODE_VIREMENT => 'Virement',
+                        Paiement::MODE_CHEQUE => 'Chèque',
                         default => 'Mobile Money',
                     },
                     'statut' => $paiement->statut === Paiement::STATUT_PAYE ? '✓ Payé' : $paiement->statut,
                 ];
             })->values(),
+            'isFimecoResponsable' => true,
         ]);
     }
 

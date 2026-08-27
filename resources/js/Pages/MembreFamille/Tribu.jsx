@@ -450,7 +450,89 @@ export default function Tribu({
                                         )}
                                 </div>
 
-                                {membresScope === "tribu" ? (
+                                {membresScope === "tribu" && !isTribuChef ? (
+                                    membres.length === 0 ? (
+                                        <p className="text-sm text-gray-400">
+                                            Aucun autre membre dans cette tribu
+                                            pour le moment.
+                                        </p>
+                                    ) : filteredMembres.length === 0 ? (
+                                        <p className="text-sm text-gray-400">
+                                            Aucun membre ne correspond à "
+                                            {searchMembres}".
+                                        </p>
+                                    ) : (
+                                        <>
+                                            <div className="overflow-x-auto rounded-xl border border-gray-100">
+                                                <table className="w-full text-sm">
+                                                    <thead className="bg-gray-50">
+                                                        <tr>
+                                                            <th className="px-4 py-2"></th>
+                                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                                Nom
+                                                            </th>
+                                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                                Prénom
+                                                            </th>
+                                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                                Téléphone
+                                                            </th>
+                                                            <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                                                Email
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-100">
+                                                        {paginatedMembres.map((m) => {
+                                                            const estChef =
+                                                                tribu.chefs.some(
+                                                                    (c) => c.id === m.id,
+                                                                );
+                                                            return (
+                                                                <tr key={m.id}>
+                                                                    <td className="px-4 py-2">
+                                                                        <ProfilePhoto
+                                                                            user={m}
+                                                                            size="sm"
+                                                                        />
+                                                                    </td>
+                                                                    <td className="px-4 py-2 font-medium text-gray-800">
+                                                                        <div className="flex items-center gap-2">
+                                                                            {m.nom}
+                                                                            {estChef && (
+                                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wide shrink-0">
+                                                                                    <Crown className="w-3 h-3" />
+                                                                                    Chef
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-4 py-2 text-gray-700">
+                                                                        {m.prenom}
+                                                                    </td>
+                                                                    <td className="px-4 py-2 text-gray-500">
+                                                                        {m.telephone || "-"}
+                                                                    </td>
+                                                                    <td className="px-4 py-2 text-gray-500">
+                                                                        {m.email || "-"}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            {totalPages > 1 && (
+                                                <Pagination
+                                                    currentPage={currentPage}
+                                                    totalPages={totalPages}
+                                                    paginate={goToPage}
+                                                />
+                                            )}
+                                        </>
+                                    )
+                                ) : membresScope === "tribu" ? (
                                     membres.length === 0 ? (
                                         <p className="text-sm text-gray-400">
                                             Aucun autre membre dans cette tribu

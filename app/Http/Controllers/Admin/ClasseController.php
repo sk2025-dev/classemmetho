@@ -33,6 +33,8 @@ class ClasseController extends Controller
                     'nombre_membres' => $c->users()->where('role', '!=', 'admin')->count(),
                     'status' => $c->status ?? 'active',
                     'logo_url' => PhotoHelper::getImageUrl($c->logo_path),
+                    'cachet_url' => PhotoHelper::getImageUrl($c->cachet_path),
+                    'theme_texte' => $c->theme_texte,
                     'has_tribus' => (bool) $c->has_tribus,
                     'created_at' => $c->created_at?->format('d/m/Y H:i'),
                 ];
@@ -107,6 +109,8 @@ class ClasseController extends Controller
             'commune' => $classe->commune ?? '',
             'status' => $classe->status ?? 'active',
             'logo_url' => PhotoHelper::getImageUrl($classe->logo_path),
+            'cachet_url' => PhotoHelper::getImageUrl($classe->cachet_path),
+            'theme_texte' => $classe->theme_texte,
             'nombre_familles' => $classe->families->count(),
             'nombre_membres' => $classe->users->where('role', '!=', 'admin')->count(),
             'created_at' => $classe->created_at ? $classe->created_at->format('d/m/Y H:i') : '-',
@@ -148,14 +152,21 @@ class ClasseController extends Controller
             'description' => 'nullable|string',
             'conducteur' => 'nullable|string|max:255',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'cachet' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'theme_texte' => 'nullable|string|max:255',
             'has_tribus' => 'nullable|boolean',
+            'carte_virtuelle_active' => 'nullable|boolean',
         ]);
 
         if ($request->hasFile('logo')) {
             $validated['logo_path'] = $request->file('logo')->store('classes/logos', 'public');
         }
-        unset($validated['logo']);
+        if ($request->hasFile('cachet')) {
+            $validated['cachet_path'] = $request->file('cachet')->store('classes/cachets', 'public');
+        }
+        unset($validated['logo'], $validated['cachet']);
         $validated['has_tribus'] = $request->boolean('has_tribus');
+        $validated['carte_virtuelle_active'] = $request->boolean('carte_virtuelle_active');
 
         $classe = Classe::create($validated + ['status' => 'active']);
 
@@ -192,7 +203,10 @@ class ClasseController extends Controller
                 'conducteur' => $classe->conducteur,
                 'status' => $classe->status ?? 'active',
                 'logo_url' => PhotoHelper::getImageUrl($classe->logo_path),
+                'cachet_url' => PhotoHelper::getImageUrl($classe->cachet_path),
+                'theme_texte' => $classe->theme_texte,
                 'has_tribus' => (bool) $classe->has_tribus,
+                'carte_virtuelle_active' => (bool) $classe->carte_virtuelle_active,
             ],
         ]);
     }
@@ -209,9 +223,14 @@ class ClasseController extends Controller
             'status' => 'nullable|in:active,inactive',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'remove_logo' => 'nullable|boolean',
+            'cachet' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'remove_cachet' => 'nullable|boolean',
+            'theme_texte' => 'nullable|string|max:255',
             'has_tribus' => 'nullable|boolean',
+            'carte_virtuelle_active' => 'nullable|boolean',
         ]);
         $validated['has_tribus'] = $request->boolean('has_tribus');
+        $validated['carte_virtuelle_active'] = $request->boolean('carte_virtuelle_active');
 
         // Par défaut, si le statut n'est pas fourni, le garder inchangé
         if (!isset($validated['status'])) {
@@ -226,6 +245,15 @@ class ClasseController extends Controller
             $validated['logo_path'] = $request->file('logo')->store('classes/logos', 'public');
         }
         unset($validated['logo'], $validated['remove_logo']);
+
+        if ($request->boolean('remove_cachet')) {
+            PhotoHelper::deletePhoto($classe->cachet_path);
+            $validated['cachet_path'] = null;
+        } elseif ($request->hasFile('cachet')) {
+            PhotoHelper::deletePhoto($classe->cachet_path);
+            $validated['cachet_path'] = $request->file('cachet')->store('classes/cachets', 'public');
+        }
+        unset($validated['cachet'], $validated['remove_cachet']);
 
         $classe->update($validated);
 

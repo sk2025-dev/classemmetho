@@ -1,4 +1,5 @@
 ﻿import React, { useState } from "react";
+import { withBasePath } from "../../../../Utils/urlHelper";
 
 const BADGE_CONFIG = {
     grace:  { label: 'Action de grâce',       emoji: '🙌', bg: '#fef3c7', color: '#d97706' },
@@ -54,8 +55,21 @@ function MiniDetail({ item, isAnn, onClose, ANNONCE_TYPES }) {
     const heureCulte   = item.details?.heure_culte;
     const temoignage   = item.details?.temoignage_public;
     const contenu      = item.details?.contenu || item.message;
-    const ficheUrl     = isAnn && item.statut === 'PUBLIEE' && item.id
-        ? `/responsable-famille/annonces/${item.id}/fiche` : null;
+    const ficheStatuts = [
+        'TRANSMISE_AU_BUREAU_CONDUCTEUR',
+        'TRANSMISE_AU_PASTEUR',
+        'VALIDEE',
+        'PUBLIEE',
+        'ARCHIVEE',
+    ];
+    const ficheUrl = item.id && ficheStatuts.includes(item.statut)
+        ? withBasePath(
+              "",
+              isAnn
+                  ? `/conducteur/annonces/${item.id}/fiche?preview=1`
+                  : `/conducteur/liturgie/${item.id}/fiche?preview=1`,
+          )
+        : null;
 
     return (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={onClose}>
@@ -214,7 +228,7 @@ export default function TransmisesTab({ transmises, annTransmises = [], openModa
                             <div className="demande-type">{prettyType(acte.type_acte)} · Transmis le {formatDate(acte.updated_at || acte.created_at)}</div>
                         </div>
                         <div className="demande-meta">
-                            <span className="badge badge-transmis"><span className="badge-dot" />AU PASTEUR</span>
+                            <span className="badge badge-transmis"><span className="badge-dot" />AU BUREAU</span>
                             <div className="item-actions">
                                 <button className="btn-small btn-view" onClick={(e) => { e.stopPropagation(); setDetail({ item: acte, isAnn: false }); }}>
                                     <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
@@ -251,7 +265,7 @@ export default function TransmisesTab({ transmises, annTransmises = [], openModa
                                             <div className="demande-type" style={{ marginTop:2 }}>Transmis le {formatDate(ann.updated_at || ann.created_at)}</div>
                                         </div>
                                         <div className="demande-meta">
-                                            <span className="badge badge-transmis"><span className="badge-dot" />AU PASTEUR</span>
+                                            <span className="badge badge-transmis"><span className="badge-dot" />AU BUREAU</span>
                                             <div className="item-actions">
                                                 <button className="btn-small btn-view" onClick={(e) => { e.stopPropagation(); setDetail({ item: ann, isAnn: true }); }}>
                                                     <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>

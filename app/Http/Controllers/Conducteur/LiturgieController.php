@@ -30,10 +30,7 @@ class LiturgieController extends Controller
         $query = ActeLiturgique::with(['membre', 'classe', 'historiques.acteur', 'createur', 'conducteur'])
             ->whereIn('classe_id', $classIds)
             // ne pas mélanger les annonces dans les actes liturgiques
-            ->whereNotIn('type_acte', [
-                ActeLiturgique::TYPE_ANNOUNCE,
-                ActeLiturgique::TYPE_ANNOUNCE_LITURGIQUE,
-            ])
+            ->whereNotIn('type_acte', ActeLiturgique::ANNOUNCE_TYPES)
             ->latest();
 
         if ($request->filled('statut')) {
@@ -144,6 +141,7 @@ class LiturgieController extends Controller
             'classes' => $user->getManagedClasses()->values(),
             'calendarEvents' => $calendarEvents,
             'flashInfoPropres' => $flashInfoPropres,
+            'authUserId' => $conducteurId,
         ]);
     }
 
@@ -408,10 +406,7 @@ class LiturgieController extends Controller
                 'membre.family',
                 'membre.classe',
             ])
-                ->whereNotIn('type_acte', [
-                    ActeLiturgique::TYPE_ANNOUNCE,
-                    ActeLiturgique::TYPE_ANNOUNCE_LITURGIQUE,
-                ])
+                ->whereNotIn('type_acte', ActeLiturgique::ANNOUNCE_TYPES)
                 ->whereIn('classe_id', $classIds)
                 ->whereIn('id', $requestedIds)
                 ->get();
@@ -464,10 +459,7 @@ class LiturgieController extends Controller
             'membre.family',
             'membre.classe',
         ])
-            ->whereNotIn('type_acte', [
-                ActeLiturgique::TYPE_ANNOUNCE,
-                ActeLiturgique::TYPE_ANNOUNCE_LITURGIQUE,
-            ])
+            ->whereNotIn('type_acte', ActeLiturgique::ANNOUNCE_TYPES)
             ->whereIn('classe_id', $classIds)
             ->findOrFail($id);
 
@@ -643,10 +635,7 @@ class LiturgieController extends Controller
         $classIds = $user->getManagedClasses()->pluck('id')->toArray();
 
         $acte = ActeLiturgique::with(['createur', 'family', 'conducteur', 'pasteur', 'membre', 'classe'])
-            ->whereNotIn('type_acte', [
-                ActeLiturgique::TYPE_ANNOUNCE,
-                ActeLiturgique::TYPE_ANNOUNCE_LITURGIQUE,
-            ])
+            ->whereNotIn('type_acte', ActeLiturgique::ANNOUNCE_TYPES)
             ->where(function ($q) use ($classIds) {
                 $q->whereIn('classe_id', $classIds)
                     ->orWhereNull('classe_id');
@@ -654,7 +643,7 @@ class LiturgieController extends Controller
             ->findOrFail($id);
 
         // PDF disponible après transmission au pasteur ou validation
-        if (!in_array($acte->statut, ['SOUMISE', 'EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'], true)) {
+        if (!in_array($acte->statut, ['SOUMISE', 'EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_BUREAU_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'], true)) {
             abort(403, 'La fiche PDF est disponible après transmission au pasteur.');
         }
 

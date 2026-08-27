@@ -27,6 +27,7 @@ class PresencesController extends Controller
                 'famille'   => ['nom' => '', 'classe' => '', 'conducteur' => '', 'membres' => []],
                 'activites' => [],
                 'presences' => (object) [],
+                'isPresenceMarker' => $this->isPresenceMarker($user),
             ]);
         }
 
@@ -120,7 +121,21 @@ class PresencesController extends Controller
             ],
             'activites' => $activites->values(),
             'presences' => (object) $presencesByActivity,
+            'isPresenceMarker' => $this->isPresenceMarker($user),
         ]);
+    }
+
+    private function isPresenceMarker($user): bool
+    {
+        $user->loadMissing('fonction');
+        $nom = strtolower(trim((string) ($user->fonction?->nom ?? '')));
+        $nom = strtr($nom, [
+            'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'à' => 'a', 'â' => 'a', 'ù' => 'u', 'û' => 'u',
+            'î' => 'i', 'ï' => 'i', 'ô' => 'o', 'ö' => 'o', 'ç' => 'c',
+        ]);
+
+        return in_array($nom, ['marqueur de presence', 'marqueur presence'], true);
     }
 
     private function resolveDateFromActivity(PermanentActivity $activity): ?string

@@ -58,7 +58,7 @@ function BoutonTelechargement({ acte }) {
     }
 
     // naissance, décès et autres → fiche PDF simple
-    if ([...STATUTS_APRES_PASTEUR, "TRANSMISE_AU_PASTEUR"].includes(acte.statut)) {
+    if ([...STATUTS_APRES_PASTEUR, "TRANSMISE_AU_BUREAU_CONDUCTEUR", "TRANSMISE_AU_PASTEUR"].includes(acte.statut)) {
         return (
             <button
                 className="btn-small btn-fiche"

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useForm } from '@inertiajs/react'
 import { Head } from '@inertiajs/react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, CreditCard } from 'lucide-react'
 import useToast from '../../Hooks/useToast'
 import ToastContainer from '../../Components/ToastContainer'
 import { withBasePath } from '../../Utils/urlHelper'
@@ -27,6 +27,16 @@ export default function ProfileShow({ user }) {
     signature: null,
   })
   const [signaturePreview, setSignaturePreview] = useState(user.signature_url || '')
+
+  const cachetForm = useForm({
+    cachet: null,
+  })
+  const [cachetPreview, setCachetPreview] = useState(user.classe_cachet_url || '')
+  const canManageCachet = user.role === 'conducteur'
+
+  const themeForm = useForm({
+    theme_texte: user.classe_theme_texte || '',
+  })
   const toast = useToast()
   const profileLabel = user.name || user.code_membre || 'Profil'
   const profileInitials = profileLabel
@@ -65,13 +75,33 @@ export default function ProfileShow({ user }) {
     })
   }
 
+  const handleCachetSubmit = (e) => {
+    e.preventDefault()
+    cachetForm.post(withBasePath('', '/profile/classe-cachet'), {
+      forceFormData: true,
+      onSuccess: () => {
+        cachetForm.reset()
+        toast.success('Cachet de la classe mis a jour avec succes.')
+      },
+    })
+  }
+
+  const handleThemeSubmit = (e) => {
+    e.preventDefault()
+    themeForm.post(withBasePath('', '/profile/classe-theme'), {
+      onSuccess: () => {
+        toast.success('Theme de la carte virtuelle mis a jour avec succes.')
+      },
+    })
+  }
+
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)" }}>
       <Head title="Mon Profil" />
 
       <div className="max-w-4xl mx-auto py-8 px-4">
         <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
           <button
             onClick={() => window.history.back()}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-all backdrop-blur-md border border-white/20"
@@ -79,6 +109,13 @@ export default function ProfileShow({ user }) {
             <ArrowLeft className="w-4 h-4" />
             Retour
           </button>
+          <a
+            href={withBasePath('', '/ma-carte-virtuelle')}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-all backdrop-blur-md border border-white/20"
+          >
+            <CreditCard className="w-4 h-4" />
+            Voir ma carte virtuelle
+          </a>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -133,6 +170,18 @@ export default function ProfileShow({ user }) {
             >
               Signature electronique
             </button>
+            {canManageCachet && (
+              <button
+                onClick={() => setActiveTab('cachet')}
+                className={`flex-1 py-4 px-6 text-center font-semibold border-b-2 transition ${
+                  activeTab === 'cachet'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Cachet &amp; theme de la classe
+              </button>
+            )}
           </div>
 
           <div className="p-6">
@@ -344,6 +393,87 @@ export default function ProfileShow({ user }) {
                 </form>
               </div>
             )}
+
+            {activeTab === 'cachet' && canManageCachet && (
+              <div>
+                <h2 className="text-xl font-semibold mb-6 text-gray-800">Cachet de la classe {user.classe_nom ? `(${user.classe_nom})` : ''}</h2>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-blue-800">
+                    Ce cachet apparait sur la carte virtuelle des membres de votre classe.
+                  </p>
+                </div>
+
+                <form onSubmit={handleCachetSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-2">Image du cachet (PNG/JPG)</label>
+                    <input
+                      type="file"
+                      accept=".png,.jpg,.jpeg"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null
+                        cachetForm.setData('cachet', file)
+                        if (file) {
+                          const url = URL.createObjectURL(file)
+                          setCachetPreview(url)
+                        }
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    {cachetForm.errors.cachet && (
+                      <p className="text-red-600 text-sm mt-1">{cachetForm.errors.cachet}</p>
+                    )}
+                  </div>
+
+                  {cachetPreview && (
+                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                      <p className="text-sm text-gray-600 mb-2">Apercu:</p>
+                      <img src={cachetPreview} alt="Cachet" className="max-h-32" />
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={cachetForm.processing}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-lg transition disabled:opacity-50"
+                  >
+                    {cachetForm.processing ? 'Enregistrement...' : 'Enregistrer le cachet'}
+                  </button>
+                </form>
+
+                <hr className="my-8 border-gray-200" />
+
+                <h2 className="text-xl font-semibold mb-6 text-gray-800">Theme de la carte virtuelle</h2>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-blue-800">
+                    Ce texte (theme / verset) s'affiche en pied de la carte virtuelle des membres de votre classe. Laissez vide pour utiliser le theme par defaut du site.
+                  </p>
+                </div>
+
+                <form onSubmit={handleThemeSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-2">Theme / verset</label>
+                    <textarea
+                      rows="3"
+                      value={themeForm.data.theme_texte}
+                      onChange={(e) => themeForm.setData('theme_texte', e.target.value)}
+                      placeholder='Ex : « Qui enverrai-je, et qui marchera pour nous ? Me voici, envoie-moi » – Esaie 6:8'
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    {themeForm.errors.theme_texte && (
+                      <p className="text-red-600 text-sm mt-1">{themeForm.errors.theme_texte}</p>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={themeForm.processing}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-lg transition disabled:opacity-50"
+                  >
+                    {themeForm.processing ? 'Enregistrement...' : 'Enregistrer le theme'}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         </div>
 
@@ -360,6 +490,16 @@ export default function ProfileShow({ user }) {
         {signatureForm.recentlySuccessful && (
           <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4">
             {signatureForm.recentlySuccessful}
+          </div>
+        )}
+        {cachetForm.recentlySuccessful && (
+          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4">
+            {cachetForm.recentlySuccessful}
+          </div>
+        )}
+        {themeForm.recentlySuccessful && (
+          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4">
+            {themeForm.recentlySuccessful}
           </div>
         )}
       </div>

@@ -417,6 +417,7 @@ class TresorerieReportService
         return match ($mode) {
             Paiement::MODE_ESPECES => 'Especes',
             Paiement::MODE_VIREMENT => 'Virement',
+            Paiement::MODE_CHEQUE => 'Cheque',
             default => 'Mobile Money',
         };
     }

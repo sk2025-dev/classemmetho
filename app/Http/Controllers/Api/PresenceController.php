@@ -248,8 +248,16 @@ class PresenceController extends Controller
     {
         $validated = $request->validate([
             'event_id' => ['required', 'integer', 'exists:special_events,id'],
-            'member_id' => ['required', 'integer', 'exists:users,id'],
+            'member_id' => ['nullable', 'integer', 'exists:users,id'],
+            'code_membre' => ['nullable', 'string', 'max:30'],
         ]);
+
+        if (empty($validated['member_id']) && empty($validated['code_membre'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Membre ou code manquant.',
+            ], 422);
+        }
 
         $user = Auth::user();
         if (! $user || ! $this->isPresenceMarker($user)) {
@@ -289,10 +297,13 @@ class PresenceController extends Controller
             ], 410);
         }
 
-        $member = User::query()
-            ->whereKey($validated['member_id'])
-            ->where('classe_id', $event->class_id)
-            ->first();
+        $memberQuery = User::query()->where('classe_id', $event->class_id);
+        if (!empty($validated['member_id'])) {
+            $memberQuery->whereKey($validated['member_id']);
+        } else {
+            $memberQuery->where('code_membre', $validated['code_membre']);
+        }
+        $member = $memberQuery->first();
 
         if (! $member) {
             return response()->json([
@@ -320,8 +331,10 @@ class PresenceController extends Controller
             'statut' => 'present',
             'marquee_par' => Auth::id(),
             'marquee_le' => now(),
-            'methode' => 'marquage_manuel',
-            'notes' => 'Présence marquée manuellement par le marqueur de présence',
+            'methode' => !empty($validated['code_membre']) ? 'qr_carte_membre' : 'marquage_manuel',
+            'notes' => !empty($validated['code_membre'])
+                ? 'Présence marquée via scan de la carte virtuelle'
+                : 'Présence marquée manuellement par le marqueur de présence',
         ];
 
         if ($presence) {
@@ -345,6 +358,98 @@ class PresenceController extends Controller
                     'prenom' => $member->prenom,
                     'code_membre' => $member->code_membre,
                 ],
+            ],
+        ]);
+    }
+
+    /**
+     * Permet au conducteur de corriger a posteriori le statut de présence d'un membre
+     * (présent / absent / excusé), sans les restrictions horaires du pointage normal.
+     * Route : POST /conducteur/presences/corriger
+     */
+    public function corrigerPresence(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'event_id' => ['required', 'integer', 'exists:special_events,id'],
+            'member_id' => ['required', 'integer', 'exists:users,id'],
+            'statut' => ['required', 'string', 'in:present,absent,excuse'],
+            'motif' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $user = Auth::user();
+        if (! $user || $user->role !== 'conducteur') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Seul le conducteur peut corriger une présence.',
+            ], 403);
+        }
+
+        if (! $user->classe_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Conducteur sans classe associee.',
+            ], 422);
+        }
+
+        $event = SpecialEvent::query()
+            ->whereKey($validated['event_id'])
+            ->where('class_id', $user->classe_id)
+            ->where('is_parish', false)
+            ->first();
+
+        if (! $event) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Activité introuvable ou non autorisée.',
+            ], 404);
+        }
+
+        $member = User::query()
+            ->whereKey($validated['member_id'])
+            ->where('classe_id', $event->class_id)
+            ->first();
+
+        if (! $member) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Membre introuvable ou non autorisé.',
+            ], 422);
+        }
+
+        $notes = 'Présence corrigée manuellement par le conducteur';
+        if (!empty($validated['motif'])) {
+            $notes .= ' : ' . $validated['motif'];
+        }
+
+        $payload = [
+            'activite_id' => null,
+            'special_event_id' => $event->id,
+            'membre_famille_id' => $member->id,
+            'statut' => $validated['statut'],
+            'marquee_par' => Auth::id(),
+            'marquee_le' => now(),
+            'methode' => 'correction_conducteur',
+            'notes' => $notes,
+        ];
+
+        $presence = Presence::query()
+            ->where('special_event_id', $event->id)
+            ->where('membre_famille_id', $member->id)
+            ->first();
+
+        if ($presence) {
+            $presence->update($payload);
+        } else {
+            Presence::create($payload);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Présence corrigée avec succès.',
+            'data' => [
+                'event_id' => $event->id,
+                'member_id' => $member->id,
+                'statut' => $validated['statut'],
             ],
         ]);
     }

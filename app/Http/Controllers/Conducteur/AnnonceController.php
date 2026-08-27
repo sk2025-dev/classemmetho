@@ -174,7 +174,7 @@ class AnnonceController extends Controller
         $acte = ActeLiturgique::create([
             'reference' => $reference,
             'type_acte' => $type,
-            'statut' => ActeLiturgique::STATUT_TRANSMISE_AU_PASTEUR,
+            'statut' => ActeLiturgique::STATUT_TRANSMISE_AU_BUREAU_CONDUCTEUR,
             'details' => $details,
             'date_souhaitee' => $validated['date_annonce'] ?? now(),
             'date_publication' => $datePublication,
@@ -185,6 +185,16 @@ class AnnonceController extends Controller
             'created_by' => $user->id,
             'conducteur_id' => $user->id,
             'est_annonce' => true,
+        ]);
+
+        // Le conducteur occupe déjà l'étape "Conducteur" : on trace cette
+        // validation implicite pour que l'historique/chronologie l'affiche.
+        ActeLiturgiqueHistorique::create([
+            'acte_id'          => $acte->id,
+            'statut_precedent' => ActeLiturgique::STATUT_Soumise,
+            'statut_nouveau'   => ActeLiturgique::STATUT_TRANSMISE_AU_BUREAU_CONDUCTEUR,
+            'acteur_id'        => $user->id,
+            'commentaire'      => 'Demande soumise directement par le conducteur.',
         ]);
 
         $acte->load(['createur', 'family', 'membre', 'classe']);

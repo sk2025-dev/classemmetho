@@ -495,10 +495,7 @@ class LiturgieController extends Controller
     {
         $user = Auth::user();
         $acte = ActeLiturgique::with(['createur', 'family', 'conducteur', 'bureauConducteur', 'pasteur', 'membre', 'classe'])
-            ->whereNotIn('type_acte', [
-                ActeLiturgique::TYPE_ANNOUNCE,
-                ActeLiturgique::TYPE_ANNOUNCE_LITURGIQUE,
-            ])
+            ->whereNotIn('type_acte', ActeLiturgique::ANNOUNCE_TYPES)
             ->where(function ($query) use ($user) {
                 $query->where('created_by', $user->id)
                     ->orWhere('family_id', $user->family_id);
@@ -650,6 +647,11 @@ class LiturgieController extends Controller
                 $query->where('created_by', $user->id)
                     ->orWhereIn('membre_id', $familyMemberIds);
             })
+            ->where(function ($query) {
+                $query->where('est_annonce', false)
+                    ->orWhereNull('est_annonce');
+            })
+            ->whereNotIn('type_acte', ActeLiturgique::ANNOUNCE_TYPES)
             ->latest()
             ->take(15)
             ->get()

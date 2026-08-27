@@ -227,6 +227,24 @@ tr.past-row td.actions-cell .btn-table-delete {
     background: #f59e0b;
     color: white;
 }
+.status-reportee {
+    background: #f97316;
+    color: white;
+}
+.status-annulee {
+    background: #ef4444;
+    color: white;
+}
+.statut-select {
+    margin-top: 4px;
+    font-size: 0.7rem;
+    padding: 2px 4px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+}
 .stats-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1386,7 +1404,7 @@ export default function AllProgrammes() {
     search: '',
     status: 'all',
     month: 'all',
-    year: new Date().getFullYear().toString()
+    year: 'all'
   });
   
   // Années disponibles (calculées depuis les données)
@@ -1423,6 +1441,8 @@ export default function AllProgrammes() {
   };
 
   const getStatus = (event) => {
+    if (event.statut_realisation === 'reportee') return 'Reportée';
+    if (event.statut_realisation === 'annulee') return 'Annulée';
     const eventDate = getEventStartDate(event);
     if (isTodayEvent(eventDate)) return 'Aujourd\'hui';
     if (isUpcomingEvent(event)) return 'À venir';
@@ -1430,6 +1450,8 @@ export default function AllProgrammes() {
   };
 
   const getStatusClass = (event) => {
+    if (event.statut_realisation === 'reportee') return 'status-reportee';
+    if (event.statut_realisation === 'annulee') return 'status-annulee';
     const eventDate = getEventStartDate(event);
     if (isTodayEvent(eventDate)) return 'status-today';
     if (isUpcomingEvent(event)) return 'status-upcoming';
@@ -1456,12 +1478,6 @@ export default function AllProgrammes() {
   };
   // ========== FIN DES FONCTIONS ==========
 
-  // Calcul des statistiques
-  const totalCount = allProgrammes.length;
-  const upcomingCount = allProgrammes.filter(event => isUpcomingEvent(event)).length;
-  const pastCount = allProgrammes.filter(event => isPastEvent(event)).length;
-  const todayCount = allProgrammes.filter(event => isTodayEvent(getEventStartDate(event))).length;
-
   // Fonction de filtrage des programmes (frontend)
   const filteredProgrammes = allProgrammes.filter(event => {
     const eventStartDate = getEventStartDate(event);
@@ -1483,6 +1499,8 @@ export default function AllProgrammes() {
       if (filters.status === 'upcoming' && !isUpcomingEvent(event)) return false;
       if (filters.status === 'past' && !isPastEvent(event)) return false;
       if (filters.status === 'today' && !isTodayEvent(eventStartDate)) return false;
+      if (filters.status === 'reportee' && event.statut_realisation !== 'reportee') return false;
+      if (filters.status === 'annulee' && event.statut_realisation !== 'annulee') return false;
     }
     
     // Filtre par mois
@@ -1499,6 +1517,14 @@ export default function AllProgrammes() {
     
     return true;
   });
+
+  // Calcul des statistiques — reflète les filtres actuellement appliqués
+  const totalCount = filteredProgrammes.length;
+  const upcomingCount = filteredProgrammes.filter(event => isUpcomingEvent(event)).length;
+  const pastCount = filteredProgrammes.filter(event => isPastEvent(event)).length;
+  const todayCount = filteredProgrammes.filter(event => isTodayEvent(getEventStartDate(event))).length;
+  const reporteeCount = filteredProgrammes.filter(event => event.statut_realisation === 'reportee').length;
+  const annuleeCount = filteredProgrammes.filter(event => event.statut_realisation === 'annulee').length;
 
   // Pagination
   const totalPages = Math.ceil(filteredProgrammes.length / itemsPerPage);
@@ -1525,15 +1551,6 @@ export default function AllProgrammes() {
   };
 
   const openEditModal = (event) => {
-    if (isPastEvent(event)) {
-      setAlertModal({
-        isOpen: true,
-        title: 'Activité passée',
-        message: `Cette activité "${event.title}" est déjà passée et ne peut plus être modifiée.`,
-        icon: '📅'
-      });
-      return;
-    }
     setConfirmModal({
       isOpen: true,
       action: 'edit',
@@ -1590,6 +1607,24 @@ export default function AllProgrammes() {
       }
       showToast('Erreur lors de la modification', 'error');
       throw error;
+    }
+  };
+
+  const handleChangeStatutRealisation = async (event, statutRealisation) => {
+    try {
+      const response = await axios.patch(
+        withBasePath("", `/conducteur/programmes/event/${event.id}/statut`),
+        { statut_realisation: statutRealisation },
+      );
+      if (response.data.success) {
+        showToast('Statut mis à jour', 'success');
+        router.reload({ only: ['allProgrammes'] });
+      } else {
+        showToast('Erreur lors de la mise à jour du statut', 'error');
+      }
+    } catch (error) {
+      console.error('Erreur de mise à jour du statut', error);
+      showToast('Erreur lors de la mise à jour du statut', 'error');
     }
   };
 
@@ -1837,7 +1872,7 @@ export default function AllProgrammes() {
       search: '',
       status: 'all',
       month: 'all',
-      year: new Date().getFullYear().toString()
+      year: 'all'
     });
   };
 
@@ -2068,6 +2103,20 @@ export default function AllProgrammes() {
                 <p>Aujourd'hui</p>
               </div>
             </div>
+            <div className="stat-card">
+              <div className="stat-icon" style={{ background: '#fff7ed', color: '#f97316' }}>↩️</div>
+              <div className="stat-info">
+                <h3>{reporteeCount}</h3>
+                <p>Reportées</p>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon" style={{ background: '#fef2f2', color: '#ef4444' }}>✕</div>
+              <div className="stat-info">
+                <h3>{annuleeCount}</h3>
+                <p>Annulées</p>
+              </div>
+            </div>
           </div>
 
           {/* Barre de filtre */}
@@ -2093,6 +2142,8 @@ export default function AllProgrammes() {
                 <option value="upcoming">À venir</option>
                 <option value="past">Passés</option>
                 <option value="today">Aujourd'hui</option>
+                <option value="reportee">Reportées</option>
+                <option value="annulee">Annulées</option>
               </select>
             </div>
             <div className="filter-group">
@@ -2195,8 +2246,7 @@ export default function AllProgrammes() {
                         <button
                           className="btn-card-edit"
                           onClick={() => openEditModal(event)}
-                          disabled={past}
-                          title={past ? "Impossible de modifier une activité passée" : "Modifier"}
+                          title="Modifier"
                         >
                           <IconEdit /> Modifier
                         </button>
@@ -2309,18 +2359,28 @@ export default function AllProgrammes() {
                             </div>
                           )}
                         </td>
-                        <td>
+                        <td onClick={(e) => e.stopPropagation()}>
                           <span className={`status-badge ${getStatusClass(event)}`}>
                             {getStatus(event)}
                           </span>
+                          <br />
+                          <select
+                            className="statut-select"
+                            value={event.statut_realisation || 'planifiee'}
+                            onChange={(e) => handleChangeStatutRealisation(event, e.target.value)}
+                          >
+                            <option value="planifiee">Planifiée</option>
+                            <option value="realisee">Réalisée</option>
+                            <option value="reportee">Reportée</option>
+                            <option value="annulee">Annulée</option>
+                          </select>
                         </td>
                         <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
                           <div className="table-actions">
                             <button
                               className="btn-table-edit"
                               onClick={() => openEditModal(event)}
-                              disabled={past}
-                              title={past ? "Impossible de modifier une activité passée" : "Modifier"}
+                              title="Modifier"
                             >
                               <IconEdit style={{ width: '14px', height: '14px' }} /> Modifier
                             </button>

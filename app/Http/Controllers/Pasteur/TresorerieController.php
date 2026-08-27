@@ -18,6 +18,9 @@ class TresorerieController extends Controller
 {
     public function index()
     {
+        $user = Auth::user();
+        $isFimecoResponsable = $user->hasFonction('Responsable FIMECO') || $user->role === 'admin';
+
         if (!Schema::hasTable('paiements') || !Schema::hasTable('dons') || !Schema::hasTable('cotisations')) {
             return Inertia::render('Pasteur/Tresorerie/Index', [
                 'globalStats' => [
@@ -30,6 +33,7 @@ class TresorerieController extends Controller
                 ],
                 'classes' => [],
                 'cotisationsParClasse' => [],
+                'isFimecoResponsable' => $isFimecoResponsable,
             ]);
         }
 
@@ -236,6 +240,7 @@ class TresorerieController extends Controller
             'classes'            => $classRows,
             'cotisationsParClasse' => $cotisationsParClasse,
             'encouragements'     => $encouragements,
+            'isFimecoResponsable' => $isFimecoResponsable,
         ]);
     }
 

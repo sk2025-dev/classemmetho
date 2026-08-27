@@ -126,6 +126,13 @@ class LiturgieController extends Controller
                 })
             : collect();
 
+        $allMembers = User::query()
+            ->whereNotIn('role', ['admin'])
+            ->select(['id', 'nom', 'prenom'])
+            ->orderBy('prenom')
+            ->orderBy('nom')
+            ->get();
+
         // Load announcements from all families
         $annonces = ActeLiturgique::with([
             'createur.family',
@@ -133,6 +140,8 @@ class LiturgieController extends Controller
             'classe',
             'membre.family',
             'conducteur',
+            'bureauConducteur',
+            'historiques.acteur',
         ])
             ->annonces()
             ->where('statut', 'TRANSMISE_AU_PASTEUR')
@@ -244,6 +253,7 @@ class LiturgieController extends Controller
             'actes' => $actes,
             'historique' => $historique,
             'familyMembers' => $familyMembers,
+            'allMembers' => $allMembers,
             'annonces' => $annonces,
             'annoncesHistorique' => $annoncesHistorique,
             'calendarEvents' => $calendarEvents,

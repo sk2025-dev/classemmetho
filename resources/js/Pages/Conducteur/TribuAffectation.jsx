@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, router, Head } from "@inertiajs/react";
+import Select from "react-select";
 import { withBasePath } from "../../Utils/urlHelper";
 import { EMPLOYMENT_STATUS_OPTIONS } from "../../Helpers/select2SingleOptions";
 import {
@@ -8,7 +9,9 @@ import {
     Cake,
     Briefcase,
     UserCheck,
+    UserPlus,
     Search,
+    X,
 } from "lucide-react";
 import Select2Single from "../../Components/Select2Single";
 import useToast from "../../Hooks/useToast";
@@ -26,19 +29,42 @@ const FORM_STYLES = `
     .btn-primary { background-color: var(--primary); color: white; }
     .btn-primary:hover { background-color: var(--primary-hover); }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .pagination { display: flex; justify-content: center; align-items: center; gap: 0.5rem; padding: 1rem 0; flex-wrap: wrap; }
-    .pagination-info { margin-right: 1rem; color: #4b5563; font-size: 0.875rem; font-weight: 600; }
-    .pagination-btn { padding: 0.5rem 0.75rem; border-radius: 0.5rem; background: white; border: 1px solid #d1d5db; color: #374151; font-size: 0.875rem; font-weight: 600; transition: all 0.2s; }
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 0.375rem; padding: 1rem 0; flex-wrap: wrap; }
+    .pagination-info { margin-right: 0.75rem; color: #4b5563; font-size: 0.875rem; font-weight: 600; }
+    .pagination-btn { min-width: 2.25rem; padding: 0.5rem 0.75rem; border-radius: 0.5rem; background: white; border: 1px solid #d1d5db; color: #374151; font-size: 0.875rem; font-weight: 600; transition: all 0.2s; }
     .pagination-btn:hover:not(:disabled) { background: #f3f4f6; border-color: #9ca3af; }
     .pagination-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
     .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .pagination-dots { padding: 0 0.25rem; color: #9ca3af; font-weight: 700; user-select: none; }
 `;
 
-const Pagination = ({ currentPage, totalPages, paginate }) => {
-    const pageNumbers = [];
-    for (let i = 1; i <= totalPages; i++) {
-        pageNumbers.push(i);
+// Fenêtre de pages autour de la page courante (ex: 1 … 4 5 6 … 30) pour éviter
+// d'afficher un bouton par page quand il y en a beaucoup.
+const getPageWindow = (current, total, delta = 1) => {
+    const pages = [];
+    for (let i = 1; i <= total; i++) {
+        if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+            pages.push(i);
+        }
     }
+    const withDots = [];
+    let previous;
+    pages.forEach((page) => {
+        if (previous !== undefined) {
+            if (page - previous === 2) {
+                withDots.push(previous + 1);
+            } else if (page - previous > 2) {
+                withDots.push("…");
+            }
+        }
+        withDots.push(page);
+        previous = page;
+    });
+    return withDots;
+};
+
+const Pagination = ({ currentPage, totalPages, paginate }) => {
+    const pages = getPageWindow(currentPage, totalPages);
 
     return (
         <div className="pagination">
@@ -52,15 +78,21 @@ const Pagination = ({ currentPage, totalPages, paginate }) => {
             >
                 Précédent
             </button>
-            {pageNumbers.map((number) => (
-                <button
-                    key={number}
-                    className={`pagination-btn ${currentPage === number ? "active" : ""}`}
-                    onClick={() => paginate(number)}
-                >
-                    {number}
-                </button>
-            ))}
+            {pages.map((page, idx) =>
+                page === "…" ? (
+                    <span key={`dots-${idx}`} className="pagination-dots">
+                        …
+                    </span>
+                ) : (
+                    <button
+                        key={page}
+                        className={`pagination-btn ${currentPage === page ? "active" : ""}`}
+                        onClick={() => paginate(page)}
+                    >
+                        {page}
+                    </button>
+                ),
+            )}
             <button
                 className="pagination-btn"
                 onClick={() => paginate(currentPage + 1)}
@@ -70,6 +102,64 @@ const Pagination = ({ currentPage, totalPages, paginate }) => {
             </button>
         </div>
     );
+};
+
+const AVATAR_COLORS = [
+    { bg: "#e0e7ff", text: "#4338ca" },
+    { bg: "#fce7f3", text: "#be185d" },
+    { bg: "#dcfce7", text: "#166534" },
+    { bg: "#fef3c7", text: "#92400e" },
+    { bg: "#e0f2fe", text: "#0369a1" },
+    { bg: "#f3e8ff", text: "#6b21a8" },
+];
+
+const getInitials = (fullName = "") => {
+    const parts = fullName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "?";
+    return (parts[0][0] + (parts[parts.length - 1][0] || "")).toUpperCase();
+};
+
+const getAvatarColor = (fullName = "") => {
+    let hash = 0;
+    for (let i = 0; i < fullName.length; i++) {
+        hash = fullName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
+
+// Styles react-select cohérents avec .input-control pour les filtres multi-sélection
+// "Lieu d'habitation" et "Situation professionnelle".
+const multiSelectStyles = {
+    control: (provided, state) => ({
+        ...provided,
+        minHeight: "2.5rem",
+        borderRadius: "0.75rem",
+        borderWidth: "1.5px",
+        borderColor: state.isFocused ? "#4f46e5" : "#d1d5db",
+        boxShadow: state.isFocused ? "0 0 0 3px rgba(79, 70, 229, 0.15)" : "none",
+        "&:hover": { borderColor: state.isFocused ? "#4f46e5" : "#9ca3af" },
+    }),
+    valueContainer: (provided) => ({ ...provided, padding: "2px 8px" }),
+    multiValue: (provided) => ({
+        ...provided,
+        backgroundColor: "#e0e7ff",
+        borderRadius: "0.375rem",
+    }),
+    multiValueLabel: (provided) => ({
+        ...provided,
+        color: "#4338ca",
+        fontSize: "0.75rem",
+        fontWeight: 600,
+    }),
+    multiValueRemove: (provided) => ({
+        ...provided,
+        color: "#4338ca",
+        borderRadius: "0 0.375rem 0.375rem 0",
+        "&:hover": { backgroundColor: "#c7d2fe", color: "#3730a3" },
+    }),
+    placeholder: (provided) => ({ ...provided, color: "#9ca3af", fontSize: "0.875rem" }),
+    menuPortal: (provided) => ({ ...provided, zIndex: 9999 }),
+    menu: (provided) => ({ ...provided, zIndex: 9999 }),
 };
 
 const employmentLabel = (value) =>
@@ -86,8 +176,8 @@ export default function TribuAffectation({
 
     const [tribuCible, setTribuCible] = useState("");
     const [search, setSearch] = useState("");
-    const [ville, setVille] = useState("");
-    const [profession, setProfession] = useState("");
+    const [selectedVilles, setSelectedVilles] = useState([]);
+    const [selectedProfessions, setSelectedProfessions] = useState([]);
     const [ageMin, setAgeMin] = useState("");
     const [ageMax, setAgeMax] = useState("");
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -106,13 +196,25 @@ export default function TribuAffectation({
         return membres.filter((m) => {
             if (m.tribu_actuelle) return false;
             if (term && !m.nom.toLowerCase().includes(term)) return false;
-            if (ville && m.ville !== ville) return false;
-            if (profession && m.employment_status !== profession) return false;
+            if (selectedVilles.length > 0 && !selectedVilles.includes(m.ville))
+                return false;
+            if (
+                selectedProfessions.length > 0 &&
+                !selectedProfessions.includes(m.employment_status)
+            )
+                return false;
             if (min !== null && (m.age === null || m.age < min)) return false;
             if (max !== null && (m.age === null || m.age > max)) return false;
             return true;
         });
-    }, [membres, search, ville, profession, ageMin, ageMax]);
+    }, [
+        membres,
+        search,
+        selectedVilles,
+        selectedProfessions,
+        ageMin,
+        ageMax,
+    ]);
 
     const totalPages = Math.max(1, Math.ceil(filteredMembres.length / itemsPerPage));
     const paginatedMembres = filteredMembres.slice(
@@ -126,7 +228,7 @@ export default function TribuAffectation({
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [search, ville, profession, ageMin, ageMax]);
+    }, [search, selectedVilles, selectedProfessions, ageMin, ageMax]);
 
     useEffect(() => {
         if (currentPage > totalPages) setCurrentPage(totalPages);
@@ -213,8 +315,18 @@ export default function TribuAffectation({
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-xl p-6">
-                        {/* Tribu cible */}
+                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                        {/* Tribu cible + Filtres (figés en haut pendant le scroll) */}
+                        <div className="sticky top-0 z-20 bg-white p-6 pb-5 border-b border-gray-100">
+                        <div className="flex items-center gap-3 mb-5">
+                            <span className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-sm shrink-0">
+                                <UserPlus className="w-5 h-5" />
+                            </span>
+                            <p className="text-xs text-gray-500 font-medium">
+                                {filteredMembres.length} membre(s) disponible(s) pour affectation
+                            </p>
+                        </div>
+
                         <div className="form-group mb-5 max-w-sm">
                             <label className="form-label">
                                 Affecter à quelle tribu ?{" "}
@@ -231,55 +343,132 @@ export default function TribuAffectation({
                         </div>
 
                         {/* Filtres */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
-                                <input
-                                    type="text"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Rechercher un nom..."
-                                    className="input-control pl-9"
-                                />
+                        <div className="bg-gray-50/70 border border-gray-100 rounded-2xl p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <div className="form-group">
+                                    <label className="form-label">Nom</label>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+                                        <input
+                                            type="text"
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                            placeholder="Rechercher un nom..."
+                                            className="input-control pl-9"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Lieu d'habitation</label>
+                                    <Select
+                                        inputId="filtre_villes"
+                                        value={villeOptions.filter((o) =>
+                                            selectedVilles.includes(o.value),
+                                        )}
+                                        onChange={(opts) =>
+                                            setSelectedVilles(
+                                                (opts || []).map((o) => o.value),
+                                            )
+                                        }
+                                        options={villeOptions}
+                                        placeholder="Toutes les villes"
+                                        isMulti
+                                        isClearable
+                                        styles={multiSelectStyles}
+                                        classNamePrefix="react-select"
+                                        noOptionsMessage={() => "Aucun lieu"}
+                                        menuPortalTarget={
+                                            typeof document !== "undefined"
+                                                ? document.body
+                                                : null
+                                        }
+                                        menuPosition="fixed"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Situation professionnelle</label>
+                                    <Select
+                                        inputId="filtre_professions"
+                                        value={EMPLOYMENT_STATUS_OPTIONS.filter(
+                                            (o) =>
+                                                selectedProfessions.includes(
+                                                    o.value,
+                                                ),
+                                        )}
+                                        onChange={(opts) =>
+                                            setSelectedProfessions(
+                                                (opts || []).map((o) => o.value),
+                                            )
+                                        }
+                                        options={EMPLOYMENT_STATUS_OPTIONS}
+                                        placeholder="Toutes les situations"
+                                        isMulti
+                                        isClearable
+                                        styles={multiSelectStyles}
+                                        classNamePrefix="react-select"
+                                        noOptionsMessage={() => "Aucune situation"}
+                                        menuPortalTarget={
+                                            typeof document !== "undefined"
+                                                ? document.body
+                                                : null
+                                        }
+                                        menuPosition="fixed"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Âge</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={ageMin}
+                                            onChange={(e) => setAgeMin(e.target.value)}
+                                            placeholder="Min"
+                                            className="input-control"
+                                        />
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={ageMax}
+                                            onChange={(e) => setAgeMax(e.target.value)}
+                                            placeholder="Max"
+                                            className="input-control"
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                            <Select2Single
-                                name="ville"
-                                value={ville}
-                                onChange={(e) => setVille(e.target.value)}
-                                options={villeOptions}
-                                placeholder="Lieu d'habitation..."
-                            />
-                            <Select2Single
-                                name="profession"
-                                value={profession}
-                                onChange={(e) => setProfession(e.target.value)}
-                                options={EMPLOYMENT_STATUS_OPTIONS}
-                                placeholder="Situation professionnelle..."
-                            />
-                            <div className="flex gap-2">
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={ageMin}
-                                    onChange={(e) => setAgeMin(e.target.value)}
-                                    placeholder="Âge min"
-                                    className="input-control"
-                                />
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={ageMax}
-                                    onChange={(e) => setAgeMax(e.target.value)}
-                                    placeholder="Âge max"
-                                    className="input-control"
-                                />
-                            </div>
+                            {(search ||
+                                selectedVilles.length > 0 ||
+                                selectedProfessions.length > 0 ||
+                                ageMin ||
+                                ageMax) && (
+                                <div className="flex justify-end mt-3">
+                                    <button
+                                        onClick={() => {
+                                            setSearch("");
+                                            setSelectedVilles([]);
+                                            setSelectedProfessions([]);
+                                            setAgeMin("");
+                                            setAgeMax("");
+                                        }}
+                                        className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                        Réinitialiser les filtres
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         </div>
 
+                        <div className="p-6 pt-5">
                         {filteredMembres.length === 0 ? (
-                            <p className="text-sm text-gray-400">
-                                Aucun membre ne correspond à ces critères.
-                            </p>
+                            <div className="flex flex-col items-center justify-center text-center py-14 text-gray-400">
+                                <Search className="w-8 h-8 mb-2 text-gray-300" />
+                                <p className="text-sm font-medium">
+                                    Aucun membre ne correspond à ces critères.
+                                </p>
+                            </div>
                         ) : (
                             <>
                                 <div className="overflow-x-auto rounded-xl border border-gray-100">
@@ -303,16 +492,19 @@ export default function TribuAffectation({
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
-                                            {paginatedMembres.map((m) => (
+                                            {paginatedMembres.map((m) => {
+                                                const avatarColor = getAvatarColor(m.nom);
+                                                return (
                                                 <tr
                                                     key={m.id}
-                                                    className={
+                                                    onClick={() => toggleMembre(m.id)}
+                                                    className={`cursor-pointer transition-colors ${
                                                         selectedIds.has(m.id)
-                                                            ? "bg-indigo-50/60"
-                                                            : ""
-                                                    }
+                                                            ? "bg-indigo-50/60 hover:bg-indigo-50"
+                                                            : "hover:bg-gray-50"
+                                                    }`}
                                                 >
-                                                    <td className="px-4 py-2">
+                                                    <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedIds.has(
@@ -326,8 +518,21 @@ export default function TribuAffectation({
                                                             className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                                         />
                                                     </td>
-                                                    <td className="px-4 py-2 font-medium text-gray-800">
-                                                        {m.nom}
+                                                    <td className="px-4 py-2">
+                                                        <div className="flex items-center gap-3">
+                                                            <span
+                                                                className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                                                                style={{
+                                                                    backgroundColor: avatarColor.bg,
+                                                                    color: avatarColor.text,
+                                                                }}
+                                                            >
+                                                                {getInitials(m.nom)}
+                                                            </span>
+                                                            <span className="font-medium text-gray-800">
+                                                                {m.nom}
+                                                            </span>
+                                                        </div>
                                                     </td>
                                                     <td className="px-4 py-2">
                                                         <div className="flex flex-wrap gap-1.5">
@@ -351,7 +556,8 @@ export default function TribuAffectation({
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            ))}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
@@ -368,9 +574,20 @@ export default function TribuAffectation({
 
                         {/* Barre d'action */}
                         <div className="flex items-center justify-between gap-4 mt-5 pt-5 border-t border-gray-100 flex-wrap">
-                            <span className="text-sm font-semibold text-gray-600">
-                                {selectedIds.size} membre(s) sélectionné(s)
-                            </span>
+                            <div className="flex items-center gap-3">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-indigo-50 text-indigo-700">
+                                    <UserCheck className="w-4 h-4" />
+                                    {selectedIds.size} sélectionné(s)
+                                </span>
+                                {selectedIds.size > 0 && (
+                                    <button
+                                        onClick={() => setSelectedIds(new Set())}
+                                        className="text-xs font-semibold text-gray-500 hover:text-gray-700"
+                                    >
+                                        Effacer la sélection
+                                    </button>
+                                )}
+                            </div>
                             <button
                                 onClick={handleBulkAssign}
                                 disabled={
@@ -390,6 +607,7 @@ export default function TribuAffectation({
                                     ? `Affecter la sélection à ${tribuCibleNom}`
                                     : "Choisir une tribu cible"}
                             </button>
+                        </div>
                         </div>
                     </div>
                 </div>

@@ -85,7 +85,6 @@ class ProgrammesClasseController extends Controller
 
         $allProgrammes = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
-            ->whereYear('start_date', now()->year)
             ->orderBy('start_date', 'asc')
             ->orderBy('start_time', 'asc')
             ->get()
@@ -1120,14 +1119,392 @@ class ProgrammesClasseController extends Controller
             Log::error('Erreur import', [
                 'error' => $e->getMessage()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur: ' . $e->getMessage()
             ], 500);
         }
     }
-    
+
+    /**
+     * Télécharge un modèle Excel vierge (avec un exemple) à remplir pour l'import de masse.
+     */
+    public function downloadImportTemplate()
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Programmes');
+
+        $headers = [
+            'Titre', 'Date début (AAAA-MM-JJ)', 'Date fin (AAAA-MM-JJ)',
+            'Heure début (HH:MM)', 'Heure fin (HH:MM)', 'Orateur',
+            'Modérateur', 'Famille de réception', 'Lieu',
+        ];
+        $sheet->fromArray($headers, null, 'A1');
+        $sheet->getStyle('A1:I1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:I1')->getFont()->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle('A1:I1')->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('4F46E5');
+
+        $sheet->fromArray([
+            'Étude biblique',
+            now()->addDays(7)->format('Y-m-d'),
+            '',
+            '18:30',
+            '',
+            'Fr. Jean',
+            'Fr. Paul',
+            'Famille Dupont',
+            'Salle 101',
+        ], null, 'A2');
+
+        foreach (range('A', 'I') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, 'modele_import_programmes.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * En-têtes acceptées (normalisées) => clé de champ SpecialEvent.
+     */
+    private const IMPORT_HEADER_ALIASES = [
+        'titre' => 'title',
+        'title' => 'title',
+        'date_debut' => 'start_date',
+        'date_de_debut' => 'start_date',
+        'start_date' => 'start_date',
+        'date_fin' => 'end_date',
+        'date_de_fin' => 'end_date',
+        'end_date' => 'end_date',
+        'heure_debut' => 'start_time',
+        'heure_de_debut' => 'start_time',
+        'start_time' => 'start_time',
+        'heure_fin' => 'end_time',
+        'heure_de_fin' => 'end_time',
+        'end_time' => 'end_time',
+        'orateur' => 'orateur',
+        'moderateur' => 'moderateur',
+        'famille_de_reception' => 'famille_reception',
+        'famille_reception' => 'famille_reception',
+        'lieu' => 'lieu',
+    ];
+
+    /**
+     * Import de masse de programmes depuis un fichier Excel rempli à partir du modèle.
+     * Chaque ligne valide crée un nouveau programme ; les lignes invalides sont ignorées
+     * (comptabilisées) sans bloquer le reste de l'import. N'affecte jamais les programmes existants.
+     */
+    public function importExcelFile(Request $request)
+    {
+        $user = Auth::user();
+        $classe = $user->classe;
+        if (!$classe) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucune classe associée à votre compte.',
+            ], 403);
+        }
+
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls',
+        ]);
+
+        $filePath = $request->file('file')->store('temp_excel');
+        $fullPath = storage_path('app/private/' . $filePath);
+
+        if (!file_exists($fullPath)) {
+            return response()->json([
+                'success' => false,
+                'message' => "Le fichier n'a pas pu être sauvegardé.",
+            ], 400);
+        }
+
+        try {
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($fullPath);
+            $worksheet = $spreadsheet->getActiveSheet();
+            $highestRow = $worksheet->getHighestDataRow();
+
+            // En-têtes (ligne 1) => colonne => clé de champ
+            $columnMap = [];
+            foreach ($worksheet->getRowIterator(1, 1) as $row) {
+                $cellIterator = $row->getCellIterator();
+                $cellIterator->setIterateOnlyExistingCells(false);
+                foreach ($cellIterator as $cell) {
+                    $raw = $cell->getValue();
+                    if ($raw === null || $raw === '') {
+                        continue;
+                    }
+                    $key = $this->normalizeImportHeader((string) $raw);
+                    if (isset(self::IMPORT_HEADER_ALIASES[$key])) {
+                        $columnMap[$cell->getColumn()] = self::IMPORT_HEADER_ALIASES[$key];
+                    }
+                }
+            }
+
+            if (!in_array('title', $columnMap, true) || !in_array('start_date', $columnMap, true)) {
+                Storage::delete($filePath);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => "Le fichier ne contient pas les colonnes obligatoires (Titre, Date début). Téléchargez le modèle pour vérifier le format attendu.",
+                ], 400);
+            }
+
+            $currentYear = now()->year;
+            $created = 0;
+            $skipped = [];
+            $importedEvents = [];
+
+            for ($rowIndex = 2; $rowIndex <= $highestRow; $rowIndex++) {
+                $rowData = [];
+                $isEmpty = true;
+
+                foreach ($columnMap as $col => $field) {
+                    $cell = $worksheet->getCell($col . $rowIndex);
+                    $value = $cell->getValue();
+                    if ($value === null || $value === '') {
+                        continue;
+                    }
+                    $isEmpty = false;
+
+                    if (in_array($field, ['start_date', 'end_date'], true)) {
+                        $rowData[$field] = $this->parseImportDateCell($cell);
+                    } elseif (in_array($field, ['start_time', 'end_time'], true)) {
+                        $rowData[$field] = $this->parseImportTimeCell($cell);
+                    } else {
+                        $rowData[$field] = $this->toUtf8Value(trim((string) $value));
+                    }
+                }
+
+                if ($isEmpty) {
+                    continue;
+                }
+
+                $title = trim((string) ($rowData['title'] ?? ''));
+                $startDate = $rowData['start_date'] ?? null;
+
+                if ($title === '' || !$startDate) {
+                    $skipped[] = "Ligne {$rowIndex}: titre ou date de début manquant/invalide.";
+                    continue;
+                }
+
+                // Contrairement à la création manuelle, l'import Excel accepte les années passées
+                // (archivage d'un historique de programmes) ; seules les dates manifestement
+                // corrompues (typo sur l'année, ex: "202" au lieu de "2026") sont rejetées.
+                $activityYear = (int) date('Y', strtotime($startDate));
+                if ($activityYear < 2000 || $activityYear > $currentYear + 1) {
+                    $skipped[] = "Ligne {$rowIndex}: date de début invalide ({$startDate}, année {$activityYear}).";
+                    continue;
+                }
+
+                if (!empty($rowData['end_date']) && $rowData['end_date'] < $startDate) {
+                    unset($rowData['end_date']);
+                }
+
+                $event = SpecialEvent::create([
+                    'title' => mb_substr($title, 0, 255),
+                    'start_date' => $startDate,
+                    'end_date' => $rowData['end_date'] ?? null,
+                    'start_time' => $rowData['start_time'] ?? null,
+                    'end_time' => $rowData['end_time'] ?? null,
+                    'orateur' => isset($rowData['orateur']) ? mb_substr($rowData['orateur'], 0, 255) : null,
+                    'moderateur' => isset($rowData['moderateur']) ? mb_substr($rowData['moderateur'], 0, 255) : null,
+                    'famille_reception' => isset($rowData['famille_reception']) ? mb_substr($rowData['famille_reception'], 0, 255) : null,
+                    'lieu' => isset($rowData['lieu']) ? mb_substr($rowData['lieu'], 0, 500) : null,
+                    'class_id' => $classe->id,
+                    'created_by' => $user->id,
+                    'is_parish' => false,
+                ]);
+
+                $eventArray = $event->toArray();
+                $eventArray['date'] = $event->start_date;
+                $eventArray['time'] = $event->start_time;
+                $importedEvents[] = $eventArray;
+                $created++;
+            }
+
+            Storage::delete($filePath);
+
+            if ($created === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucun programme valide trouvé dans le fichier.',
+                    'errors' => $skipped,
+                ], 422);
+            }
+
+            $message = "{$created} programme(s) importé(s) avec succès.";
+            if (count($skipped) > 0) {
+                $message .= ' ' . count($skipped) . ' ligne(s) ignorée(s) (voir détail).';
+            }
+
+            return response()->json([
+                'success' => true,
+                'imported_count' => $created,
+                'message' => $message,
+                'events' => $importedEvents,
+                'errors' => $skipped,
+            ]);
+        } catch (\Throwable $e) {
+            Storage::delete($filePath);
+            Log::error('Erreur import Excel programmes', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la lecture du fichier: ' . $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    private function normalizeImportHeader(string $header): string
+    {
+        // Retire les indications de format entre parenthèses (ex: "Date début (AAAA-MM-JJ)")
+        // pour ne comparer que le libellé de la colonne.
+        $header = trim((string) preg_replace('/\([^)]*\)/', '', $header));
+
+        $translit = strtr($header, [
+            'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e', 'É' => 'e', 'È' => 'e',
+            'à' => 'a', 'â' => 'a', 'À' => 'a',
+            'î' => 'i', 'ï' => 'i',
+            'ô' => 'o',
+            'û' => 'u', 'ù' => 'u',
+            'ç' => 'c',
+        ]);
+        $translit = strtolower($translit);
+        $translit = preg_replace('/[^a-z0-9]+/', '_', $translit);
+
+        return trim($translit, '_');
+    }
+
+    private function parseImportDateCell($cell): ?string
+    {
+        $value = $cell->getValue();
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_numeric($value) && \PhpOffice\PhpSpreadsheet\Shared\Date::isDateTime($cell)) {
+            try {
+                return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value)->format('Y-m-d');
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+
+        return $this->parseFlexibleDateString((string) $value);
+    }
+
+    /**
+     * Convertit une date saisie sous n'importe quel format courant (JJ/MM/AAAA, JJ-MM-AAAA,
+     * AAAA-MM-JJ, avec points ou espaces comme séparateurs, etc.) vers le format Y-m-d attendu
+     * par la base de données. Le format jour/mois/année (français) est prioritaire en cas d'ambiguïté.
+     */
+    private function parseFlexibleDateString(string $raw): ?string
+    {
+        $raw = trim($raw);
+        if ($raw === '') {
+            return null;
+        }
+
+        // Normalise les séparateurs (/, ., espace) vers "-" pour tester un format unique.
+        $normalized = preg_replace('/[.\/\s]+/', '-', $raw);
+
+        // Du plus probable (jour-mois-année, convention française) au moins probable.
+        $formats = ['d-m-Y', 'j-n-Y', 'Y-m-d', 'd-m-y'];
+        foreach ($formats as $format) {
+            $date = \DateTime::createFromFormat('!' . $format, $normalized);
+            if ($date instanceof \DateTime) {
+                $errors = \DateTime::getLastErrors();
+                if (!$errors || ($errors['warning_count'] === 0 && $errors['error_count'] === 0)) {
+                    return $date->format('Y-m-d');
+                }
+            }
+        }
+
+        // Dernier recours : laisser PHP deviner (dates textuelles, ISO 8601 avec heure, etc.).
+        $ts = strtotime($raw);
+
+        return $ts ? date('Y-m-d', $ts) : null;
+    }
+
+    private function parseImportTimeCell($cell): ?string
+    {
+        $value = $cell->getValue();
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_numeric($value) && \PhpOffice\PhpSpreadsheet\Shared\Date::isDateTime($cell)) {
+            try {
+                return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value)->format('H:i');
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+        $str = strtolower(str_replace(['h', '.'], ':', trim((string) $value)));
+        if (preg_match('/^(\d{1,2}):(\d{2})/', $str, $m)) {
+            return sprintf('%02d:%02d', (int) $m[1], (int) $m[2]);
+        }
+
+        return null;
+    }
+
+    private function toUtf8Value(string $value): string
+    {
+        if (!mb_check_encoding($value, 'UTF-8')) {
+            $converted = @mb_convert_encoding($value, 'UTF-8', 'Windows-1252');
+            if ($converted !== false) {
+                return $converted;
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * Met à jour le statut de réalisation d'un programme (planifiée, réalisée,
+     * reportée, annulée), y compris pour une activité passée.
+     */
+    public function updateStatutRealisation(Request $request, $id)
+    {
+        $user = Auth::user();
+        $classe = $user->classe;
+
+        if (!$classe) {
+            return response()->json(['success' => false, 'message' => 'Aucune classe associée à votre compte.'], 403);
+        }
+
+        $event = SpecialEvent::where('is_parish', false)
+            ->where('class_id', $classe->id)
+            ->find($id);
+
+        if (!$event) {
+            return response()->json(['success' => false, 'message' => 'Programme introuvable ou non autorisé.'], 404);
+        }
+
+        $validated = $request->validate([
+            'statut_realisation' => 'required|in:planifiee,realisee,reportee,annulee',
+        ]);
+
+        $event->update(['statut_realisation' => $validated['statut_realisation']]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Statut mis à jour avec succès.',
+            'statut_realisation' => $event->statut_realisation,
+        ]);
+    }
+
     /**
      * Supprimer un événement
      */

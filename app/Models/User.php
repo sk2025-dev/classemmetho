@@ -71,6 +71,11 @@ class User extends Authenticatable
         // === STATUT ===
         'status',
 
+        // === SUIVI NOUVEAUX MEMBRES ===
+        'is_nouveau',
+        'nouveau_depuis',
+        'nouveau_integre_le',
+
         // === DÉCÈS ===
         'is_deceased',
         'deceased_at',
@@ -177,6 +182,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_nouveau' => 'boolean',
+            'nouveau_depuis' => 'date',
+            'nouveau_integre_le' => 'datetime',
         ];
     }
 
@@ -297,6 +305,21 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Fonction::class, 'fonction_user')
             ->withTimestamps();
+    }
+
+    /**
+     * Vérifie si l'utilisateur détient une fonction donnée (nom), que ce soit via
+     * la fonction principale (fonction_id) ou via le pivot multi-fonctions.
+     */
+    public function hasFonction(string $nom): bool
+    {
+        $target = mb_strtolower(trim($nom));
+
+        if (mb_strtolower(trim((string) ($this->fonction?->nom ?? ''))) === $target) {
+            return true;
+        }
+
+        return $this->fonctions->contains(fn ($f) => mb_strtolower(trim($f->nom)) === $target);
     }
 
     /**

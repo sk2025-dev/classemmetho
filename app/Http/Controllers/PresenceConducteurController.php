@@ -111,10 +111,6 @@ class PresenceConducteurController extends Controller
             return response()->json(['message' => 'Ce membre n\'est pas dans votre classe.'], 403);
         }
 
-        if (! in_array($member->role, ['membre_famille', 'tresorier'], true)) {
-            return response()->json(['message' => 'Seul un membre de famille peut devenir marqueur de présence.'], 422);
-        }
-
         $fonction = $this->getPresenceMarkerFunction();
 
         User::query()
@@ -123,10 +119,14 @@ class PresenceConducteurController extends Controller
             ->where('id', '!=', $member->id)
             ->update(['fonction_id' => null]);
 
-        $member->update([
-            'role' => 'membre_famille',
-            'fonction_id' => $fonction->id,
-        ]);
+        // Assigner la fonction marqueur sans toucher au rôle du membre (conducteur, pasteur,
+        // etc. gardent leur rôle d'origine) ; seuls les anciens comptes avec role="tresorier"
+        // (legacy) sont normalisés vers membre_famille.
+        $updates = ['fonction_id' => $fonction->id];
+        if ($member->role === 'tresorier') {
+            $updates['role'] = 'membre_famille';
+        }
+        $member->update($updates);
         $member->load('family');
 
         return response()->json([
@@ -335,6 +335,21 @@ class PresenceConducteurController extends Controller
                 'couleur' => $this->couleurAvatar($m->id),
             ]);
 
+        // Liste dédiée à l'assignation du marqueur de présence : tous les membres de la
+        // classe, sans restriction de rôle (distincte de $membres utilisée pour le suivi des présences).
+        $membresAssignables = $classe->users()
+            ->with('family:id,nom')
+            ->get()
+            ->map(fn(User $m) => [
+                'id' => $m->id,
+                'prenom' => $this->utf8Safe($m->prenom),
+                'nom' => $this->utf8Safe($m->nom),
+                'role' => $m->role,
+                'famille' => $m->family ? ['nom' => $this->utf8Safe($m->family->nom)] : null,
+                'avatar_initiales' => strtoupper(substr($this->utf8Safe($m->prenom), 0, 1) . substr($this->utf8Safe($m->nom), 0, 1)),
+                'couleur' => $this->couleurAvatar($m->id),
+            ]);
+
         $hasSpecialEventColumn = Schema::hasColumn('presences', 'special_event_id');
 
         $presencesBrutes = $hasSpecialEventColumn
@@ -397,9 +412,11 @@ class PresenceConducteurController extends Controller
                 'manualMark' => '/membre-famille/presences/marquage/marquer',
                 'assignPresenceMarker' => '/conducteur/presences/assign-marqueur',
                 'unassignPresenceMarker' => '/conducteur/presences/unassign-marqueur',
+                'correctPresence' => '/conducteur/presences/corriger',
             ],
             'activites' => $activites,
             'membres' => $membres,
+            'membresAssignables' => $membresAssignables,
             'presences' => $presences,
             'activite_active_id' => $activiteActiveId,
             'stats' => [

@@ -90,10 +90,13 @@ Route::middleware(['auth'])->group(function () {
 
     // Profil utilisateur
     Route::get('/profile', [\App\Http\Controllers\Profile\ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/ma-carte-virtuelle', [\App\Http\Controllers\CarteVirtuelleController::class, 'index'])->name('carte.virtuelle');
     Route::post('/profile/update', [\App\Http\Controllers\Profile\ProfileController::class, 'update'])->name('profile.update');
     Route::post('/profile/identifier', [\App\Http\Controllers\Profile\ProfileController::class, 'updateIdentifier'])->name('profile.identifier');
     Route::post('/profile/password', [\App\Http\Controllers\Profile\ProfileController::class, 'changePassword'])->name('profile.password');
     Route::post('/profile/signature', [\App\Http\Controllers\Profile\ProfileController::class, 'updateSignature'])->name('profile.signature');
+    Route::post('/profile/classe-cachet', [\App\Http\Controllers\Profile\ProfileController::class, 'updateClasseCachet'])->name('profile.classe-cachet');
+    Route::post('/profile/classe-theme', [\App\Http\Controllers\Profile\ProfileController::class, 'updateClasseTheme'])->name('profile.classe-theme');
 
     // Route générique /dashboard redirige selon le rôle connecté
     Route::get('/dashboard', function () {
@@ -111,6 +114,8 @@ Route::middleware(['auth'])->group(function () {
                 return redirect()->route('responsable_famille.dashboard');
             case 'membre_famille':
                 return redirect()->route('membre_famille.dashboard');
+            case 'secretariat':
+                return redirect()->route('secretariat.dashboard');
             default:
                 return Inertia::render('Dashboard');
         }
@@ -123,6 +128,12 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::post('/activities/{eventId}/quick-photo', [\App\Http\Controllers\Api\LivePhotoController::class, 'store'])->name('activities.quick-photo');
     Route::get('/activities/{eventId}/photos-count', [\App\Http\Controllers\Api\LivePhotoController::class, 'count'])->name('activities.photos-count');
+});
+
+// Import Excel FIMECO — réservé au Responsable FIMECO (fonction transverse aux rôles), voir ImportController
+Route::middleware(['auth'])->group(function () {
+    Route::post('/fimeco/import/souscriptions', [\App\Http\Controllers\Fimeco\ImportController::class, 'importSouscriptions'])->name('fimeco.import.souscriptions');
+    Route::post('/fimeco/import/versements', [\App\Http\Controllers\Fimeco\ImportController::class, 'importVersements'])->name('fimeco.import.versements');
 });
 
 // Routes authentifiées
@@ -159,6 +170,9 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('/admin/classes', \App\Http\Controllers\Admin\ClasseController::class)
             ->parameters(['classes' => 'classe']);
         Route::patch('/admin/classes/{classe}/status', [\App\Http\Controllers\Admin\ClasseController::class, 'toggleStatus'])->name('classes.toggle-status');
+
+        // Paramètres du site
+        Route::post('/admin/parametres/carte-theme', [\App\Http\Controllers\Admin\SiteSettingController::class, 'updateCarteTheme'])->name('admin.parametres.carte-theme');
 
         // Routes pour les fonctions
         Route::resource('/admin/fonctions', \App\Http\Controllers\Admin\FonctionController::class);
@@ -222,6 +236,8 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/admin/membres/{id}/status', [UserManagementController::class, 'updateStatus'])->name('admin.membres.status');
         Route::post('/admin/membres/{id}/president-conducteurs', [AdministrationController::class, 'assignPresidentConducteurs'])->name('admin.membres.president_conducteurs.assign');
         Route::delete('/admin/membres/{id}/president-conducteurs', [AdministrationController::class, 'unassignPresidentConducteurs'])->name('admin.membres.president_conducteurs.unassign');
+        Route::post('/admin/membres/{id}/secretariat', [AdministrationController::class, 'assignSecretariat'])->name('admin.membres.secretariat.assign');
+        Route::delete('/admin/membres/{id}/secretariat', [AdministrationController::class, 'unassignSecretariat'])->name('admin.membres.secretariat.unassign');
 
         // Routes pour les détails
         Route::get('/inscriptions/{id}', [AdministrationController::class, 'getInscriptionDetails'])
@@ -249,6 +265,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('presences.programmes_activites');
         Route::post('/conducteur/presences/assign-marqueur', [PresenceConducteurController::class, 'assignPresenceMarker'])
             ->name('presences.assign_marqueur');
+        Route::post('/conducteur/presences/corriger', [\App\Http\Controllers\Api\PresenceController::class, 'corrigerPresence'])
+            ->name('presences.corriger');
         Route::post('/conducteur/presences/unassign-marqueur', [PresenceConducteurController::class, 'unassignPresenceMarker'])
             ->name('presences.unassign_marqueur');
         Route::post('/conducteur/presences/programme/{event}', [PresenceConducteurController::class, 'enregistrerProgramme'])
@@ -292,6 +310,11 @@ Route::middleware(['auth'])->group(function () {
 
         // Endpoint simplifié pour ajouter rapidement un simple membre
         Route::post('/conducteur/quick-member', [QuickMemberController::class, 'store'])->name('conducteur.quick_member.store');
+        Route::get('/conducteur/membres/{user}/carte', [\App\Http\Controllers\Conducteur\CarteVirtuelleController::class, 'show'])->name('conducteur.membres.carte');
+        Route::get('/conducteur/nouveaux', [\App\Http\Controllers\Conducteur\NouveauxController::class, 'index'])->name('conducteur.nouveaux.index');
+        Route::post('/conducteur/nouveaux/assign-gestionnaire', [\App\Http\Controllers\Conducteur\NouveauxController::class, 'assignGestionnaire'])->name('conducteur.nouveaux.assign-gestionnaire');
+        Route::post('/conducteur/nouveaux/unassign-gestionnaire', [\App\Http\Controllers\Conducteur\NouveauxController::class, 'unassignGestionnaire'])->name('conducteur.nouveaux.unassign-gestionnaire');
+        Route::post('/conducteur/nouveaux/{membre}/integrer', [\App\Http\Controllers\Conducteur\NouveauxController::class, 'integrer'])->name('conducteur.nouveaux.integrer');
         Route::get('/conducteur/check-email', [QuickMemberController::class, 'checkEmail'])->name('conducteur.check_email');
 
         Route::put('/conducteur/members/{memberId}', [ConducteurInscriptionsController::class, 'update'])->name('conducteur.members.update');
@@ -337,7 +360,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/liturgie/{id}/fiche', [ConducteurLiturgieController::class, 'fiche'])->name('conducteur.liturgie.fiche');
 
         Route::get('/conducteur/liturgie/selection', function () {
-            return Inertia::render('Conducteur/Liturgie/Selection');
+            $user = Auth::user();
+            $classIds = $user->getManagedClasses()->pluck('id')->toArray();
+            $familyMembers = \App\Models\User::query()
+                ->whereIn('classe_id', $classIds)
+                ->select(['id', 'nom', 'prenom', 'classe_id'])
+                ->orderBy('prenom')
+                ->orderBy('nom')
+                ->get();
+
+            return Inertia::render('Conducteur/Liturgie/Selection', [
+                'familyMembers' => $familyMembers,
+            ]);
         })->name('conducteur.liturgie.selection');
 
         // Route dynamique pour afficher le bon formulaire selon le type_acte
@@ -417,6 +451,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('conducteur.tresorerie.assign-tresorier');
         Route::post('/conducteur/tresorerie/unassign-tresorier', [ConducteurTresorerieController::class, 'unassignTresorier'])
             ->name('conducteur.tresorerie.unassign-tresorier');
+        Route::post('/conducteur/tresorerie/fimeco-souscription', [ConducteurTresorerieController::class, 'setFimecoSouscription'])
+            ->name('conducteur.tresorerie.fimeco-souscription');
 
         // ===== ROUTES PROGRAMMES CONDUCTEUR =====
         Route::get('/conducteur/programmes', [ProgrammesClasseController::class, 'index'])->name('conducteur.programmes');
@@ -424,6 +460,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/conducteur/programmes/event', [ProgrammesClasseController::class, 'storeEvent'])->name('conducteur.programmes.event');
         Route::post('/conducteur/programmes/events-multiple', [ProgrammesClasseController::class, 'storeMultipleEvents'])->name('conducteur.programmes.events-multiple');
         Route::put('/conducteur/programmes/event/{id}', [ProgrammesClasseController::class, 'updateEvent'])->name('conducteur.programmes.event.update');
+        Route::patch('/conducteur/programmes/event/{id}/statut', [ProgrammesClasseController::class, 'updateStatutRealisation'])->name('conducteur.programmes.event.statut');
         Route::get('/conducteur/programmes/event/{id}/qr', [ProgrammesClasseController::class, 'qrCode'])->name('conducteur.programmes.event.qr');
         Route::get('/conducteur/programmes/{event}/presences', [\App\Http\Controllers\Api\PresenceController::class, 'programmeSummary'])
             ->whereNumber('event')
@@ -433,6 +470,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/programmes/event/{id}/qr/data', [ProgrammesClasseController::class, 'qrData'])->name('conducteur.programmes.event.qr.data');
         Route::delete('/conducteur/programmes/event/{id}', [ProgrammesClasseController::class, 'destroy'])->name('conducteur.programmes.event.destroy');
         Route::post('/conducteur/programmes/import-events', [ProgrammesClasseController::class, 'importEvents'])->name('conducteur.programmes.import');
+        Route::get('/conducteur/programmes/import-template', [ProgrammesClasseController::class, 'downloadImportTemplate'])->name('conducteur.programmes.import-template');
+        Route::post('/conducteur/programmes/import-excel', [ProgrammesClasseController::class, 'importExcelFile'])->name('conducteur.programmes.import-excel');
         Route::get('/conducteur/programmes/events-by-month', [ProgrammesClasseController::class, 'getEventsByMonth'])->name('conducteur.programmes.events.by-month');
         Route::get('/conducteur/programmes/history', [ProgrammesClasseController::class, 'historyProgrammes'])->name('conducteur.programmes.history');
         Route::get('/conducteur/programmes/history/filter', [ProgrammesClasseController::class, 'getHistoryProgrammes'])->name('conducteur.programmes.history.filter');
@@ -525,6 +564,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('responsable_famille.tresorerie.paiements.store');
         Route::post('/responsable-famille/tresorerie/paiements/initiate', [ResponsableFamilleTresorerieController::class, 'initiatePaiement'])
             ->name('responsable_famille.tresorerie.paiements.initiate');
+        Route::post('/responsable-famille/tresorerie/fimeco-souscription', [ResponsableFamilleTresorerieController::class, 'setFimecoSouscription'])
+            ->name('responsable_famille.tresorerie.fimeco-souscription');
         Route::post('/responsable-famille/tresorerie/dons', [ResponsableFamilleTresorerieController::class, 'storeDon'])
             ->name('responsable_famille.tresorerie.dons.store');
         Route::post('/responsable-famille/tresorerie/dons/initiate', [ResponsableFamilleTresorerieController::class, 'initiateDonLibre'])
@@ -572,6 +613,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/president-conducteurs/liturgie/{id}/transition', [\App\Http\Controllers\PresidentConducteurs\LiturgieController::class, 'transition'])->name('president_conducteurs.liturgie.transition');
         Route::get('/president-conducteurs/liturgie/{id}/fiche-conducteur', [\App\Http\Controllers\PresidentConducteurs\LiturgieController::class, 'ficheConducteur'])->name('president_conducteurs.liturgie.fiche_conducteur');
         Route::get('/president-conducteurs/liturgie/{id}/fiche-priere', [\App\Http\Controllers\PresidentConducteurs\LiturgieController::class, 'fichePriere'])->name('president_conducteurs.liturgie.fiche_priere');
+        Route::post('/president-conducteurs/annonces', [\App\Http\Controllers\PresidentConducteurs\AnnonceController::class, 'store'])->name('president_conducteurs.annonces.store');
 
         // Trésorerie
         Route::post('/president-conducteurs/tresorerie/encouragement', [\App\Http\Controllers\PresidentConducteurs\DashboardController::class, 'storeEncouragement'])->name('president_conducteurs.tresorerie.encouragement');
@@ -584,6 +626,13 @@ Route::middleware(['auth'])->group(function () {
         // Sondages
         Route::get('/president-conducteurs/sondages/{id}/details', [\App\Http\Controllers\PresidentConducteurs\Sondage\SondageController::class, 'details'])->whereNumber('id')->name('president_conducteurs.sondages.details');
         Route::get('/president-conducteurs/sondages/{id}/export', [\App\Http\Controllers\PresidentConducteurs\Sondage\SondageController::class, 'export'])->whereNumber('id')->name('president_conducteurs.sondages.export');
+    });
+
+    // ===== ROUTES SECRETARIAT =====
+    Route::middleware('role:secretariat')->group(function () {
+        Route::get('/secretariat/dashboard', [\App\Http\Controllers\Secretariat\DashboardController::class, 'index'])->name('secretariat.dashboard');
+        Route::post('/secretariat/annonces/{id}/archiver', [\App\Http\Controllers\Secretariat\AnnonceController::class, 'archiver'])->name('secretariat.annonces.archiver');
+        Route::get('/secretariat/annonces/{id}/fiche', [\App\Http\Controllers\Secretariat\AnnonceController::class, 'fiche'])->name('secretariat.annonces.fiche');
     });
 
     // ===== ROUTES PASTEUR =====
@@ -628,6 +677,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/pasteur/annonces/{id}/valider', [\App\Http\Controllers\Pasteur\AnnonceController::class, 'valider'])->name('pasteur.annonces.valider');
         Route::post('/pasteur/annonces/{id}/rejeter', [\App\Http\Controllers\Pasteur\AnnonceController::class, 'rejeter'])->name('pasteur.annonces.rejeter');
         Route::post('/pasteur/annonces/{id}/publier', [\App\Http\Controllers\Pasteur\AnnonceController::class, 'publier'])->name('pasteur.annonces.publier');
+        Route::post('/pasteur/annonces/{id}/reprogrammer', [\App\Http\Controllers\Pasteur\AnnonceController::class, 'reprogrammer'])->name('pasteur.annonces.reprogrammer');
         Route::post('/pasteur/annonces/{id}/archiver', [\App\Http\Controllers\Pasteur\AnnonceController::class, 'archiver'])->name('pasteur.annonces.archiver');
 
         // Routes module Trésorerie (Pasteur)
@@ -651,15 +701,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/prieres', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'index'])->name('membre_famille.prieres.index');
         Route::get('/membre-famille/dashboard', [MembreFamilleDashboardController::class, 'index'])->name('membre_famille.dashboard');
         Route::get('/membre-famille/presences', [\App\Http\Controllers\MembreFamille\PresencesController::class, 'index'])->name('membre_famille.presences.index');
-        Route::get('/membre-famille/presences/marquage', [PresenceConducteurController::class, 'indexMarqueur'])
-            ->name('membre_famille.presences.marquage.index');
-        Route::get('/membre-famille/presences/marquage/programmes-activites', [PresenceConducteurController::class, 'activitesProgramme'])
-            ->name('membre_famille.presences.marquage.programmes_activites');
-        Route::get('/membre-famille/presences/marquage/programmes/{event}/presences', [\App\Http\Controllers\Api\PresenceController::class, 'programmeSummary'])
-            ->whereNumber('event')
-            ->name('membre_famille.presences.marquage.programmes.presences');
-        Route::post('/membre-famille/presences/marquage/marquer', [\App\Http\Controllers\Api\PresenceController::class, 'marquerPresenceManuelle'])
-            ->name('membre_famille.presences.marquage.marquer');
         Route::get('/membre-famille/prieres', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'index'])->name('membre_famille.prieres.index');
         Route::post('/membre-famille/prieres', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'store'])->name('membre_famille.prieres.store');
         Route::patch('/membre-famille/prieres/{priere}/commentaire', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'updateTestimony'])->name('membre_famille.prieres.testimony');
@@ -719,6 +760,21 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/api/events/{eventId}/media', [ProgrammesController::class, 'getMediaByEvent'])->name('membre_famille.api.events.media');
         Route::get('/membre-famille/programmes/history/filter', [ProgrammesController::class, 'getHistoryProgrammes'])->name('membre_famille.programmes.history.filter');
         Route::get('/membre-famille/galerie/filter', [ProgrammesController::class, 'getGalleryMediaFiltered'])->name('membre_famille.galerie.filter');
+    });
+
+    // Marquage des présences : accessible à tout membre désigné "marqueur de présence"
+    // par le conducteur, quel que soit son rôle de base (membre_famille ou responsable_famille).
+    // L'autorisation fine (isPresenceMarker) reste vérifiée dans les contrôleurs.
+    Route::middleware(['auth', 'role:membre_famille,responsable_famille'])->group(function () {
+        Route::get('/membre-famille/presences/marquage', [PresenceConducteurController::class, 'indexMarqueur'])
+            ->name('membre_famille.presences.marquage.index');
+        Route::get('/membre-famille/presences/marquage/programmes-activites', [PresenceConducteurController::class, 'activitesProgramme'])
+            ->name('membre_famille.presences.marquage.programmes_activites');
+        Route::get('/membre-famille/presences/marquage/programmes/{event}/presences', [\App\Http\Controllers\Api\PresenceController::class, 'programmeSummary'])
+            ->whereNumber('event')
+            ->name('membre_famille.presences.marquage.programmes.presences');
+        Route::post('/membre-famille/presences/marquage/marquer', [\App\Http\Controllers\Api\PresenceController::class, 'marquerPresenceManuelle'])
+            ->name('membre_famille.presences.marquage.marquer');
     });
 
     // Route pour changer le mot de passe

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Profile;
 
 use App\Helpers\PhotoHelper;
 use App\Http\Controllers\Controller;
+use App\Models\Classe;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,7 @@ class ProfileController extends Controller
     public function show()
     {
         $user = Auth::user();
+        $classe = $user->role === 'conducteur' ? $user->classe : null;
 
         return Inertia::render('Profile/Show', [
             'user' => [
@@ -32,6 +34,9 @@ class ProfileController extends Controller
                 'last_login_at' => $user->last_login_at,
                 'profile_photo_url' => $user->profile_photo_url ?: PhotoHelper::getPhotoUrl($user->photo_path, $user->prenom, $user->nom),
                 'signature_url' => $user->signature_path ? '/storage/' . ltrim($user->signature_path, '/') : null,
+                'classe_cachet_url' => $classe ? PhotoHelper::getImageUrl($classe->cachet_path) : null,
+                'classe_theme_texte' => $classe?->theme_texte,
+                'classe_nom' => $classe?->nom,
             ]
         ]);
     }
@@ -141,5 +146,58 @@ class ProfileController extends Controller
         ]);
 
         return back()->with('success', 'Signature mise a jour avec succes.');
+    }
+
+    /**
+     * Mettre a jour le cachet de la classe geree par le conducteur connecte.
+     */
+    public function updateClasseCachet(Request $request)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'conducteur' || !$user->classe_id) {
+            return back()->withErrors(['cachet' => 'Vous ne gerez aucune classe.']);
+        }
+
+        $classe = Classe::findOrFail($user->classe_id);
+
+        $validated = $request->validate([
+            'cachet' => 'required|image|mimes:png,jpg,jpeg|max:2048',
+        ], [
+            'cachet.required' => 'Le cachet est obligatoire.',
+            'cachet.image' => 'Le fichier doit etre une image.',
+        ]);
+
+        PhotoHelper::deletePhoto($classe->cachet_path);
+        $classe->update([
+            'cachet_path' => $validated['cachet']->store('classes/cachets', 'public'),
+        ]);
+
+        return back()->with('success', 'Cachet de la classe mis a jour avec succes.');
+    }
+
+    /**
+     * Mettre a jour le theme (verset) de la carte virtuelle de la classe geree
+     * par le conducteur connecte.
+     */
+    public function updateClasseTheme(Request $request)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'conducteur' || !$user->classe_id) {
+            return back()->withErrors(['theme_texte' => 'Vous ne gerez aucune classe.']);
+        }
+
+        $classe = Classe::findOrFail($user->classe_id);
+
+        $validated = $request->validate([
+            'theme_texte' => 'nullable|string|max:255',
+        ]);
+
+        $classe->update([
+            'theme_texte' => $validated['theme_texte'] ?? null,
+        ]);
+
+        return back()->with('success', 'Theme de la carte virtuelle mis a jour avec succes.');
     }
 }

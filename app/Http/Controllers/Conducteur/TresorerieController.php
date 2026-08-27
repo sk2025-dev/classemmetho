@@ -7,6 +7,7 @@ use App\Models\Campagne;
 use App\Models\Cotisation;
 use App\Models\Don;
 use App\Models\Family;
+use App\Models\FimecoSouscription;
 use App\Models\Fonction;
 use App\Models\NotificationFinanciere;
 use App\Models\Paiement;
@@ -55,7 +56,10 @@ class TresorerieController extends Controller
                 'donsClasse' => [],
                 'cotisationsCreees' => [],
                 'fimecoSuivi' => [],
+                'fimecoAnnee' => now()->year,
+                'isFimecoResponsable' => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
                 'membresClasse' => [],
+                'membresClasseAssignables' => [],
                 'tresorierClasse' => null,
                 'notificationsFinancieres' => [],
             ]);
@@ -171,6 +175,7 @@ class TresorerieController extends Controller
                     'mode' => match ($paiement->mode_paiement) {
                         Paiement::MODE_ESPECES => 'Especes',
                         Paiement::MODE_VIREMENT => 'Virement',
+                        Paiement::MODE_CHEQUE => 'Chèque',
                         default => 'Mobile Money',
                     },
                     'recu' => $paiement->reference_recu,
@@ -351,8 +356,20 @@ class TresorerieController extends Controller
             ];
         })->values();
 
+        // FIMECO : chaque famille souscrit un montant annuel (indépendant du montant fixe
+        // d'une cotisation classique) ; les paiements restent enregistrés via la cotisation
+        // "FIMECO" existante, mais la cible de suivi vient désormais de cette souscription.
+        $fimecoAnnee = now()->year;
+        $fimecoSouscriptions = FimecoSouscription::query()
+            ->where('annee', $fimecoAnnee)
+            ->where(function ($query) use ($classeId) {
+                $query->whereNull('classe_id')
+                    ->orWhere('classe_id', $classeId);
+            })
+            ->pluck('montant_souscrit', 'family_id');
+
         $fimeco = Cotisation::query()
-            ->where('nom', 'FIMECO')
+            ->whereRaw('LOWER(nom) LIKE ?', ['%fimeco%'])
             ->where(function ($query) use ($classeId) {
                 $query->whereNull('classe_id')
                     ->orWhere('classe_id', $classeId);
@@ -360,7 +377,7 @@ class TresorerieController extends Controller
             ->orderByDesc('id')
             ->first();
 
-        $fimecoSuivi = $membresClasse->map(function (User $member) use ($fimeco) {
+        $fimecoSuivi = $membresClasse->map(function (User $member) use ($fimeco, $fimecoSouscriptions) {
             $paid = 0;
             if ($fimeco && $member->family_id) {
                 $paid = (int) Paiement::query()
@@ -369,17 +386,20 @@ class TresorerieController extends Controller
                     ->sum('montant');
             }
 
-            $target = (int) ($fimeco?->montant ?? 0);
+            $target = (int) ($fimecoSouscriptions[$member->family_id] ?? 0);
             $due = max(0, $target - $paid);
+            $statut = $target === 0 ? 'NON SOUSCRIT' : ($due === 0 ? 'A JOUR' : 'EN RETARD');
 
             return [
                 'user_id' => $member->id,
+                'family_id' => $member->family_id,
                 'nom' => trim(($member->prenom ?? '') . ' ' . ($member->nom ?? '')),
                 'famille' => $member->family?->nom ?? 'Sans famille',
+                'montant_souscrit' => $target,
                 'montant_cible' => $target,
                 'montant_paye' => $paid,
                 'montant_restant' => $due,
-                'statut' => $due === 0 ? 'A JOUR' : 'EN RETARD',
+                'statut' => $statut,
             ];
         })->values();
 
@@ -401,6 +421,22 @@ class TresorerieController extends Controller
             ->values();
 
         $payeesAJour = max(0, $families->count() - $famillesEnRetard->count());
+
+        // Liste dédiée à l'assignation de trésorier : tous les membres de la classe,
+        // sans restriction de rôle (distincte de $membresClasseData utilisée pour le suivi des cotisations).
+        $membresClasseAssignables = User::query()
+            ->where('classe_id', $classeId)
+            ->with('family:id,nom')
+            ->orderBy('nom')
+            ->orderBy('prenom')
+            ->get()
+            ->map(fn (User $m) => [
+                'id' => $m->id,
+                'nom' => trim(($m->prenom ?? '') . ' ' . ($m->nom ?? '')),
+                'famille' => $m->family?->nom ?? 'Sans famille',
+                'role' => $m->role,
+            ])
+            ->values();
 
         return Inertia::render('Conducteur/Tresorerie/Index', [
             'classInfo' => [
@@ -425,12 +461,15 @@ class TresorerieController extends Controller
             'cotisationsCreees' => $cotisationsCreees,
             'cotisationsPaiement' => $cotisationsPaiement,
             'membresClasse' => $membresClasseData,
+            'membresClasseAssignables' => $membresClasseAssignables,
             'tresorierClasse' => $tresorierClasse ? [
                 'id' => $tresorierClasse->id,
                 'nom' => trim(($tresorierClasse->prenom ?? '') . ' ' . ($tresorierClasse->nom ?? '')),
                 'famille' => $tresorierClasse->family?->nom ?? 'Sans famille',
             ] : null,
             'fimecoSuivi' => $fimecoSuivi,
+            'fimecoAnnee' => $fimecoAnnee,
+            'isFimecoResponsable' => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
             'notificationsFinancieres' => $notificationsFinancieres,
         ]);
     }
@@ -951,7 +990,7 @@ class TresorerieController extends Controller
             'user_id' => ['required', 'exists:users,id'],
             'cotisation_id' => ['nullable', 'exists:cotisations,id'],
             'montant' => ['required', 'integer', 'min:100'],
-            'mode_paiement' => ['required', 'in:MOBILE_MONEY,ESPECES,VIREMENT'],
+            'mode_paiement' => ['required', 'in:MOBILE_MONEY,ESPECES,VIREMENT,CHEQUE'],
             'date_paiement' => ['required', 'date'],
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -1104,11 +1143,6 @@ class TresorerieController extends Controller
             return response()->json(['message' => 'Ce membre n\'est pas dans votre classe.'], 403);
         }
 
-        // Vérifier que le membre est un membre de famille (compatibilité anciens comptes tresorier)
-        if (!in_array($member->role, ['membre_famille', 'tresorier'], true)) {
-            return response()->json(['message' => 'Seul un membre de famille peut devenir tresorier.'], 422);
-        }
-
         $tresorierFonction = Fonction::query()
             ->whereRaw('LOWER(nom) = ?', ['trésorier'])
             ->orWhereRaw('LOWER(nom) = ?', ['tresorier'])
@@ -1128,11 +1162,14 @@ class TresorerieController extends Controller
             ->where('id', '!=', $member->id)
             ->update(['fonction_id' => null]);
 
-        // Assigner la fonction trésorier tout en conservant le rôle membre_famille.
-        $member->update([
-            'role' => 'membre_famille',
-            'fonction_id' => $tresorierFonction->id,
-        ]);
+        // Assigner la fonction trésorier sans toucher au rôle du membre (conducteur, pasteur, etc.
+        // gardent leur rôle d'origine) ; seuls les anciens comptes avec role="tresorier" (legacy)
+        // sont normalisés vers membre_famille.
+        $updates = ['fonction_id' => $tresorierFonction->id];
+        if ($member->role === 'tresorier') {
+            $updates['role'] = 'membre_famille';
+        }
+        $member->update($updates);
         $member->load('fonction');
 
         return response()->json([
@@ -1207,6 +1244,50 @@ class TresorerieController extends Controller
                 'prenom' => $member->prenom,
                 'role' => $member->role,
                 'motif_retrait' => $validated['motif_retrait'],
+            ],
+        ], 200);
+    }
+
+    /**
+     * Définit (ou met à jour) le montant que la famille souscrit pour la FIMECO de l'année
+     * en cours. Accessible au conducteur et au trésorier de classe désigné.
+     */
+    public function setFimecoSouscription(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Action reservee au conducteur ou au tresorier de la classe.'], 403);
+        }
+
+        $validated = $request->validate([
+            'family_id' => ['required', 'exists:families,id'],
+            'montant_souscrit' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $family = Family::query()->findOrFail($validated['family_id']);
+
+        if ((int) $family->classe_id !== (int) $user->classe_id) {
+            return response()->json(['message' => 'Cette famille n\'est pas dans votre classe.'], 403);
+        }
+
+        $annee = now()->year;
+
+        $souscription = FimecoSouscription::query()->updateOrCreate(
+            ['family_id' => $family->id, 'annee' => $annee],
+            [
+                'classe_id' => $user->classe_id,
+                'montant_souscrit' => $validated['montant_souscrit'],
+                'created_by' => $user->id,
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Souscription FIMECO enregistree avec succes.',
+            'data' => [
+                'family_id' => $souscription->family_id,
+                'annee' => $souscription->annee,
+                'montant_souscrit' => $souscription->montant_souscrit,
             ],
         ], 200);
     }

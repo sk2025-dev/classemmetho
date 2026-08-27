@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Head } from "@inertiajs/react";
 import AppLayout from "@/Layouts/AppLayout";
 import { withBasePath } from "@/Utils/urlHelper";
@@ -16,7 +16,9 @@ import {
     AlertTriangle,
     Ban,
     Timer,
+    ScanLine,
 } from "lucide-react";
+import QrCodeScanner from "@/Components/QrCodeScanner";
 
 const GRACE_HOURS = 2;
 
@@ -238,6 +240,52 @@ export default function MarqueurDePresence({
         return () => { window.clearInterval(timer); };
     }, [selectedActiviteId, programmeSummaryTemplate, summaryReloadKey]);
 
+    const [scanFeedback, setScanFeedback] = useState(null);
+    const lastScanRef = useRef({ code: null, at: 0 });
+
+    async function handleScanMark(codeMembre) {
+        const code = String(codeMembre || "").trim();
+        if (!code) return;
+
+        // Évite de re-déclencher plusieurs fois pour le même QR détecté sur des frames successives.
+        const now2 = Date.now();
+        if (
+            lastScanRef.current.code === code &&
+            now2 - lastScanRef.current.at < 4000
+        ) {
+            return;
+        }
+        lastScanRef.current = { code, at: now2 };
+
+        if (!selectedActiviteId) {
+            setScanFeedback({ type: "error", message: "Sélectionnez une activité." });
+            return;
+        }
+
+        try {
+            const endpoint = withBasePath("", manualMarkEndpoint);
+            const response = await window.axios.post(endpoint, {
+                event_id: selectedActiviteId,
+                code_membre: code,
+            });
+            const memberData = response?.data?.data?.member;
+            setScanFeedback({
+                type: "success",
+                message: memberData
+                    ? `${memberData.prenom} ${memberData.nom} — présence enregistrée`
+                    : response?.data?.message || "Présence enregistrée.",
+            });
+            setSummaryReloadKey((v) => v + 1);
+        } catch (error) {
+            setScanFeedback({
+                type: "error",
+                message:
+                    error?.response?.data?.message ||
+                    "Impossible de marquer cette présence.",
+            });
+        }
+    }
+
     async function handleManualMark(member) {
         if (!selectedActiviteId) {
             showToast("Sélectionnez une activité.", "error");
@@ -354,6 +402,7 @@ export default function MarqueurDePresence({
                     <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                         {[
                             { key: "presence", label: "Présence" },
+                            { key: "scanner", label: "Scanner QR" },
                             { key: "marquer", label: "Marquer" },
                             { key: "activites", label: "Activités" },
                         ].map(({ key, label }) => (
@@ -448,6 +497,46 @@ export default function MarqueurDePresence({
                             onPrev={() => setPresencePage((p) => Math.max(1, p - 1))}
                             onNext={() => setPresencePage((p) => Math.min(totalPresencePages, p + 1))}
                         />
+                    </div>
+                )}
+
+                {/* Tab: Scanner QR (carte virtuelle) */}
+                {activeTab === "scanner" && (
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100">
+                            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                                <ScanLine className="w-5 h-5 text-indigo-600" />
+                                Scanner la carte virtuelle d'un membre
+                            </h2>
+                            <p className="text-sm text-gray-500 mt-0.5">
+                                {activiteSelectionnee?.titre
+                                    ? `Activité : ${activiteSelectionnee.titre}`
+                                    : "Sélectionnez d'abord une activité."}
+                            </p>
+                        </div>
+                        <div className="p-6">
+                            {activeTab === "scanner" && selectedActiviteId ? (
+                                <QrCodeScanner
+                                    active={activeTab === "scanner"}
+                                    onScan={handleScanMark}
+                                />
+                            ) : (
+                                <p className="text-center text-sm text-gray-400 py-10">
+                                    Sélectionnez une activité pour activer le scanner.
+                                </p>
+                            )}
+                            {scanFeedback && (
+                                <div
+                                    className={`mt-4 max-w-xs mx-auto text-center px-4 py-2.5 rounded-xl text-sm font-semibold ${
+                                        scanFeedback.type === "success"
+                                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                            : "bg-red-50 text-red-700 border border-red-200"
+                                    }`}
+                                >
+                                    {scanFeedback.message}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 

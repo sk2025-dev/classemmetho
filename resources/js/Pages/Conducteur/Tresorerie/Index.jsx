@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
 import Select2Single from "../../../Components/Select2Single";
+import FimecoImportPanel from "../../../Components/Fimeco/FimecoImportPanel";
 import {
     ArrowLeft,
     Download,
@@ -18,6 +19,8 @@ import {
     X,
     Check,
     Clock,
+    Award,
+    Pencil,
 } from "lucide-react";
 
 const C = {
@@ -52,6 +55,22 @@ const C = {
         light: "#CBD5E1",
         pale: "#F8FAFC",
     },
+};
+
+const ROLE_LABELS_TRESORIER = {
+    membre_famille: "Membre de famille",
+    responsable_famille: "Responsable de famille",
+    conducteur: "Conducteur",
+    pasteur: "Pasteur",
+    bureau_conducteur: "Bureau des conducteurs",
+    tresorier: "Trésorier",
+};
+const formatRoleTresorier = (role) => ROLE_LABELS_TRESORIER[role] || role || "-";
+
+const memberInitials = (fullName = "") => {
+    const parts = fullName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "?";
+    return (parts[0][0] + (parts[parts.length - 1][0] || "")).toUpperCase();
 };
 
 const Pill = ({ color = "blue", children }) => {
@@ -672,7 +691,10 @@ export default function ConducteurTresorerie({
     cotisationsCreees = [],
     cotisationsPaiement = [],
     fimecoSuivi = [],
+    fimecoAnnee = new Date().getFullYear(),
+    isFimecoResponsable = false,
     membresClasse = [],
+    membresClasseAssignables = [],
     tresorierClasse = null,
     notificationsFinancieres = [],
 }) {
@@ -691,6 +713,9 @@ export default function ConducteurTresorerie({
     const [toast, setToast] = useState(null);
     const [selectedMemberTresorier, setSelectedMemberTresorier] = useState("");
     const [motifRetraitTresorier, setMotifRetraitTresorier] = useState("");
+    const [modalFimecoSouscription, setModalFimecoSouscription] = useState(null);
+    const [fimecoMontantInput, setFimecoMontantInput] = useState("");
+    const [fimecoSaving, setFimecoSaving] = useState(false);
     const [newCotisation, setNewCotisation] = useState({
         nom: "",
         periodicite: "MENSUEL",
@@ -1270,6 +1295,42 @@ export default function ConducteurTresorerie({
         }
     };
 
+    const openFimecoSouscriptionModal = (item) => {
+        setModalFimecoSouscription(item);
+        setFimecoMontantInput(String(item.montant_souscrit || ""));
+    };
+
+    const handleSetFimecoSouscription = async () => {
+        if (!modalFimecoSouscription?.family_id) return;
+        const montant = parseInt(fimecoMontantInput, 10);
+        if (isNaN(montant) || montant < 0) {
+            showToast("Veuillez saisir un montant valide.", "warning");
+            return;
+        }
+
+        try {
+            setFimecoSaving(true);
+            const response = await postJson(
+                withBasePath("", "/conducteur/tresorerie/fimeco-souscription"),
+                {
+                    family_id: modalFimecoSouscription.family_id,
+                    montant_souscrit: montant,
+                },
+            );
+            reloadWithToast(
+                response?.message || "Souscription FIMECO enregistrée avec succès.",
+            );
+            setModalFimecoSouscription(null);
+        } catch (error) {
+            showToast(
+                "Erreur lors de l'enregistrement de la souscription: " + error.message,
+                "error",
+            );
+        } finally {
+            setFimecoSaving(false);
+        }
+    };
+
     const retardTotal = useMemo(
         () =>
             famillesEnRetard.reduce((s, f) => s + Number(f.montantDu || 0), 0),
@@ -1526,7 +1587,26 @@ export default function ConducteurTresorerie({
                             </p>
                         </div>
                     </div>
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {tresorierClasse && (
+                            <span
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 7,
+                                    background: "rgba(212,175,55,0.18)",
+                                    border: "1px solid rgba(212,175,55,0.45)",
+                                    borderRadius: 10,
+                                    padding: "8px 14px",
+                                    color: "#fff",
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                }}
+                            >
+                                <Award size={14} color="#D4AF37" />
+                                Trésorier : {tresorierClasse.nom}
+                            </span>
+                        )}
                         <button
                             onClick={() => setModalTresorier(true)}
                             style={{
@@ -1543,7 +1623,7 @@ export default function ConducteurTresorerie({
                                 cursor: "pointer",
                             }}
                         >
-                            <Plus size={14} /> Assigner Trésorier
+                            <Plus size={14} /> {tresorierClasse ? "Changer de trésorier" : "Assigner Trésorier"}
                         </button>
                     </div>
                 </div>
@@ -2655,6 +2735,7 @@ export default function ConducteurTresorerie({
                             gap: 20,
                         }}
                     >
+                        {isFimecoResponsable && <FimecoImportPanel />}
                         <Card>
                             <SecTitle
                                 accent="blue"
@@ -2693,7 +2774,7 @@ export default function ConducteurTresorerie({
                                     </div>
                                 }
                             >
-                                Suivi FIMECO par membre
+                                Suivi FIMECO par membre · Souscription {fimecoAnnee}
                             </SecTitle>
                             <Table
                                 heads={[
@@ -2714,12 +2795,46 @@ export default function ConducteurTresorerie({
                                                       100,
                                               )
                                             : 0;
+                                    const pillColor =
+                                        item.statut === "A JOUR"
+                                            ? "teal"
+                                            : item.statut === "NON SOUSCRIT"
+                                              ? "amber"
+                                              : "red";
                                     return (
                                         <Tr key={item.user_id}>
                                             <Td bold>{item.nom}</Td>
                                             <Td>{item.famille}</Td>
                                             <Td right>
-                                                {fmt(item.montant_cible)}
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "flex-end",
+                                                        gap: 6,
+                                                    }}
+                                                >
+                                                    {fmt(item.montant_cible)}
+                                                    <button
+                                                        onClick={() =>
+                                                            openFimecoSouscriptionModal(
+                                                                item,
+                                                            )
+                                                        }
+                                                        title="Définir la souscription de la famille"
+                                                        style={{
+                                                            border: "none",
+                                                            background:
+                                                                "transparent",
+                                                            cursor: "pointer",
+                                                            padding: 4,
+                                                            display: "flex",
+                                                            color: C.amber.from,
+                                                        }}
+                                                    >
+                                                        <Pencil size={12} />
+                                                    </button>
+                                                </div>
                                             </Td>
                                             <Td right bold color="green">
                                                 {fmt(item.montant_paye)}
@@ -2765,13 +2880,7 @@ export default function ConducteurTresorerie({
                                                 </div>
                                             </Td>
                                             <Td center>
-                                                <Pill
-                                                    color={
-                                                        item.statut === "A JOUR"
-                                                            ? "teal"
-                                                            : "red"
-                                                    }
-                                                >
+                                                <Pill color={pillColor}>
                                                     {item.statut}
                                                 </Pill>
                                             </Td>
@@ -3814,22 +3923,127 @@ export default function ConducteurTresorerie({
             >
                 <div
                     style={{
-                        background: "#E0F2FE",
-                        border: "1px solid #0084FF40",
-                        borderRadius: 10,
-                        padding: "12px 14px",
-                        marginBottom: 16,
-                        fontSize: 12,
-                        color: "#0C4A6E",
+                        background: `linear-gradient(135deg, ${C.blue.pale}, ${C.amber.pale})`,
+                        border: `1px solid ${C.blue.light}55`,
+                        borderRadius: 14,
+                        padding: "14px 16px",
+                        marginBottom: 18,
                         display: "flex",
                         alignItems: "center",
-                        gap: 8,
+                        gap: 12,
                     }}
                 >
-                    <CheckCircle size={14} />
-                    Le tresorier aidera à assister la trésorerie de votre
-                    classe.
+                    <span
+                        style={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: 10,
+                            background: `linear-gradient(135deg, ${C.blue.from}, ${C.blue.mid})`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                        }}
+                    >
+                        <Wallet size={18} color="#fff" />
+                    </span>
+                    <div>
+                        <div
+                            style={{
+                                fontSize: 13,
+                                fontWeight: 800,
+                                color: "#2C2C2A",
+                            }}
+                        >
+                            Choisissez la personne de confiance
+                        </div>
+                        <div
+                            style={{
+                                fontSize: 11.5,
+                                color: "#5F5E5A",
+                                marginTop: 2,
+                            }}
+                        >
+                            Elle aidera à gérer la trésorerie de votre classe.
+                            Tous les membres de la classe sont éligibles.
+                        </div>
+                    </div>
                 </div>
+
+                {tresorierClasse ? (
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                            marginBottom: 18,
+                            padding: "12px 14px",
+                            borderRadius: 12,
+                            border: `1px solid ${C.amber.light}66`,
+                            borderLeft: `4px solid ${C.amber.light}`,
+                            background: C.amber.pale,
+                        }}
+                    >
+                        <span
+                            style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: "50%",
+                                background: "#fff",
+                                border: `1px solid ${C.amber.light}`,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                fontSize: 12,
+                                fontWeight: 800,
+                                color: C.amber.from,
+                            }}
+                        >
+                            {memberInitials(tresorierClasse.nom)}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    fontSize: 13,
+                                    fontWeight: 800,
+                                    color: "#2C2C2A",
+                                }}
+                            >
+                                <Award size={13} color={C.amber.from} />
+                                Trésorier actuel
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: 12,
+                                    color: "#5F5E5A",
+                                    marginTop: 1,
+                                }}
+                            >
+                                {tresorierClasse.nom} · {tresorierClasse.famille}
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div
+                        style={{
+                            marginBottom: 18,
+                            padding: "10px 14px",
+                            borderRadius: 12,
+                            border: "1px dashed #D3D1C7",
+                            background: "#F9FAFB",
+                            fontSize: 12,
+                            color: "#888780",
+                            textAlign: "center",
+                        }}
+                    >
+                        Aucun trésorier assigné pour le moment.
+                    </div>
+                )}
+
                 <FW label="Sélectionner un membre de la classe" span2>
                     <Select2Single
                         name="membre_tresorier"
@@ -3837,43 +4051,24 @@ export default function ConducteurTresorerie({
                         onChange={(e) =>
                             setSelectedMemberTresorier(e.target.value)
                         }
-                        options={membresClasse
-                            .filter((m) => m.role === "membre_famille")
-                            .map((m) => ({
-                                value: m.id,
-                                label: `${m.nom} (${m.famille})`,
-                            }))}
+                        options={membresClasseAssignables.map((m) => ({
+                            value: m.id,
+                            label: `${m.nom} (${m.famille}) · ${formatRoleTresorier(m.role)}`,
+                        }))}
                         placeholder="-- Choisir un membre --"
                         isClearable={false}
                     />
                 </FW>
-                <div
-                    style={{
-                        marginTop: 8,
-                        marginBottom: 14,
-                        padding: "10px 12px",
-                        borderRadius: 10,
-                        border: "1px solid #E5E7EB",
-                        background: "#F9FAFB",
-                        fontSize: 12,
-                        color: "#374151",
-                    }}
-                >
-                    <strong>Trésorier actuel:</strong>{" "}
-                    {tresorierClasse
-                        ? `${tresorierClasse.nom} (${tresorierClasse.famille})`
-                        : "Aucun"}
-                </div>
                 <p
                     style={{
                         fontSize: 11,
                         color: "#888780",
-                        marginTop: 6,
+                        marginTop: 8,
                         marginBottom: 10,
                     }}
                 >
-                    Seuls les membres actifs de votre classe peuvent être
-                    assignés comme trésorier.
+                    Tous les membres de votre classe peuvent être assignés
+                    comme trésorier, quel que soit leur rôle.
                 </p>
                 {tresorierClasse ? (
                     <FTextarea
@@ -3916,6 +4111,61 @@ export default function ConducteurTresorerie({
                         icon={Plus}
                     >
                         Assigner le trésorier
+                    </GradBtn>
+                </div>
+            </Modal>
+
+            {/* PANNEAU SOUSCRIPTION FIMECO */}
+            <Modal
+                open={!!modalFimecoSouscription}
+                onClose={() => setModalFimecoSouscription(null)}
+                title="Souscription FIMECO"
+            >
+                <div
+                    style={{
+                        marginBottom: 16,
+                        padding: "10px 14px",
+                        borderRadius: 12,
+                        border: `1px solid ${C.amber.light}66`,
+                        background: C.amber.pale,
+                        fontSize: 12,
+                        color: "#5F5E5A",
+                    }}
+                >
+                    Montant que la famille{" "}
+                    <strong>{modalFimecoSouscription?.famille}</strong>{" "}
+                    s'engage à verser pour la FIMECO {fimecoAnnee}.
+                </div>
+                <FInput
+                    label="Montant souscrit (FCFA)"
+                    type="number"
+                    value={fimecoMontantInput}
+                    onChange={(e) => setFimecoMontantInput(e.target.value)}
+                    placeholder="Ex: 25000"
+                    span2
+                />
+                <div
+                    style={{
+                        display: "flex",
+                        gap: 10,
+                        justifyContent: "flex-end",
+                        marginTop: 16,
+                    }}
+                >
+                    <OutlineBtn
+                        color="gray"
+                        onClick={() => setModalFimecoSouscription(null)}
+                    >
+                        Annuler
+                    </OutlineBtn>
+                    <GradBtn
+                        onClick={handleSetFimecoSouscription}
+                        disabled={fimecoSaving}
+                        loading={fimecoSaving}
+                        color="amber"
+                        icon={Award}
+                    >
+                        Enregistrer
                     </GradBtn>
                 </div>
             </Modal>

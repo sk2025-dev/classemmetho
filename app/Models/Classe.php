@@ -16,9 +16,17 @@ class Classe extends Model
         'description',
         'conducteur',
         'logo_path',
+        'cachet_path',
+        'theme_texte',
         'has_tribus',
+        'carte_virtuelle_active',
         'nombre_membres',
         'status',
+    ];
+
+    protected $casts = [
+        'has_tribus' => 'boolean',
+        'carte_virtuelle_active' => 'boolean',
     ];
 
     public function users()

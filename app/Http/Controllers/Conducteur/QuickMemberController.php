@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Conducteur;
 
 use App\Http\Controllers\Controller;
+use App\Models\Family;
 use App\Models\User;
 use App\Models\UserSacrement;
 use App\Mail\SendCredentials;
@@ -47,6 +48,7 @@ class QuickMemberController extends Controller
                 'fonction_ids' => 'nullable|array|max:10',
                 'fonction_ids.*' => 'integer|exists:fonctions,id',
                 'relation' => 'nullable|string|max:100',
+                'family_id' => 'nullable|exists:families,id',
                 'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
                 'profile_photo_url' => 'nullable|string|max:1000',
                 'baptise' => 'nullable|in:true,false,1,0',
@@ -85,8 +87,19 @@ class QuickMemberController extends Controller
                 ], 404);
             }
 
-            // Récupérer la famille du conducteur (si elle existe)
+            // Famille de destination : soit une famille existante de la classe (choisie
+            // explicitement, ex: depuis "Tous les Membres"), soit celle du conducteur par défaut.
             $familyId = $conducteur->family_id;
+            if (!empty($validated['family_id'])) {
+                $targetFamily = Family::query()->find($validated['family_id']);
+                if (!$targetFamily || (int) $targetFamily->classe_id !== (int) $classeId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Cette famille n\'appartient pas à votre classe.',
+                    ], 403);
+                }
+                $familyId = $targetFamily->id;
+            }
 
             DB::beginTransaction();
 

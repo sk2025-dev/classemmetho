@@ -46,7 +46,9 @@ import {
     Zap,
     Archive,
     AlertCircle,
+    CreditCard,
 } from "lucide-react";
+import CarteVirtuelle from "../../Components/CarteVirtuelle";
 import DeleteConfirmationModal from "../../Components/DeleteConfirmationModal";
 import { normalizePhotoUrl } from "@/Helpers/PhotoUrlHelper";
 import ProfilePhoto from "@/Components/ProfilePhoto";
@@ -423,6 +425,9 @@ export default function Inscriptions({
     const [selectedMember, setSelectedMember] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [selectedInscription, setSelectedInscription] = useState(null);
+    const [carteModal, setCarteModal] = useState(null);
+    const [carteLoading, setCarteLoading] = useState(false);
+    const [carteError, setCarteError] = useState(null);
     const [rejectReason, setRejectReason] = useState("");
     const [approvingId, setApprovingId] = useState(null);
     const [rejectingId, setRejectingId] = useState(null);
@@ -468,6 +473,7 @@ export default function Inscriptions({
         fonction_ids: [],
         fonction_id: "",
         relation: "",
+        family_id: "",
         // Photo
         photo: null,
         photoPreview: null,
@@ -1408,6 +1414,7 @@ setSelectedMember(normalized);
     const openCreateModal = () => {
         setModalMode("create");
         reset();
+        setData("family_id", userFamilyId ? String(userFamilyId) : "");
         setEmailTaken(false);
         setEmailChecking(false);
         setIsSubmitting(false);
@@ -1415,6 +1422,31 @@ setSelectedMember(normalized);
         setShowMemberModal(false);
         setShowFamilyModal(false);
         setShowModal(true);
+    };
+
+    const openCarteModal = async (member) => {
+        setCarteModal({ loading: true });
+        setCarteError(null);
+        setCarteLoading(true);
+        try {
+            const res = await axios.get(
+                withBasePath("", `/conducteur/membres/${member.id}/carte`),
+            );
+            setCarteModal(res.data.carte);
+        } catch (error) {
+            setCarteModal({});
+            setCarteError(
+                error.response?.data?.message ||
+                    "Impossible de charger la carte virtuelle.",
+            );
+        } finally {
+            setCarteLoading(false);
+        }
+    };
+
+    const closeCarteModal = () => {
+        setCarteModal(null);
+        setCarteError(null);
     };
 
     const openEditModal = async (item) => {
@@ -2186,6 +2218,15 @@ setSelectedMember(normalized);
                                         />
                                     </div>
 
+                                    {/* Bouton ajouter un membre à une famille existante */}
+                                    <button
+                                        onClick={openCreateModal}
+                                        className="px-4 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white transition font-medium whitespace-nowrap flex items-center gap-2"
+                                        title="Ajouter un membre à une famille existante"
+                                    >
+                                        <Plus size={18} /> Ajouter un membre
+                                    </button>
+
                                     {/* Bouton reset */}
                                     <button
                                         onClick={resetFilters}
@@ -2945,6 +2986,14 @@ setSelectedMember(normalized);
                                                                             onClick={() => openMemberModal(member)}
                                                                         >
                                                                             <Eye className="w-4 h-4" />
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            title="Voir la carte virtuelle"
+                                                                            className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 ring-1 ring-indigo-200 transition-all hover:scale-110 active:scale-95"
+                                                                            onClick={() => openCarteModal(member)}
+                                                                        >
+                                                                            <CreditCard className="w-4 h-4" />
                                                                         </button>
                                                                         <button
                                                                             type="button"
@@ -4224,6 +4273,44 @@ setSelectedMember(normalized);
                                                                 </p>
                                                             )}
                                                         </FormField>
+                                                        {modalMode === "create" && (
+                                                            <FormField
+                                                                label="Famille"
+                                                                icon={Users}
+                                                            >
+                                                                <Select2Single
+                                                                    name="family_id"
+                                                                    value={
+                                                                        data.family_id
+                                                                    }
+                                                                    onChange={(e) =>
+                                                                        setData({
+                                                                            ...data,
+                                                                            family_id:
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                        })
+                                                                    }
+                                                                    options={familyFilterOptions.filter(
+                                                                        (o) =>
+                                                                            o.value !==
+                                                                            "",
+                                                                    )}
+                                                                    placeholder="Choisir la famille..."
+                                                                    isClearable={
+                                                                        false
+                                                                    }
+                                                                />
+                                                                {(fieldErrors.family_id ||
+                                                                    errors.family_id) && (
+                                                                    <p className="text-red-500 text-xs mt-1">
+                                                                        {fieldErrors.family_id ||
+                                                                            errors.family_id}
+                                                                    </p>
+                                                                )}
+                                                            </FormField>
+                                                        )}
                                                         <FormField
                                                             label="Relation de Famille"
                                                             icon={Users}
@@ -5792,6 +5879,43 @@ setSelectedMember(normalized);
                                 Supprimer
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL CARTE VIRTUELLE */}
+            {carteModal && (
+                <div
+                    className="fixed inset-0 z-[95] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={closeCarteModal}
+                >
+                    <div
+                        className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-6"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <CreditCard className="w-5 h-5 text-indigo-600" />
+                                Carte virtuelle
+                            </h2>
+                            <button
+                                onClick={closeCarteModal}
+                                className="text-slate-400 hover:text-red-500 transition p-2 rounded-full hover:bg-red-50"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        {carteLoading ? (
+                            <p className="text-sm text-slate-400 text-center py-10">
+                                Chargement...
+                            </p>
+                        ) : carteError ? (
+                            <p className="text-sm text-slate-500 text-center py-10">
+                                {carteError}
+                            </p>
+                        ) : (
+                            <CarteVirtuelle carte={carteModal} />
+                        )}
                     </div>
                 </div>
             )}

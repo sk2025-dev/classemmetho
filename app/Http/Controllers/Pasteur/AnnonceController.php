@@ -6,9 +6,12 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Controllers\Controller;
 use App\Models\ActeLiturgique;
 use App\Models\ActeLiturgiqueHistorique;
+use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 class AnnonceController extends Controller
@@ -156,10 +159,68 @@ class AnnonceController extends Controller
             'commentaire'     => $request->input('note', null),
         ]);
 
+        $this->notifierSecretariat($acte->fresh());
+
         return response()->json([
             'success' => true,
             'message' => 'Annonce validée et publiée avec succès.',
         ]);
+    }
+
+    /**
+     * Le secrétariat est notifié dès qu'une demande de prière est validée
+     * par le pasteur, afin de pouvoir l'archiver ou l'imprimer.
+     */
+    private function notifierSecretariat(ActeLiturgique $acte): void
+    {
+        $secretaires = User::query()
+            ->where('role', 'secretariat')
+            ->whereNotNull('email')
+            ->get();
+
+        if ($secretaires->isEmpty()) {
+            return;
+        }
+
+        $concerne = $acte->membre ? "{$acte->membre->prenom} {$acte->membre->nom}" : null;
+        $sujet = "Demande de prière validée — {$acte->reference}";
+        $corps = "Bonjour,\n\n"
+            . "Le pasteur vient de valider et publier la demande de prière (réf. {$acte->reference}"
+            . ($concerne ? ", pour {$concerne}" : '') . ").\n\n"
+            . "Vous pouvez maintenant l'archiver ou l'imprimer depuis votre tableau de bord secrétariat.\n\n"
+            . 'Bien cordialement.';
+
+        foreach ($secretaires as $secretaire) {
+            try {
+                Notification::create([
+                    'user_id' => $secretaire->id,
+                    'channel' => 'in_app',
+                    'to'      => $secretaire->email,
+                    'subject' => $sujet,
+                    'body'    => "La demande de prière (Réf {$acte->reference}) a été validée par le pasteur.",
+                    'data'    => ['link' => config('app.url') . '/secretariat/dashboard'],
+                    'sent_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Echec creation notification secretariat', [
+                    'acte_id' => $acte->id,
+                    'secretaire_id' => $secretaire->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            try {
+                Mail::raw($corps, function ($message) use ($secretaire, $sujet) {
+                    $message->to($secretaire->email)->subject($sujet);
+                });
+            } catch (\Throwable $e) {
+                Log::warning('Echec envoi email secretariat', [
+                    'acte_id' => $acte->id,
+                    'secretaire_id' => $secretaire->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     public function rejeter(Request $request, int $id)
@@ -276,6 +337,87 @@ class AnnonceController extends Controller
             'success' => true,
             'message' => 'Annonce archivée.',
         ]);
+    }
+
+    /**
+     * Le pasteur modifie la date/l'heure du culte d'une demande de prière et
+     * notifie toute la chaîne (chef de famille, conducteur, Bureau des
+     * conducteurs) par email.
+     */
+    public function reprogrammer(Request $request, int $id)
+    {
+        $user = Auth::user();
+        if (!in_array($user->role, ['pasteur', 'admin'], true)) {
+            return response()->json(['success' => false, 'message' => 'Accès non autorisé.'], 403);
+        }
+
+        $validated = $request->validate([
+            'date_annonce' => 'required|date',
+            'heure_culte' => 'nullable|string|max:10',
+            'motif' => 'required|string|max:1000',
+        ], [
+            'motif.required' => 'Le motif du changement est obligatoire.',
+        ]);
+
+        $acte = ActeLiturgique::with(['createur', 'conducteur', 'bureauConducteur', 'membre'])
+            ->annonces()
+            ->findOrFail($id);
+
+        $ancienneDate = optional($acte->date_souhaitee)->format('d/m/Y');
+        $ancienneHeure = $acte->details['heure_culte'] ?? null;
+
+        $details = $acte->details ?? [];
+        $details['heure_culte'] = $validated['heure_culte'] ?? null;
+        $details['motif_reprogrammation'] = $validated['motif'];
+
+        $acte->update([
+            'date_souhaitee' => $validated['date_annonce'],
+            'details' => $details,
+            'updated_by' => $user->id,
+        ]);
+
+        $this->notifierChaineReprogrammation($acte, $ancienneDate, $ancienneHeure, $validated['motif']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Date/heure mises à jour, la chaîne a été notifiée.',
+            'annonce' => $acte->fresh(),
+        ]);
+    }
+
+    private function notifierChaineReprogrammation(ActeLiturgique $acte, ?string $ancienneDate, ?string $ancienneHeure, string $motif): void
+    {
+        $nouvelleDate = optional($acte->date_souhaitee)->format('d/m/Y');
+        $nouvelleHeure = $acte->details['heure_culte'] ?? null;
+        $concerne = $acte->membre ? "{$acte->membre->prenom} {$acte->membre->nom}" : null;
+
+        $sujet = "Modification de la date/heure — {$acte->reference}";
+        $corps = "Bonjour,\n\n"
+            . "La date et/ou l'heure de la demande de prière (réf. {$acte->reference}"
+            . ($concerne ? ", pour {$concerne}" : '') . ") ont été modifiées par le pasteur.\n\n"
+            . 'Ancienne date : ' . ($ancienneDate ?: '—') . ($ancienneHeure ? " à {$ancienneHeure}" : '') . "\n"
+            . 'Nouvelle date : ' . ($nouvelleDate ?: '—') . ($nouvelleHeure ? " à {$nouvelleHeure}" : '') . "\n\n"
+            . "Motif : {$motif}\n\n"
+            . 'Bien cordialement.';
+
+        $destinataires = collect([$acte->createur, $acte->conducteur, $acte->bureauConducteur])
+            ->filter()
+            ->unique('id')
+            ->filter(fn ($u) => !empty($u->email));
+
+        foreach ($destinataires as $destinataire) {
+            try {
+                Mail::raw($corps, function ($message) use ($destinataire, $sujet) {
+                    $message->to($destinataire->email)->subject($sujet);
+                });
+            } catch (\Throwable $e) {
+                Log::warning('Echec envoi notification reprogrammation', [
+                    'acte_id' => $acte->id,
+                    'destinataire' => $destinataire->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     public function fiche(int $id)

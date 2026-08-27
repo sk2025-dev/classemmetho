@@ -1,8 +1,18 @@
 import React, { useState } from "react";
 import { Link, router } from "@inertiajs/react";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import {
+    ArrowLeft,
+    ChevronRight,
+    Sparkles,
+    Megaphone,
+    User,
+    MessageSquare,
+    Calendar,
+    Clock,
+} from "lucide-react";
 import axios from "axios";
 import { withBasePath } from "../../../Utils/urlHelper";
+import Select2Single from "../../../Components/Select2Single";
 
 const ACTE_OPTIONS = [
     {
@@ -322,7 +332,8 @@ export default function Selection({
                 <div className="mt-6 bg-white/95 rounded-xl p-4 border border-gray-200">
                     <p className="text-sm text-gray-700">
                         Le dossier suit ce circuit: <strong>Conducteur</strong>{" "}
-                        puis <strong>Pasteur</strong>. Vous serez notifie a
+                        puis <strong>Bureau des conducteurs</strong> puis{" "}
+                        <strong>Pasteur</strong>. Vous serez notifie a
                         chaque etape.
                     </p>
                 </div>
@@ -408,168 +419,179 @@ export default function Selection({
 
                             {/* ÉTAPE 2 — détails */}
                             {annonceStep === 2 && (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                                     {(annonceForm.type_annonce === "grace" ||
                                         annonceForm.type_annonce ===
                                             "priere") && (
-                                        <SelField label="Motif" required>
-                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-                                                {(annonceForm.type_annonce ===
-                                                "grace"
-                                                    ? MOTIFS_GRACE
-                                                    : MOTIFS_INTERCESSION
-                                                ).map((m) => (
-                                                    <button
-                                                        key={m.value}
-                                                        type="button"
-                                                        onClick={() =>
-                                                            setAnnonceForm(
-                                                                (f) => ({
-                                                                    ...f,
-                                                                    motif: m.value,
-                                                                }),
-                                                            )
-                                                        }
-                                                        style={{
-                                                            padding: "6px 14px",
-                                                            borderRadius: 20,
-                                                            border: annonceForm.motif === m.value ? "2px solid #d97706" : "1.5px solid #d1d5db",
-                                                            background: annonceForm.motif === m.value ? "#fffbeb" : "#fff",
-                                                            color: annonceForm.motif === m.value ? "#b45309" : "#374151",
-                                                            fontWeight: annonceForm.motif === m.value ? 700 : 400,
-                                                            fontSize: 12,
-                                                            cursor: "pointer",
-                                                            transition: "all .15s",
-                                                        }}
-                                                    >
-                                                        {annonceForm.motif ===
-                                                            m.value && "✓ "}
-                                                        {m.label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </SelField>
-                                    )}
-                                    {(annonceForm.type_annonce === "grace" ||
-                                        annonceForm.type_annonce ===
-                                            "priere") && (
-                                        <SelField label="Voulez-vous rendre publiquement témoignage ?">
-                                            <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                                                {[
-                                                    { val: true, label: "OUI" },
-                                                    {
-                                                        val: false,
-                                                        label: "NON",
-                                                    },
-                                                ].map(({ val, label }) => (
-                                                    <button
-                                                        key={label}
-                                                        type="button"
-                                                        onClick={() =>
-                                                            setAnnonceForm(
-                                                                (f) => ({
-                                                                    ...f,
-                                                                    temoignage_public:
-                                                                        val,
-                                                                }),
-                                                            )
-                                                        }
-                                                        style={{
-                                                            padding: "6px 20px",
-                                                            borderRadius: 20,
-                                                            border: annonceForm.temoignage_public === val ? "2px solid #d97706" : "1.5px solid #d1d5db",
-                                                            background: annonceForm.temoignage_public === val ? "#fffbeb" : "#fff",
-                                                            color: annonceForm.temoignage_public === val ? "#b45309" : "#374151",
-                                                            fontWeight: annonceForm.temoignage_public === val ? 700 : 400,
-                                                            fontSize: 12,
-                                                            cursor: "pointer",
-                                                        }}
-                                                    >
-                                                        {label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
-                                                Pour cas exceptionnel
-                                            </div>
-                                        </SelField>
-                                    )}
-                                    <SelField label="Personne concernée" required>
-                                        <select
-                                            className="sel-ann-input"
-                                            value={annonceForm.membre_id}
-                                            onChange={(e) =>
-                                                setAnnonceForm((f) => ({
-                                                    ...f,
-                                                    membre_id: e.target.value,
-                                                }))
-                                            }
-                                        >
-                                            <option value="">
-                                                -- Sélectionnez un membre --
-                                            </option>
-                                            {familyMembers.map((m) => (
-                                                <option key={m.id} value={m.id}>
-                                                    {m.prenom} {m.nom}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </SelField>
-                                    <SelField
-                                        label="Message de l'annonce"
-                                        required
-                                    >
-                                        <textarea
-                                            className="sel-ann-textarea"
-                                            rows={4}
-                                            placeholder={getPlaceholder(
-                                                annonceForm.type_annonce,
-                                            )}
-                                            value={annonceForm.message}
-                                            onChange={(e) =>
-                                                setAnnonceForm((f) => ({
-                                                    ...f,
-                                                    message: e.target.value,
-                                                }))
-                                            }
-                                        />
-                                        <div style={{ fontSize: 10.5, color: "#9C9484", textAlign: "right" }}>
-                                            {annonceForm.message.length}/500
+                                        <div className="sel-card">
+                                            <SelField
+                                                label="Motif"
+                                                icon={<Sparkles size={13} />}
+                                                required
+                                            >
+                                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                                                    {(annonceForm.type_annonce ===
+                                                    "grace"
+                                                        ? MOTIFS_GRACE
+                                                        : MOTIFS_INTERCESSION
+                                                    ).map((m) => (
+                                                        <button
+                                                            key={m.value}
+                                                            type="button"
+                                                            className={`sel-chip ${annonceForm.motif === m.value ? "sel" : ""}`}
+                                                            onClick={() =>
+                                                                setAnnonceForm(
+                                                                    (f) => ({
+                                                                        ...f,
+                                                                        motif: m.value,
+                                                                    }),
+                                                                )
+                                                            }
+                                                        >
+                                                            {annonceForm.motif ===
+                                                                m.value && "✓ "}
+                                                            {m.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </SelField>
+
+                                            <SelField
+                                                label="Voulez-vous rendre publiquement témoignage ?"
+                                                icon={<Megaphone size={13} />}
+                                            >
+                                                <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                                                    {[
+                                                        { val: true, label: "OUI" },
+                                                        {
+                                                            val: false,
+                                                            label: "NON",
+                                                        },
+                                                    ].map(({ val, label }) => (
+                                                        <button
+                                                            key={label}
+                                                            type="button"
+                                                            className={`sel-chip ${annonceForm.temoignage_public === val ? "sel" : ""}`}
+                                                            style={{ minWidth: 64, textAlign: "center" }}
+                                                            onClick={() =>
+                                                                setAnnonceForm(
+                                                                    (f) => ({
+                                                                        ...f,
+                                                                        temoignage_public:
+                                                                            val,
+                                                                    }),
+                                                                )
+                                                            }
+                                                        >
+                                                            {label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <div style={{ fontSize: 11, color: "#9C9484", marginTop: 6 }}>
+                                                    Pour cas exceptionnel
+                                                </div>
+                                            </SelField>
                                         </div>
-                                    </SelField>
-                                    <div style={{ display: "flex", gap: 12 }}>
-                                        <SelField label="Date du culte" style={{ flex: 1 }}>
-                                            <input
-                                                className="sel-ann-input"
-                                                type="date"
-                                                value={annonceForm.date_annonce}
+                                    )}
+
+                                    <div className="sel-card">
+                                        <SelField
+                                            label="Personne concernée"
+                                            icon={<User size={13} />}
+                                            required
+                                        >
+                                            <Select2Single
+                                                name="membre_id"
+                                                value={annonceForm.membre_id}
                                                 onChange={(e) =>
                                                     setAnnonceForm((f) => ({
                                                         ...f,
-                                                        date_annonce:
+                                                        membre_id:
                                                             e.target.value,
+                                                    }))
+                                                }
+                                                options={familyMembers.map(
+                                                    (m) => ({
+                                                        value: m.id,
+                                                        label: `${m.prenom} ${m.nom}`,
+                                                    }),
+                                                )}
+                                                placeholder="Rechercher un membre..."
+                                                noOptionsMessage="Aucun membre trouvé"
+                                            />
+                                        </SelField>
+                                        <SelField
+                                            label="Message de l'annonce"
+                                            icon={<MessageSquare size={13} />}
+                                            required
+                                        >
+                                            <textarea
+                                                className="sel-ann-textarea"
+                                                rows={4}
+                                                maxLength={500}
+                                                placeholder={getPlaceholder(
+                                                    annonceForm.type_annonce,
+                                                )}
+                                                value={annonceForm.message}
+                                                onChange={(e) =>
+                                                    setAnnonceForm((f) => ({
+                                                        ...f,
+                                                        message: e.target.value,
                                                     }))
                                                 }
                                             />
-                                        </SelField>
-                                        <SelField label="Heure du culte" style={{ flex: 1 }}>
-                                            <select
-                                                className="sel-ann-input"
-                                                value={annonceForm.heure_culte}
-                                                onChange={(e) =>
-                                                    setAnnonceForm((f) => ({
-                                                        ...f,
-                                                        heure_culte:
-                                                            e.target.value,
-                                                    }))
-                                                }
-                                            >
-                                                <option value="">-- Choisir --</option>
-                                                <option value="07:30">7h30</option>
-                                                <option value="09:30">9h30</option>
-                                            </select>
+                                            <div style={{ fontSize: 10.5, color: "#9C9484", textAlign: "right", marginTop: 2 }}>
+                                                {annonceForm.message.length}/500
+                                            </div>
                                         </SelField>
                                     </div>
+
+                                    <div className="sel-card">
+                                        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                                            <SelField
+                                                label="Date du culte"
+                                                icon={<Calendar size={13} />}
+                                                style={{ flex: "1 1 140px" }}
+                                            >
+                                                <input
+                                                    className="sel-ann-input"
+                                                    type="date"
+                                                    value={annonceForm.date_annonce}
+                                                    onChange={(e) =>
+                                                        setAnnonceForm((f) => ({
+                                                            ...f,
+                                                            date_annonce:
+                                                                e.target.value,
+                                                        }))
+                                                    }
+                                                />
+                                            </SelField>
+                                            <SelField
+                                                label="Heure du culte"
+                                                icon={<Clock size={13} />}
+                                                style={{ flex: "1 1 140px" }}
+                                            >
+                                                <input
+                                                    className="sel-ann-input"
+                                                    type="time"
+                                                    list="sel-heures-culte"
+                                                    value={annonceForm.heure_culte}
+                                                    onChange={(e) =>
+                                                        setAnnonceForm((f) => ({
+                                                            ...f,
+                                                            heure_culte:
+                                                                e.target.value,
+                                                        }))
+                                                    }
+                                                />
+                                                <datalist id="sel-heures-culte">
+                                                    <option value="07:30" label="7h30" />
+                                                    <option value="09:30" label="9h30" />
+                                                </datalist>
+                                            </SelField>
+                                        </div>
+                                    </div>
+
                                     <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "rgba(74,124,94,.06)", border: "1px solid rgba(74,124,94,.18)", borderRadius: 8, fontSize: 12, color: "#4A7C5E", fontWeight: 600 }}>
                                         Visible par toute la paroisse après
                                         validation du pasteur
@@ -741,10 +763,15 @@ export default function Selection({
     );
 }
 
-function SelField({ label, required, children, style }) {
+function SelField({ label, icon, required, children, style }) {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 6, ...style }}>
-            <label style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: ".09em", textTransform: "uppercase", color: "#5C5748" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10.5, fontWeight: 800, letterSpacing: ".09em", textTransform: "uppercase", color: "#5C5748" }}>
+                {icon && (
+                    <span style={{ color: "#9C8BD9", display: "inline-flex" }}>
+                        {icon}
+                    </span>
+                )}
                 {label}
                 {required && (
                     <span style={{ color: "#C06040" }}> *</span>
@@ -810,10 +837,15 @@ const modalStyles = `
 .sel-ann-type-btn{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:10px;border:2px solid #E8E4DC;background:#FAFAF7;cursor:pointer;transition:all .2s;text-align:left;position:relative;width:100%}
 .sel-ann-type-btn:hover{border-color:#5B3FAF;background:rgba(91,63,175,.04)}
 .sel-ann-type-btn.sel{border-color:#5B3FAF;background:rgba(91,63,175,.06);box-shadow:0 0 0 3px rgba(91,63,175,.1)}
-.sel-ann-input{width:100%;padding:10px 14px;background:#F5F4F0;border:1.5px solid #D6D1C7;border-radius:8px;font-size:13.5px;color:#1E1B16;outline:none;transition:border-color .2s;font-family:inherit}
+.sel-ann-input{width:100%;padding:10px 14px;background:#F5F4F0;border:1.5px solid #D6D1C7;border-radius:8px;font-size:13.5px;color:#1E1B16;outline:none;transition:border-color .2s,box-shadow .2s;font-family:inherit}
 .sel-ann-input:focus{border-color:#5B3FAF;box-shadow:0 0 0 3px rgba(91,63,175,.08);background:#fff}
-.sel-ann-textarea{width:100%;padding:10px 14px;background:#F5F4F0;border:1.5px solid #D6D1C7;border-radius:8px;font-size:13px;color:#1E1B16;outline:none;resize:vertical;line-height:1.6;font-family:inherit;transition:border-color .2s}
+.sel-ann-input:hover{border-color:#B9B2A3}
+.sel-ann-textarea{width:100%;padding:10px 14px;background:#F5F4F0;border:1.5px solid #D6D1C7;border-radius:8px;font-size:13px;color:#1E1B16;outline:none;resize:vertical;line-height:1.6;font-family:inherit;transition:border-color .2s,box-shadow .2s}
 .sel-ann-textarea:focus{border-color:#5B3FAF;box-shadow:0 0 0 3px rgba(91,63,175,.08);background:#fff}
+.sel-card{display:flex;flex-direction:column;gap:16px;padding:16px;background:#FBFAF8;border:1px solid #ECE8DE;border-radius:12px}
+.sel-chip{padding:7px 15px;border-radius:20px;border:1.5px solid #D6D1C7;background:#fff;color:#374151;font-weight:600;font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit}
+.sel-chip:hover{border-color:#d97706;background:#fffbeb}
+.sel-chip.sel{border-color:#d97706;background:#fffbeb;color:#b45309;font-weight:700;box-shadow:0 0 0 3px rgba(217,119,6,.1)}
 .sel-btn-mghost{padding:9px 18px;border-radius:8px;background:#F5F4F0;border:1px solid #D6D1C7;color:#5C5748;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
 .sel-btn-mnext{padding:9px 22px;border-radius:8px;background:#5B3FAF;color:#fff;border:none;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
 .sel-btn-mnext:disabled{opacity:.4;cursor:not-allowed}

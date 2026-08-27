@@ -151,8 +151,12 @@ class TribuController extends Controller
             return back()->withErrors(['error' => 'Ce membre n\'est pas dans votre classe.']);
         }
 
-        if (!in_array($membre->role, ['membre_famille', 'responsable_famille'], true)) {
-            return back()->withErrors(['error' => 'Seul un membre de famille peut être affecté à une tribu.']);
+        if (!in_array($membre->role, ['membre_famille', 'responsable_famille', 'conducteur'], true)) {
+            return back()->withErrors(['error' => 'Ce membre ne peut pas être affecté à une tribu.']);
+        }
+
+        if ($membre->is_nouveau) {
+            return back()->withErrors(['error' => 'Ce membre est encore en suivi (nouveau) et ne peut pas être affecté à une tribu.']);
         }
 
         $membre->update(['tribu_id' => $tribu->id]);
@@ -267,7 +271,8 @@ class TribuController extends Controller
         $count = User::query()
             ->whereIn('id', $validated['user_ids'])
             ->where('classe_id', $user->classe_id)
-            ->whereIn('role', ['membre_famille', 'responsable_famille'])
+            ->whereIn('role', ['membre_famille', 'responsable_famille', 'conducteur'])
+            ->where('is_nouveau', false)
             ->update(['tribu_id' => $tribu->id]);
 
         return back()->with('success', "$count membre(s) affecté(s) à la tribu avec succès.");
@@ -316,7 +321,8 @@ class TribuController extends Controller
         $count = User::query()
             ->whereIn('id', $validated['user_ids'])
             ->where('classe_id', $user->classe_id)
-            ->whereIn('role', ['membre_famille', 'responsable_famille'])
+            ->whereIn('role', ['membre_famille', 'responsable_famille', 'conducteur'])
+            ->where('is_nouveau', false)
             ->update(['tribu_id' => $tribu->id]);
 
         return back()->with('success', "$count membre(s) affecté(s) à {$tribu->nom} avec succès.");
@@ -485,7 +491,9 @@ class TribuController extends Controller
     {
         $membres = User::query()
             ->where('classe_id', $classeId)
-            ->whereIn('role', ['membre_famille', 'responsable_famille'])
+            ->whereIn('role', ['membre_famille', 'responsable_famille', 'conducteur'])
+            // Un nouveau membre en suivi (< 3 mois) ne peut pas encore être affecté à une tribu.
+            ->where('is_nouveau', false)
             ->with(['family:id,adresse,quartier', 'tribu:id,nom'])
             ->orderBy('nom')
             ->orderBy('prenom')
@@ -532,7 +540,7 @@ class TribuController extends Controller
     {
         return User::query()
             ->where('classe_id', $classeId)
-            ->whereIn('role', ['membre_famille', 'responsable_famille'])
+            ->whereIn('role', ['membre_famille', 'responsable_famille', 'conducteur'])
             ->with('family:id,adresse,quartier')
             ->get(['id', 'family_id'])
             ->map(fn (User $membre) => $membre->family?->adresse ?: $membre->family?->quartier)

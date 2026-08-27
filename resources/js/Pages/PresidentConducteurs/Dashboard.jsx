@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "@inertiajs/react";
 import { ArrowLeft } from "lucide-react";
 import DashboardIntro from "@/Components/DashboardIntro";
+import PriereRequestButton from "@/Components/PriereRequestButton";
 import { withBasePath } from "../../Utils/urlHelper";
 import TabValidationActes from "./Tabs/TabValidationActes";
 import TabPresences from "./Tabs/TabPresences";
@@ -55,6 +56,7 @@ export default function Dashboard({
     flashInfos,
     sondages,
     seenSurveyIds,
+    allMembers = [],
 }) {
     const [activeTab, setActiveTab] = useState("actes");
 
@@ -78,6 +80,14 @@ export default function Dashboard({
                 </Link>
 
                 <DashboardIntro title="MON ESPACE PRÉSIDENT DES CONDUCTEURS" />
+
+                <div className="flex justify-end mb-4">
+                    <PriereRequestButton
+                        submitUrl="/president-conducteurs/annonces"
+                        familyMembers={allMembers}
+                        circuitLabel="Pasteur → Publication"
+                    />
+                </div>
 
                 <nav className="bg-white p-1 rounded-lg shadow-md border flex flex-wrap justify-center gap-1 mb-6">
                     {TABS.map((tab) => (

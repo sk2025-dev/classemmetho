@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
+import { UserCheck, Search, ShieldCheck } from "lucide-react";
 import AppLayout from "@/Layouts/AppLayout";
 import { withBasePath } from "@/Utils/urlHelper";
 
@@ -18,6 +19,7 @@ export default function Presences({
     conducteur,
     activites = [],
     membres = [],
+    membresAssignables = [],
     presences: initialPresences = {},
     stats = {},
     activite_active_id = null,
@@ -47,6 +49,10 @@ export default function Presences({
         useState(false);
     const [modalMarqueurPresence, setModalMarqueurPresence] = useState(false);
     const [selectedMemberMarqueur, setSelectedMemberMarqueur] = useState("");
+    const [marqueurSearch, setMarqueurSearch] = useState("");
+    const [correctionModal, setCorrectionModal] = useState(null);
+    const [correctionMotif, setCorrectionMotif] = useState("");
+    const [correctionSaving, setCorrectionSaving] = useState(false);
     const [marqueurPresenceActuel, setMarqueurPresenceActuel] =
         useState(presenceMarkerClasse);
 
@@ -62,6 +68,8 @@ export default function Presences({
     const unassignPresenceMarkerEndpoint =
         presenceEndpoints?.unassignPresenceMarker ||
         "/conducteur/presences/unassign-marqueur";
+    const correctPresenceEndpoint =
+        presenceEndpoints?.correctPresence || "/conducteur/presences/corriger";
     const [showAllActivites, setShowAllActivites] = useState(false);
 
     const activiteSelectionnee = activites.find(
@@ -324,7 +332,44 @@ export default function Presences({
         setSelectedMemberMarqueur(
             marqueurPresenceActuel?.id ? String(marqueurPresenceActuel.id) : "",
         );
+        setMarqueurSearch("");
         setModalMarqueurPresence(true);
+    }
+
+    function openCorrectionModal(membre) {
+        setCorrectionModal(membre);
+        setCorrectionMotif("");
+    }
+
+    async function handleCorrigerPresence(statut) {
+        if (!correctionModal || !selectedActiviteId) return;
+        setCorrectionSaving(true);
+        try {
+            const endpoint = withBasePath("", correctPresenceEndpoint);
+            await window.axios.post(endpoint, {
+                event_id: selectedActiviteId,
+                member_id: correctionModal.id,
+                statut,
+                motif: correctionMotif.trim() || null,
+            });
+            setMarquages((prev) => ({
+                ...prev,
+                [selectedActiviteId]: {
+                    ...(prev[selectedActiviteId] ?? {}),
+                    [correctionModal.id]: statut,
+                },
+            }));
+            showToast("Présence corrigée avec succès.", "success");
+            setCorrectionModal(null);
+        } catch (error) {
+            showToast(
+                error?.response?.data?.message ||
+                    "Impossible de corriger cette présence.",
+                "error",
+            );
+        } finally {
+            setCorrectionSaving(false);
+        }
     }
 
     useEffect(() => {
@@ -741,13 +786,21 @@ export default function Presences({
                                             Statut (QR)
                                         </th>
                                         <th style={S.th}>Scan</th>
+                                        <th
+                                            style={{
+                                                ...S.th,
+                                                textAlign: "center",
+                                            }}
+                                        >
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {membresFiltres.length === 0 ? (
                                         <tr>
                                             <td
-                                                colSpan={4}
+                                                colSpan={5}
                                                 style={{
                                                     textAlign: "center",
                                                     color: "#aaa",
@@ -838,7 +891,10 @@ export default function Presences({
                                                                             : statut ===
                                                                                 "absent"
                                                                               ? "#ffebee"
-                                                                              : "#f5f5f5",
+                                                                              : statut ===
+                                                                                  "excuse"
+                                                                                ? "#fff8e1"
+                                                                                : "#f5f5f5",
                                                                     color:
                                                                         statut ===
                                                                         "present"
@@ -846,7 +902,10 @@ export default function Presences({
                                                                             : statut ===
                                                                                 "absent"
                                                                               ? "#c62828"
-                                                                              : "#777",
+                                                                              : statut ===
+                                                                                  "excuse"
+                                                                                ? "#b8860b"
+                                                                                : "#777",
                                                                     fontWeight: 500,
                                                                 }}
                                                             >
@@ -856,7 +915,10 @@ export default function Presences({
                                                                     : statut ===
                                                                         "absent"
                                                                       ? "Absent"
-                                                                      : "Non scanné"}
+                                                                      : statut ===
+                                                                          "excuse"
+                                                                        ? "Excusé"
+                                                                        : "Non scanné"}
                                                             </span>
                                                         </div>
                                                     </td>
@@ -870,12 +932,45 @@ export default function Presences({
                                                             {statut ===
                                                             "present"
                                                                 ? "Scan validé"
-                                                                : programmeSummary
+                                                                : statut ===
+                                                                    "excuse"
+                                                                  ? "Corrigé par le conducteur"
+                                                                  : programmeSummary
                                                                         ?.programme
                                                                         ?.is_closed
                                                                   ? "Absent automatique"
                                                                   : "En attente de scan"}
                                                         </span>
+                                                    </td>
+                                                    <td style={S.td}>
+                                                        <div
+                                                            style={{
+                                                                textAlign:
+                                                                    "center",
+                                                            }}
+                                                        >
+                                                            <button
+                                                                onClick={() =>
+                                                                    openCorrectionModal(
+                                                                        m,
+                                                                    )
+                                                                }
+                                                                style={{
+                                                                    fontSize: 11,
+                                                                    fontWeight: 600,
+                                                                    padding:
+                                                                        "5px 10px",
+                                                                    borderRadius: 8,
+                                                                    border: "1px solid #d7dbeb",
+                                                                    background:
+                                                                        "#fff",
+                                                                    color: "#1a237e",
+                                                                    cursor: "pointer",
+                                                                }}
+                                                            >
+                                                                Corriger
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             );
@@ -1490,72 +1585,346 @@ export default function Presences({
                 );
             })()}
 
-            {canManagePresenceMarker && modalMarqueurPresence && (
+            {canManagePresenceMarker && modalMarqueurPresence && (() => {
+                const roleLabels = {
+                    membre_famille: "Membre de famille",
+                    responsable_famille: "Responsable de famille",
+                    conducteur: "Conducteur",
+                    pasteur: "Pasteur",
+                    tresorier: "Trésorier",
+                };
+                const term = marqueurSearch.trim().toLowerCase();
+                const candidats = (
+                    membresAssignables.length > 0 ? membresAssignables : membres
+                ).filter((m) =>
+                    !term ||
+                    `${m.prenom} ${m.nom}`.toLowerCase().includes(term),
+                );
+                const selected = candidats.find(
+                    (m) => String(m.id) === String(selectedMemberMarqueur),
+                );
+
+                return (
+                    <div
+                        style={S.modalBackdrop}
+                        onClick={() => setModalMarqueurPresence(false)}
+                    >
+                        <div
+                            style={{ ...S.modalCard, maxWidth: 460, padding: 0, overflow: "hidden" }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div
+                                style={{
+                                    padding: "18px 20px",
+                                    background:
+                                        "linear-gradient(135deg, #1a237e, #283593)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 12,
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        width: 38,
+                                        height: 38,
+                                        borderRadius: 10,
+                                        background: "rgba(255,255,255,0.15)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    <ShieldCheck size={19} color="#fff" />
+                                </span>
+                                <div>
+                                    <h3 style={{ color: "#fff", fontSize: 16, fontWeight: 700, margin: 0 }}>
+                                        Assigner un marqueur
+                                    </h3>
+                                    <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 12, margin: "2px 0 0" }}>
+                                        Vérification finale des présences de la classe
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div style={{ padding: 20 }}>
+                                {marqueurPresenceActuel ? (
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 10,
+                                            padding: "10px 12px",
+                                            borderRadius: 10,
+                                            border: "1px solid #f3e5b8",
+                                            background: "#fffbea",
+                                            marginBottom: 16,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                width: 32,
+                                                height: 32,
+                                                borderRadius: "50%",
+                                                background: "#c6a800",
+                                                color: "#fff",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            <UserCheck size={15} />
+                                        </span>
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontSize: 12, color: "#92400e", fontWeight: 700 }}>
+                                                Marqueur actuel
+                                            </div>
+                                            <div style={{ fontSize: 13, color: "#374151" }}>
+                                                {marqueurPresenceActuel.nom} · {marqueurPresenceActuel.famille}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div
+                                        style={{
+                                            padding: "10px 12px",
+                                            borderRadius: 10,
+                                            border: "1px dashed #d1d5db",
+                                            background: "#f9fafb",
+                                            fontSize: 12,
+                                            color: "#9ca3af",
+                                            textAlign: "center",
+                                            marginBottom: 16,
+                                        }}
+                                    >
+                                        Aucun marqueur assigné pour le moment.
+                                    </div>
+                                )}
+
+                                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6, display: "block" }}>
+                                    Choisir un membre
+                                </label>
+                                <div style={{ position: "relative", marginBottom: 10 }}>
+                                    <Search
+                                        size={15}
+                                        color="#9ca3af"
+                                        style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}
+                                    />
+                                    <input
+                                        type="text"
+                                        value={marqueurSearch}
+                                        onChange={(e) => setMarqueurSearch(e.target.value)}
+                                        placeholder="Rechercher un membre..."
+                                        style={{ ...S.selectInput, width: "100%", paddingLeft: 32, boxSizing: "border-box" }}
+                                    />
+                                </div>
+
+                                <div
+                                    style={{
+                                        maxHeight: 220,
+                                        overflowY: "auto",
+                                        border: "1px solid #e5e7eb",
+                                        borderRadius: 10,
+                                    }}
+                                >
+                                    {candidats.length === 0 ? (
+                                        <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", padding: 16, margin: 0 }}>
+                                            Aucun membre ne correspond à la recherche.
+                                        </p>
+                                    ) : (
+                                        candidats.map((m) => {
+                                            const isSelected = String(m.id) === String(selectedMemberMarqueur);
+                                            const isCurrent = marqueurPresenceActuel?.id === m.id;
+                                            return (
+                                                <button
+                                                    key={m.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedMemberMarqueur(String(m.id))}
+                                                    style={{
+                                                        width: "100%",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 10,
+                                                        padding: "8px 10px",
+                                                        background: isSelected ? "#eef2ff" : "#fff",
+                                                        border: "none",
+                                                        borderBottom: "1px solid #f3f4f6",
+                                                        cursor: "pointer",
+                                                        textAlign: "left",
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            width: 28,
+                                                            height: 28,
+                                                            borderRadius: "50%",
+                                                            background: m.couleur || "#c6a800",
+                                                            color: "#fff",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            fontSize: 11,
+                                                            fontWeight: 700,
+                                                            flexShrink: 0,
+                                                        }}
+                                                    >
+                                                        {m.avatar_initiales}
+                                                    </span>
+                                                    <span style={{ flex: 1, minWidth: 0 }}>
+                                                        <span style={{ fontSize: 13, fontWeight: 600, color: "#1f2937" }}>
+                                                            {m.prenom} {m.nom}
+                                                        </span>
+                                                        <span style={{ display: "block", fontSize: 11, color: "#9ca3af" }}>
+                                                            {roleLabels[m.role] || m.role || ""}
+                                                            {isCurrent ? " · Marqueur actuel" : ""}
+                                                        </span>
+                                                    </span>
+                                                    {isSelected && (
+                                                        <UserCheck size={15} color="#1a237e" />
+                                                    )}
+                                                </button>
+                                            );
+                                        })
+                                    )}
+                                </div>
+
+                                <div style={{ ...S.modalActions, marginTop: 18 }}>
+                                    <button
+                                        style={S.btnSecondary}
+                                        onClick={() => setModalMarqueurPresence(false)}
+                                    >
+                                        Fermer
+                                    </button>
+                                    {marqueurPresenceActuel && (
+                                        <button
+                                            style={{
+                                                ...S.btnSecondary,
+                                                borderColor: "#ef9a9a",
+                                                color: "#c62828",
+                                            }}
+                                            onClick={handleUnassignPresenceMarker}
+                                        >
+                                            Retirer
+                                        </button>
+                                    )}
+                                    <button
+                                        style={S.btnPrimary}
+                                        disabled={!selectedMemberMarqueur}
+                                        onClick={handleAssignPresenceMarker}
+                                    >
+                                        {marqueurPresenceActuel
+                                            ? "Mettre à jour"
+                                            : "Assigner"}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {correctionModal && (
                 <div
                     style={S.modalBackdrop}
-                    onClick={() => setModalMarqueurPresence(false)}
+                    onClick={() => !correctionSaving && setCorrectionModal(null)}
                 >
                     <div
-                        style={S.modalCard}
+                        style={{ ...S.modalCard, maxWidth: 380 }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h3 style={S.modalTitle}>Assigner un marqueur</h3>
+                        <h3 style={S.modalTitle}>Corriger la présence</h3>
                         <p style={S.modalSubTitle}>
-                            Le marqueur de présence pourra effectuer la
-                            vérification finale des présences de votre classe.
+                            {correctionModal.prenom} {correctionModal.nom}
+                            {activiteSelectionnee?.titre
+                                ? ` — ${activiteSelectionnee.titre}`
+                                : ""}
                         </p>
-                        <p style={S.modalCurrentMarkerText}>
-                            Marqueur actuel :{" "}
-                            <strong>
-                                {marqueurPresenceActuel
-                                    ? `${marqueurPresenceActuel.nom} (${marqueurPresenceActuel.famille})`
-                                    : "Aucun"}
-                            </strong>
-                        </p>
-                        <select
-                            value={selectedMemberMarqueur}
-                            onChange={(e) =>
-                                setSelectedMemberMarqueur(e.target.value)
-                            }
-                            style={{ ...S.selectInput, width: "100%" }}
-                        >
-                            <option value="">Choisir un membre...</option>
-                            {membres.map((m) => (
-                                <option key={m.id} value={m.id}>
-                                    {m.prenom} {m.nom}
-                                    {marqueurPresenceActuel?.id === m.id
-                                        ? " (Marqueur actuel)"
-                                        : ""}
-                                </option>
-                            ))}
-                        </select>
+
+                        <textarea
+                            value={correctionMotif}
+                            onChange={(e) => setCorrectionMotif(e.target.value)}
+                            placeholder="Motif (optionnel)"
+                            rows={2}
+                            style={{
+                                ...S.selectInput,
+                                width: "100%",
+                                boxSizing: "border-box",
+                                resize: "vertical",
+                                marginTop: 8,
+                                marginBottom: 12,
+                            }}
+                        />
+
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <button
+                                disabled={correctionSaving}
+                                onClick={() => handleCorrigerPresence("present")}
+                                style={{
+                                    flex: 1,
+                                    padding: "8px 10px",
+                                    borderRadius: 8,
+                                    border: "1px solid #a5d6a7",
+                                    background: "#e8f5e9",
+                                    color: "#2e7d32",
+                                    fontWeight: 600,
+                                    fontSize: 12,
+                                    cursor: correctionSaving
+                                        ? "not-allowed"
+                                        : "pointer",
+                                }}
+                            >
+                                Présent
+                            </button>
+                            <button
+                                disabled={correctionSaving}
+                                onClick={() => handleCorrigerPresence("absent")}
+                                style={{
+                                    flex: 1,
+                                    padding: "8px 10px",
+                                    borderRadius: 8,
+                                    border: "1px solid #ef9a9a",
+                                    background: "#ffebee",
+                                    color: "#c62828",
+                                    fontWeight: 600,
+                                    fontSize: 12,
+                                    cursor: correctionSaving
+                                        ? "not-allowed"
+                                        : "pointer",
+                                }}
+                            >
+                                Absent
+                            </button>
+                            <button
+                                disabled={correctionSaving}
+                                onClick={() => handleCorrigerPresence("excuse")}
+                                style={{
+                                    flex: 1,
+                                    padding: "8px 10px",
+                                    borderRadius: 8,
+                                    border: "1px solid #ffe082",
+                                    background: "#fff8e1",
+                                    color: "#b8860b",
+                                    fontWeight: 600,
+                                    fontSize: 12,
+                                    cursor: correctionSaving
+                                        ? "not-allowed"
+                                        : "pointer",
+                                }}
+                            >
+                                Excusé
+                            </button>
+                        </div>
 
                         <div style={S.modalActions}>
                             <button
                                 style={S.btnSecondary}
-                                onClick={() => setModalMarqueurPresence(false)}
+                                disabled={correctionSaving}
+                                onClick={() => setCorrectionModal(null)}
                             >
                                 Fermer
-                            </button>
-                            {marqueurPresenceActuel && (
-                                <button
-                                    style={{
-                                        ...S.btnSecondary,
-                                        borderColor: "#ef9a9a",
-                                        color: "#c62828",
-                                    }}
-                                    onClick={handleUnassignPresenceMarker}
-                                >
-                                    Retirer
-                                </button>
-                            )}
-                            <button
-                                style={S.btnPrimary}
-                                onClick={handleAssignPresenceMarker}
-                            >
-                                {marqueurPresenceActuel
-                                    ? "Mettre à jour"
-                                    : "Assigner"}
                             </button>
                         </div>
                     </div>

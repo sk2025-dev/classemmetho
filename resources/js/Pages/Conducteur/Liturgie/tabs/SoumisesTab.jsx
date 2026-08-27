@@ -490,6 +490,19 @@ export default function SoumisesTab({
                             </div>
                         </div>
                         <div className="circuit-step">
+                            <div
+                                className="circuit-dot pending"
+                                style={{ fontSize: 10 }}
+                            >
+                                🏛
+                            </div>
+                            <div className="circuit-line" />
+                            <div className="circuit-text">
+                                <strong>Président des conducteurs</strong>
+                                <span>Bureau des conducteurs</span>
+                            </div>
+                        </div>
+                        <div className="circuit-step">
                             <div className="circuit-dot pending">
                                 ✝
                             </div>

@@ -10,6 +10,11 @@ use Carbon\Carbon;
 
 class SpecialEvent extends Model
 {
+    public const STATUT_PLANIFIEE = 'planifiee';
+    public const STATUT_REALISEE = 'realisee';
+    public const STATUT_REPORTEE = 'reportee';
+    public const STATUT_ANNULEE = 'annulee';
+
     protected $fillable = [
         'title',
         'start_date',      // NOUVEAU : date de début
@@ -20,6 +25,7 @@ class SpecialEvent extends Model
         'moderateur',
         'famille_reception',
         'lieu',
+        'statut_realisation',
         'class_id',
         'created_by',
         'is_parish',

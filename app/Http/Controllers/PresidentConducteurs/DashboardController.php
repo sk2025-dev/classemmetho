@@ -120,7 +120,15 @@ class DashboardController extends Controller
         $annuaire = $this->annuaireService->getAnnuaireData($request, 'bureau_conducteur');
         $tresorerie = $this->buildTresorerieData();
 
+        $allMembers = User::query()
+            ->whereNotIn('role', ['admin'])
+            ->select(['id', 'nom', 'prenom'])
+            ->orderBy('prenom')
+            ->orderBy('nom')
+            ->get();
+
         return Inertia::render('PresidentConducteurs/Dashboard', [
+            'allMembers'        => $allMembers,
             'actes'             => $actes,
             'historique'        => $historique,
             'pendingCount'      => $pendingCount,
@@ -144,6 +152,7 @@ class DashboardController extends Controller
             'tresorerieClasses'    => $tresorerie['classes'],
             'cotisationsParClasse' => $tresorerie['cotisationsParClasse'],
             'encouragements'       => $tresorerie['encouragements'],
+            'isFimecoResponsable'  => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
 
             // Flash info
             'flashInfos' => $this->buildFlashInfoData(),

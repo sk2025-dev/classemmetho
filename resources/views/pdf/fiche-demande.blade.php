@@ -3,7 +3,7 @@ use App\Models\ActeLiturgique;
 use Carbon\Carbon;
 
 $details = $acte->details ?? [];
-$createur = $acte->createur ?? $acte->membre ?? null;
+$createur = $acte->membre ?? $acte->createur ?? null;
 $nomComplet = trim(($createur->prenom ?? '') . ' ' . ($createur->nom ?? '')) ?: '—';
 $telephone = $createur->telephone ?? $createur->telephone2 ?? '—';
 $classe = $createur->classe?->nom ?? $acte->classe?->nom ?? 'Non définie';
@@ -92,30 +92,6 @@ $nomBureauConducteur = $bureauConducteur
     ? trim(($bureauConducteur->prenom ?? '') . ' ' . ($bureauConducteur->nom ?? ''))
     : null;
 $signatureBureauConducteurDataUri = $signatureBureauConducteurDataUri ?? $toSignatureDataUri($bureauConducteur->signature_path ?? null);
-
-// ── Lien familial du membre concerné ──────────────────────────────────────
-$membreConcerne = $acte->membre ?? null;
-$createurActe   = $acte->createur ?? null;
-$lienFamilial   = '';
-if ($membreConcerne) {
-    $rel = trim((string) ($membreConcerne->relation ?? ''));
-    // On évite "lui-même" / "lui meme" car c'est incorrect pour le respo de famille
-    $relNorm = mb_strtolower(str_replace(['-', ' '], '', $rel), 'UTF-8');
-    if ($rel !== '' && !in_array($relNorm, ['luimeme', 'luimême'], true)) {
-        $lienFamilial = ucfirst($rel);
-    } elseif ($createurActe && $membreConcerne->id === $createurActe->id) {
-        // Même personne → afficher son rôle lisible
-        $lienFamilial = match ($membreConcerne->role ?? '') {
-            'responsable_famille' => 'Responsable de famille',
-            'conducteur'          => 'Conducteur',
-            'pasteur'             => 'Pasteur',
-            'bureau_conducteur'   => 'Bureau des Conducteurs',
-            default               => 'Membre de famille',
-        };
-    } else {
-        $lienFamilial = '—';
-    }
-}
 
 // ── Date / heure de validation du Conducteur (depuis l'historique) ────────
 $historiqueCondValidation = null;
@@ -219,13 +195,13 @@ $checkboxesIntercession = [
             margin-bottom: 6px;
         }
         .logo-cell {
-            width: 64px;
+            width: 96px;
             vertical-align: top;
             padding-top: 4px;
         }
         .logo-cell img {
-            width: 58px;
-            height: 58px;
+            width: 90px;
+            height: 90px;
             object-fit: contain;
         }
         .church-center {
@@ -262,14 +238,14 @@ $checkboxesIntercession = [
             margin-top: 3px;
         }
         .logo-cell-right {
-            width: 64px;
+            width: 96px;
             text-align: right;
             vertical-align: top;
             padding-top: 4px;
         }
         .logo-cell-right img {
-            width: 58px;
-            height: 58px;
+            width: 90px;
+            height: 90px;
             object-fit: contain;
         }
 
@@ -281,7 +257,7 @@ $checkboxesIntercession = [
             text-transform: uppercase;
             color: #1a52a8;
             letter-spacing: 1px;
-            margin: 8px 0 8px 0;
+            margin: 8px 0 24px 0;
         }
 
         /* ══ CHAMPS SIMPLES ══ */
@@ -503,9 +479,7 @@ $checkboxesIntercession = [
 
     {{-- ══ CHAMPS NOM / LIEN FAMILIAL / CLASSE / DATE ══ --}}
     <div class="field-line"><b>Nom et Prénoms :</b>  {{ $nomComplet }}</div>
-    @if($lienFamilial && $lienFamilial !== '—')
-    <div class="field-line"><b>Lien familial :</b>  {{ $lienFamilial }}</div>
-    @endif
+    <div class="field-line"><b>Famille :</b>  {{ $famille }}</div>
     <div class="field-line"><b>Classe Méthodiste :</b>  {{ $classe }}</div>
     <div class="field-line">
         <b>Pour le culte du :</b>

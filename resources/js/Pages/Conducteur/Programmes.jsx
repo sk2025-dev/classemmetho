@@ -967,6 +967,26 @@ const styles = `
     color: var(--primary);
     font-size: 1.1rem;
     letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.cal-year-select {
+    font-weight: 800;
+    color: var(--primary);
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0;
+    text-align: center;
+}
+.cal-year-select:hover, .cal-year-select:focus {
+    text-decoration: underline;
+    outline: none;
 }
 .cal-nav-btn {
     background: rgba(37, 99, 235, 0.1);
@@ -2614,12 +2634,6 @@ const formatDateFrench = (dateString) => {
 };
 
 // --- FONCTIONS DE FILTRAGE ---
-const isDateInCurrentMonth = (dateString) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-};
-
 const isDateInPastMonth = (dateString) => {
   const date = new Date(dateString);
   const now = new Date();
@@ -2781,8 +2795,10 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
 };
 
 // --- MINI CALENDAR COMPONENT ---
-const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDate }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDate, currentDate: controlledDate, onMonthChange }) => {
+  const [internalDate, setInternalDate] = useState(new Date());
+  const currentDate = controlledDate || internalDate;
+  const setCurrentDate = onMonthChange || setInternalDate;
   const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
   const getDaysInMonth = (date) => {
@@ -2842,11 +2858,22 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
     <div className="mini-calendar">
       <div className="cal-header">
         <button className="cal-nav-btn" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}>‹</button>
-        <span className="cal-month-year">{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</span>
+        <span className="cal-month-year">
+          {monthNames[currentDate.getMonth()]}
+          <select
+            className="cal-year-select"
+            value={currentDate.getFullYear()}
+            onChange={(e) => setCurrentDate(new Date(Number(e.target.value), currentDate.getMonth(), 1))}
+          >
+            {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </span>
         <button className="cal-nav-btn" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}>›</button>
       </div>
       <div className="cal-grid">
-        {daysOfWeek.map(d => <div key={d} className="cal-day-label">{d}</div>)}
+        {daysOfWeek.map((d, idx) => <div key={idx} className="cal-day-label">{d}</div>)}
         {days.map((day, idx) => {
           const hasEvent = hasEventOnDate(day.date);
           const eventTitles = getEventTitles(day.date);
@@ -3077,7 +3104,6 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
 // --- IMPORT EXCEL MODAL ---
 const ImportExcelModal = ({ isOpen, onClose, onImport, isLoading = false, progress = 0 }) => {
   const [file, setFile] = useState(null);
-  const [previewData, setPreviewData] = useState([]);
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -3085,10 +3111,6 @@ const ImportExcelModal = ({ isOpen, onClose, onImport, isLoading = false, progre
 
   const handleFileSelect = (selectedFile) => {
     setFile(selectedFile);
-    setPreviewData([
-      { title: 'Étude biblique', start_date: '2026-04-15', end_date: '', start_time: '18:30', end_time: '', lieu: 'Salle 101', orateur: 'Fr. Jean', moderateur: 'Fr. Paul', famille_reception: 'Famille Dupont' },
-      { title: 'Réunion de prière', start_date: '2026-04-16', end_date: '2026-04-18', start_time: '19:00', end_time: '21:00', lieu: 'Église', orateur: 'Fr. Marc', moderateur: 'Fr. Pierre', famille_reception: 'Famille Martin' },
-    ]);
   };
 
   return (
@@ -3099,31 +3121,26 @@ const ImportExcelModal = ({ isOpen, onClose, onImport, isLoading = false, progre
           <button onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
+          <a
+            href={withBasePath("", "/conducteur/programmes/import-template")}
+            className="import-template-link"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '12px', fontSize: '0.85rem', fontWeight: 600, color: '#4f46e5', textDecoration: 'none' }}
+          >
+            <IconFileExcel /> Télécharger le modèle Excel à remplir
+          </a>
           <div className={`import-area ${isDragActive ? 'drag-active' : ''}`} onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }} onDragLeave={(e) => { e.preventDefault(); setIsDragActive(false); }} onDrop={(e) => { e.preventDefault(); setIsDragActive(false); const droppedFile = e.dataTransfer.files[0]; if (droppedFile) handleFileSelect(droppedFile); }} onClick={() => fileInputRef.current?.click()}>
             <div className="import-icon">📊</div>
             <div className="import-title">Glissez-déposez votre fichier Excel ici</div>
             <div className="import-subtitle">ou cliquez pour parcourir</div>
-            <input ref={fileInputRef} type="file" className="file-input" accept=".xlsx,.xls,.csv" onChange={(e) => e.target.files[0] && handleFileSelect(e.target.files[0])} />
+            <input ref={fileInputRef} type="file" className="file-input" accept=".xlsx,.xls" onChange={(e) => e.target.files[0] && handleFileSelect(e.target.files[0])} />
             <button className="import-btn-select" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}><IconFileExcel /> Sélectionner un fichier</button>
             {file && <div className="file-info"><IconFileExcel /> {file.name} ({(file.size / 1024).toFixed(2)} KB)</div>}
           </div>
           {isLoading && <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress}%` }}></div></div>}
-          {previewData.length > 0 && !isLoading && (
-            <div className="preview-table">
-              <table className="w-full">
-                <thead><tr><th className="text-left p-2">Titre</th><th className="text-left p-2">Date début</th><th className="text-left p-2">Date fin</th><th className="text-left p-2">Heure début</th><th className="text-left p-2">Heure fin</th><th className="text-left p-2">Lieu</th></tr></thead>
-                <tbody>
-                  {previewData.map((item, idx) => (
-                    <tr key={idx}><td className="p-2 border-t">{item.title}</td><td className="p-2 border-t">{item.start_date}</td><td className="p-2 border-t">{item.end_date || '-'}</td><td className="p-2 border-t">{item.start_time || '-'}</td><td className="p-2 border-t">{item.end_time || '-'}</td><td className="p-2 border-t">{item.lieu}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>Annuler</button>
-          <button className="btn-add" onClick={() => onImport(previewData)} disabled={!file || isLoading}>{isLoading ? `Import en cours... ${progress}%` : 'Importer'}</button>
+          <button className="btn-add" onClick={() => onImport(file)} disabled={!file || isLoading}>{isLoading ? `Import en cours... ${progress}%` : 'Importer'}</button>
         </div>
       </div>
     </div>
@@ -3601,6 +3618,7 @@ export default function Programmes() {
   const [isDateContentModalOpen, setIsDateContentModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [activeCalendarDate, setActiveCalendarDate] = useState(null);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedGalleryMediaIds, setSelectedGalleryMediaIds] = useState([]);
   const [isGallerySelectionMode, setIsGallerySelectionMode] = useState(false);
   const [openGalleryMenuId, setOpenGalleryMenuId] = useState(null);
@@ -3655,7 +3673,10 @@ export default function Programmes() {
   
   const scrollRefs = useRef({});
 
-  const currentMonthEvents = classList.filter(event => isDateInCurrentMonth(event.start_date));
+  const currentMonthEvents = classList.filter(event => {
+    const eventDate = new Date(event.start_date);
+    return eventDate.getMonth() === calendarMonth.getMonth() && eventDate.getFullYear() === calendarMonth.getFullYear();
+  });
   const pastEvents = classHistory.filter(event => isDateInPastMonth(event.start_date));
   const allEvents = [...classList, ...classHistory];
   const allEventsData = [...classList, ...classHistory];
@@ -4087,18 +4108,27 @@ export default function Programmes() {
     }
   };
 
-  const handleImportEvents = async (events) => {
+  const handleImportEvents = async (file) => {
+    if (!file) return;
     setIsLoading(true); setImportProgress(0);
     try {
-      for (let i = 0; i <= 100; i += 20) { await new Promise(resolve => setTimeout(resolve, 300)); setImportProgress(i); }
-      const response = await axios.post(withBasePath("", '/conducteur/programmes/import-events'), { events });
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await axios.post(withBasePath("", '/conducteur/programmes/import-excel'), formData, {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) setImportProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+        },
+      });
       if (response.data.success) {
         const importedEvents = response.data.events || [];
         const now = new Date();
         importedEvents.forEach(event => { const eventDate = new Date(event.start_date); if (eventDate < now) setClassHistory(prev => [...prev, event]); else setClassList(prev => [...prev, event]); });
         showToast(response.data.message, 'success'); closeImportModal();
-      } else showToast('Erreur lors de l\'import', 'error');
-    } catch (error) { console.error('Erreur import:', error); showToast('Erreur lors de l\'import', 'error'); } finally { setIsLoading(false); }
+      } else showToast(response.data.message || 'Erreur lors de l\'import', 'error');
+    } catch (error) {
+      console.error('Erreur import:', error);
+      showToast(error.response?.data?.message || 'Erreur lors de l\'import', 'error');
+    } finally { setIsLoading(false); }
   };
 
   const handleEditEvent = (event) => openEventModal(event);
@@ -4239,16 +4269,16 @@ export default function Programmes() {
 
   // Composant EmptyDialog
   const EmptyDialog = ({ onCreateClick }) => {
-    const currentMonthName = new Date().toLocaleString('fr-FR', { month: 'long' });
+    const currentMonthName = calendarMonth.toLocaleString('fr-FR', { month: 'long' });
     const currentMonthCapitalized = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
     return (
       <div className="empty-dialog" onClick={onCreateClick}>
         <div className="empty-dialog-icon">📋</div>
         <div className="empty-dialog-title">✨ Programme de la classe</div>
         <div className="empty-dialog-message">
-          {activeCalendarDate 
+          {activeCalendarDate
             ? `Aucun programme pour le ${formatDateFrench(activeCalendarDate)}. Créez-en un !`
-            : `Aucun programme pour le mois de ${currentMonthCapitalized} ${new Date().getFullYear()}. Créez votre premier programme !`}
+            : `Aucun programme pour le mois de ${currentMonthCapitalized} ${calendarMonth.getFullYear()}. Créez votre premier programme !`}
         </div>
         <button className="empty-dialog-button" onClick={(e) => { e.stopPropagation(); onCreateClick(); }}><IconPlus /> Créer un programme</button>
       </div>
@@ -4259,13 +4289,13 @@ export default function Programmes() {
   const renderContent = () => {
     switch (activeTab) {
       case 'programmes':
-        const currentMonthName = new Date().toLocaleString('fr-FR', { month: 'long' });
+        const currentMonthName = calendarMonth.toLocaleString('fr-FR', { month: 'long' });
         const currentMonthCapitalized = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
         return (
           <>
             <HeroCarousel mediaImages={mediaData} pastEvents={pastEvents} />
             <div className="action-bar">
-              <h2>🔥 ACTIVITÉS EN COURS<span className="badge-count">{filteredEvents.length} activité(s){!activeCalendarDate && ` - ${currentMonthCapitalized} ${new Date().getFullYear()}`}{activeCalendarDate && ` - ${formatDateFrench(activeCalendarDate)}`}</span></h2>
+              <h2>🔥 ACTIVITÉS EN COURS<span className="badge-count">{filteredEvents.length} activité(s){!activeCalendarDate && ` - ${currentMonthCapitalized} ${calendarMonth.getFullYear()}`}{activeCalendarDate && ` - ${formatDateFrench(activeCalendarDate)}`}</span></h2>
               <div className="action-buttons">
                 <button className="btn-import" onClick={openImportModal}><IconUpload /> Import Excel</button>
                 <button className="btn-agenda" onClick={() => openEventModal()}><IconPlus /> Créer un programme</button>
@@ -4328,7 +4358,7 @@ export default function Programmes() {
                   ) : (<EmptyDialog onCreateClick={() => openEventModal()} />)}
                 </div>
                 <div className="calendar-container">
-                  <MiniCalendar eventsDates={getAllEventDates()} eventsData={allEventsData} onDateClick={handleDateClick} activeDate={activeCalendarDate} />
+                  <MiniCalendar eventsDates={getAllEventDates()} eventsData={allEventsData} onDateClick={handleDateClick} activeDate={activeCalendarDate} currentDate={calendarMonth} onMonthChange={setCalendarMonth} />
                 </div>
               </div>
             </div>

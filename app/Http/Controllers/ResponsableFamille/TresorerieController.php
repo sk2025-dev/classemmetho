@@ -7,6 +7,7 @@ use App\Models\Campagne;
 use App\Models\Cotisation;
 use App\Models\Don;
 use App\Models\Family;
+use App\Models\FimecoSouscription;
 use App\Models\Notification;
 use App\Models\Paiement;
 use App\Models\ProjectionFinanciere;
@@ -41,6 +42,8 @@ class TresorerieController extends Controller
                 'campagnesActives' => [],
                 'historiquePaiements' => [],
                 'donsFamille' => [],
+                'fimecoSouscription' => null,
+                'isFimecoResponsable' => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
                 'projection' => [
                     'expected' => 0,
                     'paid' => 0,
@@ -64,6 +67,8 @@ class TresorerieController extends Controller
                 'campagnesActives' => [],
                 'historiquePaiements' => [],
                 'donsFamille' => [],
+                'fimecoSouscription' => null,
+                'isFimecoResponsable' => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
                 'projection' => [
                     'expected' => 0,
                     'paid' => 0,
@@ -257,6 +262,7 @@ class TresorerieController extends Controller
                 'mode' => match ($paiement->mode_paiement) {
                     Paiement::MODE_ESPECES => 'Espèces',
                     Paiement::MODE_VIREMENT => 'Virement',
+                    Paiement::MODE_CHEQUE => 'Chèque',
                     default => $paiement->provider ? ucfirst($paiement->provider) : 'Mobile Money',
                 },
                 'provider' => $paiement->provider,
@@ -325,6 +331,42 @@ class TresorerieController extends Controller
             })
             ->values();
 
+        // FIMECO : souscription annuelle propre à la famille (indépendante du montant fixe
+        // d'une cotisation classique) ; le montant payé reste suivi via la cotisation "FIMECO".
+        $fimecoAnnee = now()->year;
+        $fimecoSouscriptionRecord = FimecoSouscription::query()
+            ->where('family_id', $family->id)
+            ->where('annee', $fimecoAnnee)
+            ->first();
+
+        $fimecoCotisation = Cotisation::query()
+            ->whereRaw('LOWER(nom) LIKE ?', ['%fimeco%'])
+            ->where(function ($query) use ($classeId) {
+                $query->whereNull('classe_id');
+                if ($classeId) {
+                    $query->orWhere('classe_id', $classeId);
+                }
+            })
+            ->orderByDesc('id')
+            ->first();
+
+        $fimecoPaye = 0;
+        if ($fimecoCotisation) {
+            $fimecoPaye = (int) Paiement::query()
+                ->where('family_id', $family->id)
+                ->where('cotisation_id', $fimecoCotisation->id)
+                ->sum('montant');
+        }
+
+        $fimecoSouscrit = (int) ($fimecoSouscriptionRecord->montant_souscrit ?? 0);
+
+        $fimecoSouscription = [
+            'annee' => $fimecoAnnee,
+            'montant_souscrit' => $fimecoSouscrit,
+            'montant_paye' => $fimecoPaye,
+            'montant_restant' => max(0, $fimecoSouscrit - $fimecoPaye),
+        ];
+
         return Inertia::render('ResponsableFamille/Tresorerie/Index', [
             'familyInfo' => [
                 'id' => $family->id,
@@ -339,6 +381,8 @@ class TresorerieController extends Controller
             'campagnesActives' => $campagnesActives,
             'historiquePaiements' => $historiquePaiements,
             'donsFamille' => $donsFamille,
+            'fimecoSouscription' => $fimecoSouscription,
+            'isFimecoResponsable' => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
             'projection' => $projection,
             'notifications' => $notifications,
         ]);
@@ -353,7 +397,7 @@ class TresorerieController extends Controller
             'user_id' => ['nullable', 'exists:users,id'],
             'cotisation_id' => ['nullable', 'exists:cotisations,id'],
             'montant' => ['required', 'integer', 'min:100'],
-            'mode_paiement' => ['required', 'in:MOBILE_MONEY,ESPECES,VIREMENT'],
+            'mode_paiement' => ['required', 'in:MOBILE_MONEY,ESPECES,VIREMENT,CHEQUE'],
             'date_paiement' => ['required', 'date'],
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -765,6 +809,44 @@ class TresorerieController extends Controller
             Log::error('Don libre RF verify failed', ['error' => $e->getMessage(), 'reference' => $reference]);
             return redirect($redirectBase . '?don=error');
         }
+    }
+
+    /**
+     * Le responsable de famille déclare (ou met à jour) le montant que sa famille
+     * souscrit pour la FIMECO de l'année en cours.
+     */
+    public function setFimecoSouscription(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        $family = Family::query()->where('responsable_id', $user->id)->first();
+
+        if (!$family) {
+            return response()->json(['message' => 'Aucune famille associee a votre compte.'], 403);
+        }
+
+        $validated = $request->validate([
+            'montant_souscrit' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $annee = now()->year;
+
+        $souscription = FimecoSouscription::query()->updateOrCreate(
+            ['family_id' => $family->id, 'annee' => $annee],
+            [
+                'classe_id' => $family->classe_id,
+                'montant_souscrit' => $validated['montant_souscrit'],
+                'created_by' => $user->id,
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Souscription FIMECO enregistree avec succes.',
+            'data' => [
+                'annee' => $souscription->annee,
+                'montant_souscrit' => $souscription->montant_souscrit,
+            ],
+        ], 200);
     }
 
     private function bootstrapPayDunya(): void

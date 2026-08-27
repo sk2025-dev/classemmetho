@@ -1194,6 +1194,21 @@ export default function Index({
                                             </div>
                                         </div>
                                         <div className="ann-cs-step">
+                                            <div
+                                                className="ann-cs-dot pending"
+                                                style={{ fontSize: 10 }}
+                                            >
+                                                🏛
+                                            </div>
+                                            <div className="ann-cs-line" />
+                                            <div className="ann-cs-text">
+                                                <strong>
+                                                    Président des conducteurs
+                                                </strong>
+                                                <span>Bureau des conducteurs</span>
+                                            </div>
+                                        </div>
+                                        <div className="ann-cs-step">
                                             <div className="ann-cs-dot pending">
                                                 ✝
                                             </div>

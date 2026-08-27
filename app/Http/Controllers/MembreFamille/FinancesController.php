@@ -126,6 +126,7 @@ class FinancesController extends Controller
                     'mode' => match ($paiement->mode_paiement) {
                         Paiement::MODE_ESPECES => 'Espèces',
                         Paiement::MODE_VIREMENT => 'Virement',
+                        Paiement::MODE_CHEQUE => 'Chèque',
                         default => $paiement->provider ? ucfirst($paiement->provider) : 'Mobile Money',
                     },
                     'recu' => $paiement->reference_recu,
@@ -201,7 +202,7 @@ class FinancesController extends Controller
             'cotisation_id' => ['nullable', 'exists:cotisations,id'],
             'montant' => ['required', 'integer', 'min:100'],
             'year' => ['nullable', 'digits:4', 'numeric'],
-            'mode_paiement' => ['required', 'in:MOBILE_MONEY,ESPECES,VIREMENT'],
+            'mode_paiement' => ['required', 'in:MOBILE_MONEY,ESPECES,VIREMENT,CHEQUE'],
             'provider' => ['nullable', 'in:wave,orange,mtn'],
             'date_paiement' => ['required', 'date'],
             'note' => ['nullable', 'string', 'max:1000'],

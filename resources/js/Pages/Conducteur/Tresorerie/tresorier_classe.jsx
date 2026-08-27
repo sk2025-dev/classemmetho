@@ -13,6 +13,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 const modeLabel = (mode) => {
     if (mode === "ESPECES") return "Espèces";
     if (mode === "VIREMENT") return "Virement";
+    if (mode === "CHEQUE") return "Chèque";
     return "Mobile Money";
 };
 
@@ -1632,6 +1633,7 @@ export default function TresorierClasse({
                             <option value="ESPECES">Espèces</option>
                             <option value="MOBILE_MONEY">Mobile Money</option>
                             <option value="VIREMENT">Virement</option>
+                            <option value="CHEQUE">Chèque</option>
                         </select>
                     </div>
                     <div>
