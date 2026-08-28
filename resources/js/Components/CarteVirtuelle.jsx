@@ -39,7 +39,7 @@ function FlipHint({ label, className = "" }) {
 /**
  * Carte de membre virtuelle, affichée à l'écran (pas de téléchargement).
  * Respecte le format d'une carte PVC standard (ID-1, ratio 85.6x54mm) :
- * logo en haut à gauche, photo en cercle bordé de vert à droite, QR code
+ * logo en haut à gauche, photo en cercle à droite, QR code
  * visible sur la face avant, réseaux sociaux + nom de la classe en bas à
  * gauche, bande verte finale avec le thème/verset paramétrable. La carte
  * se retourne au clic pour afficher le QR code en grand au dos.
@@ -151,7 +151,7 @@ export default function CarteVirtuelle({ carte }) {
                                 )}
                             </div>
                             <div className="absolute right-2 sm:right-3 -top-3.5 -bottom-3.5 sm:-top-5 sm:-bottom-5 flex items-center">
-                                <div className="w-14 h-14 sm:w-24 sm:h-24 rounded-full border-2 sm:border-[3px] border-emerald-900 shadow-lg overflow-hidden bg-white shrink-0">
+                                <div className="w-14 h-14 sm:w-24 sm:h-24 rounded-full shadow-lg overflow-hidden bg-white shrink-0">
                                     {membre?.photo_url ? (
                                         <img
                                             src={membre.photo_url}
