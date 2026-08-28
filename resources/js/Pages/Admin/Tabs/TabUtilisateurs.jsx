@@ -2203,7 +2203,10 @@ const TabUtilisateurs = ({
         }
 
         let matchRole = true;
-        if (roleFilter) {
+        if (roleFilter === "secretariat") {
+            // Secrétariat est une désignation en plus du rôle habituel, pas un rôle exclusif.
+            matchRole = !!membre.is_secretariat;
+        } else if (roleFilter) {
             matchRole = membre.role === roleFilter;
         }
 
@@ -2295,7 +2298,7 @@ const TabUtilisateurs = ({
         setSelectedMember(null);
     };
 
-    const isSecretariat = (member) => member?.role === "secretariat";
+    const isSecretariat = (member) => !!member?.is_secretariat;
 
     const openSecretariatAlert = (member) => {
         setSelectedMember(member);
@@ -2940,6 +2943,11 @@ const TabUtilisateurs = ({
                                             </td>
                                             <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-center whitespace-nowrap">
                                                 {formatRole(m.role)}
+                                                {isSecretariat(m) && (
+                                                    <span className="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
+                                                        🗂️ Secrétariat
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap">
                                                 {m.fonction ||
@@ -3132,7 +3140,7 @@ const TabUtilisateurs = ({
                                                             />
                                                         </button>
                                                     )}
-                                                    {["membre_famille", "responsable_famille", "secretariat"].includes(m.role) && (
+                                                    {(["membre_famille", "responsable_famille"].includes(m.role) || isSecretariat(m)) && (
                                                         <button
                                                             onClick={() =>
                                                                 openSecretariatAlert(m)

@@ -174,7 +174,7 @@ class AnnonceController extends Controller
     private function notifierSecretariat(ActeLiturgique $acte): void
     {
         $secretaires = User::query()
-            ->where('role', 'secretariat')
+            ->where('is_secretariat', true)
             ->whereNotNull('email')
             ->get();
 

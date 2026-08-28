@@ -62,6 +62,7 @@ class User extends Authenticatable
         'fonction_id',
         'role',
         'is_family_responsible',
+        'is_secretariat',
 
         // === GESTION DU COMPTE ===
         'must_change_password',
@@ -105,6 +106,7 @@ class User extends Authenticatable
         'password' => 'hashed',
         'must_change_password' => 'boolean',
         'is_family_responsible' => 'boolean',
+        'is_secretariat' => 'boolean',
         'is_deceased' => 'boolean',
         'date_naissance' => 'date',
         'deceased_at' => 'date',

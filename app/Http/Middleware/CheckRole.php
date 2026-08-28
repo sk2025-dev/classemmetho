@@ -56,6 +56,12 @@ class CheckRole
             }
         }
 
+        // Le membre/responsable de famille désigné secrétariat accède aussi au module
+        // Secrétariat, en plus de son espace habituel (désignation, pas un rôle exclusif).
+        if (in_array('secretariat', $roles, true) && (bool) ($user->is_secretariat ?? false)) {
+            return $next($request);
+        }
+
         abort(403, 'Accès non autorisé pour ce rôle.');
     }
 }

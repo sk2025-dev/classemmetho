@@ -83,6 +83,13 @@ const Icon = ({ name, className }) => {
                 d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0018.75 4.5H5.25A2.25 2.25 0 003 6.75v10.5A2.25 2.25 0 005.25 19.5z"
             />
         ),
+        secretariat: (
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5C21.75 4.254 21.246 3.75 20.625 3.75H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+            />
+        ),
     };
     return (
         <svg
@@ -232,6 +239,18 @@ export default function Dashboard({
                       href: "/membre-famille/presences/marquage",
                       color: "text-cyan-700",
                       bg: "bg-cyan-100",
+                  },
+              ]
+            : []),
+        ...(auth?.user?.is_secretariat
+            ? [
+                  {
+                      title: "Secrétariat",
+                      desc: "Archivage des demandes de prières",
+                      icon: "secretariat",
+                      href: "/secretariat/dashboard",
+                      color: "text-slate-700",
+                      bg: "bg-slate-100",
                   },
               ]
             : []),

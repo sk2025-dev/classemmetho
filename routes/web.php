@@ -114,8 +114,6 @@ Route::middleware(['auth'])->group(function () {
                 return redirect()->route('responsable_famille.dashboard');
             case 'membre_famille':
                 return redirect()->route('membre_famille.dashboard');
-            case 'secretariat':
-                return redirect()->route('secretariat.dashboard');
             default:
                 return Inertia::render('Dashboard');
         }

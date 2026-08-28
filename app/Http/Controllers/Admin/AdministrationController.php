@@ -243,6 +243,7 @@ class AdministrationController extends Controller
                 'profil_photo' => $m->profile_photo_url ?: PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom),
                 'profile_photo_url' => $m->profile_photo_url ?: PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom),
                 'role' => $m->role ?? 'utilisateur',
+                'is_secretariat' => (bool) $m->is_secretariat,
                 'statut' => $m->statut ?? ($m->status ?? null),
                 'is_active' => (($m->statut ?? null) === 'actif' || ($m->status ?? null) === 'active') ? 1 : 0,
                 'created_at' => $m->created_at ? $m->created_at->format('d/m/Y') : null,
@@ -676,7 +677,10 @@ class AdministrationController extends Controller
     /**
      * Désigne un membre comme secrétariat : reçoit une notification à chaque
      * validation pastorale d'une demande de prière, et peut l'archiver ou
-     * l'imprimer.
+     * l'imprimer. Il s'agit d'une désignation en plus du rôle habituel
+     * (comme "Responsable FIMECO" ou "Président des conducteurs") : le membre
+     * garde l'accès à tous ses modules habituels, et accède en plus au module
+     * Secrétariat.
      */
     public function assignSecretariat($id)
     {
@@ -687,17 +691,11 @@ class AdministrationController extends Controller
         }
 
         // Un seul secrétariat à la fois : retirer l'ancien avant d'assigner le nouveau.
-        User::where('role', 'secretariat')
+        User::where('is_secretariat', true)
             ->where('id', '!=', $user->id)
-            ->update(['role' => 'membre_famille']);
+            ->update(['is_secretariat' => false]);
 
-        // Retirer le statut de responsable de famille : sinon le middleware
-        // CheckRole continue de donner accès au module Responsable Famille
-        // via ce booléen, indépendamment du rôle.
-        $user->update([
-            'role' => 'secretariat',
-            'is_family_responsible' => false,
-        ]);
+        $user->update(['is_secretariat' => true]);
 
         return back()->with('success', 'Secrétariat désigné avec succès.');
     }
@@ -706,8 +704,8 @@ class AdministrationController extends Controller
     {
         $user = User::findOrFail($id);
 
-        if ($user->role === 'secretariat') {
-            $user->update(['role' => 'membre_famille']);
+        if ($user->is_secretariat) {
+            $user->update(['is_secretariat' => false]);
         }
 
         return back()->with('success', 'Secrétariat retiré avec succès.');
