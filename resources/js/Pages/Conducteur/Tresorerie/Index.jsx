@@ -2759,26 +2759,13 @@ export default function ConducteurTresorerie({
                                         >
                                             PDF
                                         </OutlineBtn>
-                                        <GradBtn
-                                            color="blue"
-                                            icon={CreditCard}
-                                            sm
-                                            onClick={() =>
-                                                setModalPaiement({
-                                                    nom: "Paiement FIMECO",
-                                                })
-                                            }
-                                        >
-                                            Faire un paiement
-                                        </GradBtn>
                                     </div>
                                 }
                             >
-                                Suivi FIMECO par membre · Souscription {fimecoAnnee}
+                                Suivi FIMECO par famille · Souscription {fimecoAnnee}
                             </SecTitle>
                             <Table
                                 heads={[
-                                    { label: "Membre" },
                                     { label: "Famille" },
                                     { label: "Cible", right: true },
                                     { label: "Payé", right: true },
@@ -2802,9 +2789,8 @@ export default function ConducteurTresorerie({
                                               ? "amber"
                                               : "red";
                                     return (
-                                        <Tr key={item.user_id}>
-                                            <Td bold>{item.nom}</Td>
-                                            <Td>{item.famille}</Td>
+                                        <Tr key={item.family_id}>
+                                            <Td bold>{item.famille}</Td>
                                             <Td right>
                                                 <div
                                                     style={{

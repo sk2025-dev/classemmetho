@@ -377,31 +377,35 @@ class TresorerieController extends Controller
             ->orderByDesc('id')
             ->first();
 
-        $fimecoSuivi = $membresClasse->map(function (User $member) use ($fimeco, $fimecoSouscriptions) {
-            $paid = 0;
-            if ($fimeco && $member->family_id) {
-                $paid = (int) Paiement::query()
-                    ->where('family_id', $member->family_id)
-                    ->where('cotisation_id', $fimeco->id)
-                    ->sum('montant');
-            }
+        $famillesClasse = Family::query()
+            ->where('classe_id', $classeId)
+            ->get(['id', 'nom']);
 
-            $target = (int) ($fimecoSouscriptions[$member->family_id] ?? 0);
+        $paiementsParFamilleFimeco = $fimeco
+            ? Paiement::query()
+                ->select('family_id', DB::raw('SUM(montant) as total_paye'))
+                ->whereIn('family_id', $famillesClasse->pluck('id'))
+                ->where('cotisation_id', $fimeco->id)
+                ->groupBy('family_id')
+                ->pluck('total_paye', 'family_id')
+            : collect();
+
+        $fimecoSuivi = $famillesClasse->map(function (Family $famille) use ($paiementsParFamilleFimeco, $fimecoSouscriptions) {
+            $paid = (int) ($paiementsParFamilleFimeco[$famille->id] ?? 0);
+            $target = (int) ($fimecoSouscriptions[$famille->id] ?? 0);
             $due = max(0, $target - $paid);
             $statut = $target === 0 ? 'NON SOUSCRIT' : ($due === 0 ? 'A JOUR' : 'EN RETARD');
 
             return [
-                'user_id' => $member->id,
-                'family_id' => $member->family_id,
-                'nom' => trim(($member->prenom ?? '') . ' ' . ($member->nom ?? '')),
-                'famille' => $member->family?->nom ?? 'Sans famille',
+                'family_id' => $famille->id,
+                'famille' => $famille->nom ?? 'Sans famille',
                 'montant_souscrit' => $target,
                 'montant_cible' => $target,
                 'montant_paye' => $paid,
                 'montant_restant' => $due,
                 'statut' => $statut,
             ];
-        })->values();
+        })->sortBy('famille')->values();
 
         $notificationsFinancieres = NotificationFinanciere::query()
             ->where('user_id', $user->id)
