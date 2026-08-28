@@ -686,6 +686,11 @@ class AdministrationController extends Controller
             return back()->with('error', 'Seul un membre ou responsable de famille peut être désigné secrétariat.');
         }
 
+        // Un seul secrétariat à la fois : retirer l'ancien avant d'assigner le nouveau.
+        User::where('role', 'secretariat')
+            ->where('id', '!=', $user->id)
+            ->update(['role' => 'membre_famille']);
+
         // Retirer le statut de responsable de famille : sinon le middleware
         // CheckRole continue de donner accès au module Responsable Famille
         // via ce booléen, indépendamment du rôle.

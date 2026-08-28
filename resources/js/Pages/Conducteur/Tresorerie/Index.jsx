@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
 import Select2Single from "../../../Components/Select2Single";
 import FimecoImportPanel from "../../../Components/Fimeco/FimecoImportPanel";
@@ -692,6 +692,7 @@ export default function ConducteurTresorerie({
     cotisationsPaiement = [],
     fimecoSuivi = [],
     fimecoAnnee = new Date().getFullYear(),
+    fimecoAnneesDisponibles = [new Date().getFullYear()],
     isFimecoResponsable = false,
     membresClasse = [],
     membresClasseAssignables = [],
@@ -716,6 +717,7 @@ export default function ConducteurTresorerie({
     const [modalFimecoSouscription, setModalFimecoSouscription] = useState(null);
     const [fimecoMontantInput, setFimecoMontantInput] = useState("");
     const [fimecoSaving, setFimecoSaving] = useState(false);
+    const [fimecoSearch, setFimecoSearch] = useState("");
     const [newCotisation, setNewCotisation] = useState({
         nom: "",
         periodicite: "MENSUEL",
@@ -1300,6 +1302,14 @@ export default function ConducteurTresorerie({
         setFimecoMontantInput(String(item.montant_souscrit || ""));
     };
 
+    const handleFimecoAnneeChange = (annee) => {
+        router.get(
+            withBasePath("", "/conducteur/tresorerie"),
+            { fimeco_annee: annee },
+            { preserveState: true, preserveScroll: true, only: ["fimecoSuivi", "fimecoAnnee", "fimecoAnneesDisponibles"] },
+        );
+    };
+
     const handleSetFimecoSouscription = async () => {
         if (!modalFimecoSouscription?.family_id) return;
         const montant = parseInt(fimecoMontantInput, 10);
@@ -1347,13 +1357,22 @@ export default function ConducteurTresorerie({
         1,
         Math.ceil(paiementsRecents.length / 10),
     );
-    const fimecoTotalPages = Math.max(1, Math.ceil(fimecoSuivi.length / 20));
+    const fimecoSuiviFiltre = useMemo(() => {
+        const q = fimecoSearch.trim().toLowerCase();
+        if (!q) return fimecoSuivi;
+        return fimecoSuivi.filter(
+            (item) =>
+                (item.famille || "").toLowerCase().includes(q) ||
+                (item.code_famille || "").toLowerCase().includes(q),
+        );
+    }, [fimecoSuivi, fimecoSearch]);
+    const fimecoTotalPages = Math.max(1, Math.ceil(fimecoSuiviFiltre.length / 20));
     const famillesTotalPages = Math.max(
         1,
         Math.ceil(famillesSuivi.length / 10),
     );
     const recentRows = paginate(paiementsRecents, recentPage, 10);
-    const fimecoRows = paginate(fimecoSuivi, fimecoPage, 20);
+    const fimecoRows = paginate(fimecoSuiviFiltre, fimecoPage, 20);
     const famillesRows = paginate(famillesSuivi, famillesPage, 10);
     const donsTotalPages = Math.max(1, Math.ceil(donsClasse.length / 10));
     const donsRows = paginate(donsClasse, donsPage, 10);
@@ -2764,8 +2783,41 @@ export default function ConducteurTresorerie({
                             >
                                 Suivi FIMECO par famille · Souscription {fimecoAnnee}
                             </SecTitle>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    gap: 10,
+                                    padding: "0 20px 16px",
+                                }}
+                            >
+                                <input
+                                    type="text"
+                                    value={fimecoSearch}
+                                    onChange={(e) => {
+                                        setFimecoSearch(e.target.value);
+                                        setFimecoPage(1);
+                                    }}
+                                    placeholder="Rechercher par code famille ou par nom..."
+                                    style={{ ...inputStyle, maxWidth: 320 }}
+                                />
+                                <select
+                                    value={fimecoAnnee}
+                                    onChange={(e) =>
+                                        handleFimecoAnneeChange(e.target.value)
+                                    }
+                                    style={{ ...inputStyle, maxWidth: 140 }}
+                                >
+                                    {fimecoAnneesDisponibles.map((annee) => (
+                                        <option key={annee} value={annee}>
+                                            {annee}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                             <Table
                                 heads={[
+                                    { label: "Code famille" },
                                     { label: "Famille" },
                                     { label: "Cible", right: true },
                                     { label: "Payé", right: true },
@@ -2790,6 +2842,7 @@ export default function ConducteurTresorerie({
                                               : "red";
                                     return (
                                         <Tr key={item.family_id}>
+                                            <Td>{item.code_famille || "-"}</Td>
                                             <Td bold>{item.famille}</Td>
                                             <Td right>
                                                 <div

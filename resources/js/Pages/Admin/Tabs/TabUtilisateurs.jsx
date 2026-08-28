@@ -61,6 +61,7 @@ const ROLE_FILTER_OPTIONS = [
     { value: "responsable_famille", label: "Responsable de famille" },
     { value: "conducteur", label: "Conducteur" },
     { value: "pasteur", label: "Pasteur" },
+    { value: "secretariat", label: "Secrétariat" },
 ];
 
 // ------------------------------------------------------------------
@@ -2366,6 +2367,7 @@ const TabUtilisateurs = ({
             },
             conducteur: { emoji: "👤", label: "Conducteur" },
             pasteur: { emoji: "✝️", label: "Pasteur" },
+            secretariat: { emoji: "🗂️", label: "Secrétariat" },
         };
         const mapped = roleMap[role] || { emoji: "❓", label: role || "-" };
         return `${mapped.emoji} ${mapped.label}`;
@@ -2785,7 +2787,9 @@ const TabUtilisateurs = ({
                                                 ? "Conducteur"
                                                 : roleFilter === "pasteur"
                                                   ? "Pasteur"
-                                                  : roleFilter}
+                                                  : roleFilter === "secretariat"
+                                                    ? "Secrétariat"
+                                                    : roleFilter}
                                     <button
                                         onClick={() => setRoleFilter("")}
                                         className="ml-2 text-yellow-600 hover:text-yellow-800 font-bold"

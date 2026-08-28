@@ -22,7 +22,7 @@ use Inertia\Inertia;
 
 class TresorerieController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
 
@@ -57,6 +57,7 @@ class TresorerieController extends Controller
                 'cotisationsCreees' => [],
                 'fimecoSuivi' => [],
                 'fimecoAnnee' => now()->year,
+                'fimecoAnneesDisponibles' => [now()->year],
                 'isFimecoResponsable' => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
                 'membresClasse' => [],
                 'membresClasseAssignables' => [],
@@ -359,7 +360,20 @@ class TresorerieController extends Controller
         // FIMECO : chaque famille souscrit un montant annuel (indépendant du montant fixe
         // d'une cotisation classique) ; les paiements restent enregistrés via la cotisation
         // "FIMECO" existante, mais la cible de suivi vient désormais de cette souscription.
-        $fimecoAnnee = now()->year;
+        $fimecoAnnee = (int) ($request->integer('fimeco_annee') ?: now()->year);
+
+        $fimecoAnneesDisponibles = FimecoSouscription::query()
+            ->where(function ($query) use ($classeId) {
+                $query->whereNull('classe_id')
+                    ->orWhere('classe_id', $classeId);
+            })
+            ->distinct()
+            ->pluck('annee')
+            ->push(now()->year)
+            ->unique()
+            ->sortDesc()
+            ->values();
+
         $fimecoSouscriptions = FimecoSouscription::query()
             ->where('annee', $fimecoAnnee)
             ->where(function ($query) use ($classeId) {
@@ -379,13 +393,14 @@ class TresorerieController extends Controller
 
         $famillesClasse = Family::query()
             ->where('classe_id', $classeId)
-            ->get(['id', 'nom']);
+            ->get(['id', 'nom', 'code_famille']);
 
         $paiementsParFamilleFimeco = $fimeco
             ? Paiement::query()
                 ->select('family_id', DB::raw('SUM(montant) as total_paye'))
                 ->whereIn('family_id', $famillesClasse->pluck('id'))
                 ->where('cotisation_id', $fimeco->id)
+                ->where('year', $fimecoAnnee)
                 ->groupBy('family_id')
                 ->pluck('total_paye', 'family_id')
             : collect();
@@ -398,6 +413,7 @@ class TresorerieController extends Controller
 
             return [
                 'family_id' => $famille->id,
+                'code_famille' => $famille->code_famille,
                 'famille' => $famille->nom ?? 'Sans famille',
                 'montant_souscrit' => $target,
                 'montant_cible' => $target,
@@ -473,6 +489,7 @@ class TresorerieController extends Controller
             ] : null,
             'fimecoSuivi' => $fimecoSuivi,
             'fimecoAnnee' => $fimecoAnnee,
+            'fimecoAnneesDisponibles' => $fimecoAnneesDisponibles,
             'isFimecoResponsable' => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
             'notificationsFinancieres' => $notificationsFinancieres,
         ]);
