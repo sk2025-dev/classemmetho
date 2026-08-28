@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@inertiajs/react";
 import { withBasePath } from "@/Utils/urlHelper";
+import PresenceSelfScan from "@/Components/PresenceSelfScan";
 
 function countByStatus(records, status) {
     return Object.values(records ?? {}).filter((s) => s === status).length;
@@ -977,40 +978,43 @@ export default function RespoFamilleDashboard(props) {
                         </div>
                     </div>
                 </div>
-                {isPresenceMarker ? (
-                    <Link
-                        href={withBasePath("", "/membre-famille/presences/marquage")}
-                        style={{
-                            background: "#c6a800",
-                            border: "1px solid #c6a800",
-                            color: "white",
-                            borderRadius: 10,
-                            padding: "8px 14px",
-                            fontSize: 12,
-                            fontWeight: 700,
-                            textDecoration: "none",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                        }}
-                    >
-                        Marquer les présences
-                    </Link>
-                ) : (
-                    <div
-                        style={{
-                            background: "rgba(255,255,255,0.12)",
-                            border: "1px solid rgba(255,255,255,0.25)",
-                            color: "white",
-                            borderRadius: 10,
-                            padding: "8px 12px",
-                            fontSize: 12,
-                            fontWeight: 600,
-                        }}
-                    >
-                        Pointage reserve au conducteur
-                    </div>
-                )}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <PresenceSelfScan />
+                    {isPresenceMarker ? (
+                        <Link
+                            href={withBasePath("", "/membre-famille/presences/marquage")}
+                            style={{
+                                background: "#c6a800",
+                                border: "1px solid #c6a800",
+                                color: "white",
+                                borderRadius: 10,
+                                padding: "8px 14px",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                textDecoration: "none",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                            }}
+                        >
+                            Marquer les présences
+                        </Link>
+                    ) : (
+                        <div
+                            style={{
+                                background: "rgba(255,255,255,0.12)",
+                                border: "1px solid rgba(255,255,255,0.25)",
+                                color: "white",
+                                borderRadius: 10,
+                                padding: "8px 12px",
+                                fontSize: 12,
+                                fontWeight: 600,
+                            }}
+                        >
+                            Pointage reserve au conducteur
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* KPI Cards */}

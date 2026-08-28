@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useForm } from '@inertiajs/react'
 import { Head } from '@inertiajs/react'
-import { ArrowLeft, CreditCard } from 'lucide-react'
+import { ArrowLeft, CreditCard, Camera } from 'lucide-react'
 import useToast from '../../Hooks/useToast'
 import ToastContainer from '../../Components/ToastContainer'
 import { withBasePath } from '../../Utils/urlHelper'
@@ -16,6 +16,11 @@ export default function ProfileShow({ user }) {
     name: user.name || '',
     email: user.email || '',
   })
+
+  const photoForm = useForm({
+    photo: null,
+  })
+  const [photoPreview, setPhotoPreview] = useState(user.profile_photo_url || '')
 
   const passwordForm = useForm({
     current_password: '',
@@ -45,6 +50,28 @@ export default function ProfileShow({ user }) {
     .slice(0, 2)
     .map((part) => part.charAt(0).toUpperCase())
     .join('') || 'P'
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    photoForm.setData('photo', file)
+    const objectUrl = URL.createObjectURL(file)
+    setPhotoPreview(objectUrl)
+
+    photoForm.post(withBasePath('', '/profile/photo'), {
+      forceFormData: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        photoForm.reset()
+        toast.success('Photo de profil mise a jour avec succes.')
+      },
+      onError: () => {
+        setPhotoPreview(user.profile_photo_url || '')
+        toast.error('Impossible de mettre a jour la photo de profil.')
+      },
+    })
+  }
 
   const handleProfileSubmit = (e) => {
     e.preventDefault()
@@ -120,20 +147,36 @@ export default function ProfileShow({ user }) {
 
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-blue-100 bg-gray-100 flex items-center justify-center text-xl font-semibold text-gray-600">
-              {user.profile_photo_url ? (
+            <label className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-blue-100 bg-gray-100 flex items-center justify-center text-xl font-semibold text-gray-600 cursor-pointer group flex-shrink-0">
+              {photoPreview ? (
                 <img
-                  src={user.profile_photo_url}
+                  src={photoPreview}
                   alt={profileLabel}
                   className="w-full h-full object-cover"
                 />
               ) : (
                 <span>{profileInitials}</span>
               )}
-            </div>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                <Camera className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                disabled={photoForm.processing}
+                className="hidden"
+              />
+            </label>
             <div>
               <h1 className="text-3xl font-bold text-gray-800">Mon Profil</h1>
               <p className="text-gray-600 mt-2">Gerez vos informations personnelles et vos acces de securite</p>
+              {photoForm.processing && (
+                <p className="text-blue-600 text-sm mt-1">Mise a jour de la photo...</p>
+              )}
+              {photoForm.errors.photo && (
+                <p className="text-red-600 text-sm mt-1">{photoForm.errors.photo}</p>
+              )}
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import PresenceSelfScan from "../../../Components/PresenceSelfScan";
 
 const STATUT_CONFIG = {
     present: {
@@ -299,6 +300,9 @@ export default function MembreFamilleView({ membre = {}, historique = [], activi
                     >
                         Mon historique personnel
                     </span>
+                </div>
+                <div style={{ marginTop: 14 }}>
+                    <PresenceSelfScan />
                 </div>
             </div>
 

@@ -20,11 +20,7 @@ class PresenceController extends Controller
             'code_membre' => ['required', 'string', 'max:30'],
         ]);
 
-        $event = SpecialEvent::query()
-            ->where('qr_token', $validated['token'])
-            ->where('is_parish', false)
-            ->first();
-
+        $event = $this->resolveEventByToken($validated['token']);
         if (! $event) {
             return response()->json([
                 'success' => false,
@@ -32,6 +28,90 @@ class PresenceController extends Controller
             ], 404);
         }
 
+        if ($windowError = $this->checkQrWindowOpen($event)) {
+            return $windowError;
+        }
+
+        $member = User::query()
+            ->where('code_membre', $validated['code_membre'])
+            ->where('classe_id', $event->class_id)
+            ->first();
+
+        if (! $member) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Code membre invalide.',
+            ], 422);
+        }
+
+        return $this->checkInMember($event, $member, 'qr_code');
+    }
+
+    /**
+     * Pointage de sa propre présence, depuis l'espace membre connecté, en scannant
+     * avec la caméra intégrée le QR code affiché pour l'activité (pas besoin de
+     * ressaisir son code membre : l'utilisateur authentifié est le membre pointé).
+     */
+    public function scanSelf(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'qr_content' => ['required', 'string', 'max:500'],
+        ]);
+
+        $token = $this->extractTokenFromQrContent($validated['qr_content']);
+        $event = $this->resolveEventByToken($token);
+        if (! $event) {
+            return response()->json([
+                'success' => false,
+                'message' => 'QR code invalide.',
+            ], 404);
+        }
+
+        if ($windowError = $this->checkQrWindowOpen($event)) {
+            return $windowError;
+        }
+
+        $member = Auth::user();
+        if ((int) $member->classe_id !== (int) $event->class_id) {
+            return response()->json([
+                'success' => false,
+                'message' => "Ce QR code ne correspond pas à votre classe.",
+            ], 403);
+        }
+
+        return $this->checkInMember($event, $member, 'qr_self_scan');
+    }
+
+    private function resolveEventByToken(string $token): ?SpecialEvent
+    {
+        return SpecialEvent::query()
+            ->where('qr_token', $token)
+            ->where('is_parish', false)
+            ->first();
+    }
+
+    /**
+     * Le QR affiché encode l'URL complète (.../presence/{token}) ; on isole le
+     * dernier segment du chemin pour retrouver le token. Si le contenu scanné
+     * n'est pas une URL (token brut), on le retourne tel quel.
+     */
+    private function extractTokenFromQrContent(string $content): string
+    {
+        $content = trim($content);
+        $path = parse_url($content, PHP_URL_PATH);
+
+        if ($path) {
+            $segments = array_values(array_filter(explode('/', $path)));
+            if (! empty($segments)) {
+                return (string) end($segments);
+            }
+        }
+
+        return $content;
+    }
+
+    private function checkQrWindowOpen(SpecialEvent $event): ?JsonResponse
+    {
         if ($event->qr_expires_at && now()->greaterThan($event->qr_expires_at)) {
             return response()->json([
                 'success' => false,
@@ -52,18 +132,11 @@ class PresenceController extends Controller
             ], 423);
         }
 
-        $member = User::query()
-            ->where('code_membre', $validated['code_membre'])
-            ->where('classe_id', $event->class_id)
-            ->first();
+        return null;
+    }
 
-        if (! $member) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Code membre invalide.',
-            ], 422);
-        }
-
+    private function checkInMember(SpecialEvent $event, User $member, string $methode): JsonResponse
+    {
         $alreadyAbsent = Presence::query()
             ->where('special_event_id', $event->id)
             ->where('membre_famille_id', $member->id)
@@ -105,7 +178,7 @@ class PresenceController extends Controller
             'statut' => 'present',
             'marquee_par' => Auth::id(),
             'marquee_le' => now(),
-            'methode' => 'qr_code',
+            'methode' => $methode,
             'notes' => null,
         ]);
 

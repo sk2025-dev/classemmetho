@@ -62,6 +62,34 @@ class ProfileController extends Controller
     }
 
     /**
+     * Mettre a jour la photo de profil de l'utilisateur connecte.
+     */
+    public function updatePhoto(Request $request)
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
+        ], [
+            'photo.required' => 'Veuillez selectionner une photo.',
+            'photo.image' => 'Le fichier doit etre une image.',
+            'photo.max' => 'La photo ne doit pas depasser 5 Mo.',
+        ]);
+
+        PhotoHelper::deletePhoto($user->photo_path);
+
+        $path = $validated['photo']->store('photos/users', 'public');
+
+        $user->update([
+            'photo_path' => $path,
+            // Laisser l'accesseur profile_photo_url recalculer depuis photo_path.
+            'profile_photo_url' => null,
+        ]);
+
+        return back()->with('success', 'Photo de profil mise a jour avec succes.');
+    }
+
+    /**
      * Changer l'identifiant de l'utilisateur
      */
     public function updateIdentifier(Request $request)

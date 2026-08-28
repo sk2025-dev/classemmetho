@@ -92,6 +92,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [\App\Http\Controllers\Profile\ProfileController::class, 'show'])->name('profile.show');
     Route::get('/ma-carte-virtuelle', [\App\Http\Controllers\CarteVirtuelleController::class, 'index'])->name('carte.virtuelle');
     Route::post('/profile/update', [\App\Http\Controllers\Profile\ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/photo', [\App\Http\Controllers\Profile\ProfileController::class, 'updatePhoto'])->name('profile.photo');
     Route::post('/profile/identifier', [\App\Http\Controllers\Profile\ProfileController::class, 'updateIdentifier'])->name('profile.identifier');
     Route::post('/profile/password', [\App\Http\Controllers\Profile\ProfileController::class, 'changePassword'])->name('profile.password');
     Route::post('/profile/signature', [\App\Http\Controllers\Profile\ProfileController::class, 'updateSignature'])->name('profile.signature');
@@ -132,6 +133,11 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::post('/fimeco/import/souscriptions', [\App\Http\Controllers\Fimeco\ImportController::class, 'importSouscriptions'])->name('fimeco.import.souscriptions');
     Route::post('/fimeco/import/versements', [\App\Http\Controllers\Fimeco\ImportController::class, 'importVersements'])->name('fimeco.import.versements');
+});
+
+// Pointage de sa propre présence via scan caméra intégré (membre connecté)
+Route::middleware(['auth'])->group(function () {
+    Route::post('/presence/scan-self', [\App\Http\Controllers\Api\PresenceController::class, 'scanSelf'])->name('presence.scan-self');
 });
 
 // Routes authentifiées
