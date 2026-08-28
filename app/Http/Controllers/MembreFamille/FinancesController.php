@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Campagne;
 use App\Models\Cotisation;
 use App\Models\Don;
+use App\Models\FimecoSouscription;
 use App\Models\Paiement;
 use App\Services\PayDunyaService;
 use Carbon\Carbon;
@@ -87,22 +88,40 @@ class FinancesController extends Controller
             ->orderByDesc('date_paiement')
             ->get();
 
-        $cotisations = $cotisationsBase->map(function (Cotisation $cotisation) use ($user, $paiementsFamille, $paiementsMembre) {
-            $expected = $this->resolveExpectedAmountForMember($cotisation, $user);
+        // FIMECO : la cible réelle est la souscription annuelle de la famille
+        // (App\Models\FimecoSouscription), pas le montant fixe d'une cotisation
+        // classique. Le "payé" est limité à l'année de la souscription, pour
+        // rester cohérent avec les vues Responsable de famille / Conducteur.
+        $fimecoAnnee = now()->year;
+        $fimecoSouscrit = (int) (FimecoSouscription::query()
+            ->where('family_id', $family->id)
+            ->where('annee', $fimecoAnnee)
+            ->value('montant_souscrit') ?? 0);
+
+        $cotisations = $cotisationsBase->map(function (Cotisation $cotisation) use ($user, $paiementsFamille, $paiementsMembre, $fimecoAnnee, $fimecoSouscrit) {
+            $isFimeco = str_contains(mb_strtolower((string) $cotisation->nom), 'fimeco');
             $isIndividualScope = $cotisation->target_scope === Cotisation::TARGET_SCOPE_INDIVIDUELLE;
 
-            $paye = $isIndividualScope
-                ? (int) $paiementsMembre->where('cotisation_id', $cotisation->id)->sum('montant')
-                : (int) $paiementsFamille->where('cotisation_id', $cotisation->id)->sum('montant');
+            if ($isFimeco) {
+                $expected = $fimecoSouscrit;
+                $paye = (int) $paiementsFamille
+                    ->where('cotisation_id', $cotisation->id)
+                    ->where('year', $fimecoAnnee)
+                    ->sum('montant');
+            } else {
+                $expected = $this->resolveExpectedAmountForMember($cotisation, $user);
+                $paye = $isIndividualScope
+                    ? (int) $paiementsMembre->where('cotisation_id', $cotisation->id)->sum('montant')
+                    : (int) $paiementsFamille->where('cotisation_id', $cotisation->id)->sum('montant');
+            }
 
             $du = max(0, $expected - $paye);
-            $isFimeco = str_contains(mb_strtolower((string) $cotisation->nom), 'fimeco');
 
             return [
                 'id' => $cotisation->id,
                 'nom' => $cotisation->nom,
                 'montant' => $expected,
-                'periodicite' => ucfirst(strtolower($cotisation->periodicite)),
+                'periodicite' => $isFimeco ? 'Annuel' : ucfirst(strtolower($cotisation->periodicite)),
                 'target_scope' => $cotisation->target_scope,
                 'type_finance' => $isFimeco ? 'FIMECO' : 'COTISATION',
                 'montant_attendu' => $expected,
