@@ -32,7 +32,6 @@ class UsersTableSeeder extends Seeder
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         DB::table('users')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
 PHP;
 
@@ -51,7 +50,7 @@ PHP;
             $bar->advance();
         });
 
-        file_put_contents($output, "\n    }\n}\n", FILE_APPEND);
+        file_put_contents($output, "\n        DB::statement('SET FOREIGN_KEY_CHECKS=1;');\n    }\n}\n", FILE_APPEND);
 
         $bar->finish();
         $this->newLine();
