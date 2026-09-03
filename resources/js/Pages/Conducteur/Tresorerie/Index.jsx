@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
 import Select2Single from "../../../Components/Select2Single";
-import FimecoImportPanel from "../../../Components/Fimeco/FimecoImportPanel";
 import {
     ArrowLeft,
     Download,
@@ -693,7 +692,6 @@ export default function ConducteurTresorerie({
     fimecoSuivi = [],
     fimecoAnnee = new Date().getFullYear(),
     fimecoAnneesDisponibles = [new Date().getFullYear()],
-    isFimecoResponsable = false,
     membresClasse = [],
     membresClasseAssignables = [],
     tresorierClasse = null,
@@ -2754,7 +2752,6 @@ export default function ConducteurTresorerie({
                             gap: 20,
                         }}
                     >
-                        {isFimecoResponsable && <FimecoImportPanel />}
                         <Card>
                             <SecTitle
                                 accent="blue"

@@ -83,6 +83,13 @@ const Icon = ({ name, className }) => {
                 d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"
             />
         ),
+        fimeco: (
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 10h18M5 10V8l7-4 7 4v2M6 10v8m4-8v8m4-8v8m4-8v8M4 18h16v2H4z"
+            />
+        ),
     };
     return (
         <svg
@@ -204,6 +211,18 @@ export default function Dashboard({
             color: "text-teal-600",
             bg: "bg-teal-100",
         },
+        ...(auth?.user?.can_manage_fimeco
+            ? [
+                  {
+                      title: "Gestion FIMECO",
+                      desc: "Suivi global, toutes classes",
+                      icon: "fimeco",
+                      href: "/fimeco",
+                      color: "text-indigo-600",
+                      bg: "bg-indigo-100",
+                  },
+              ]
+            : []),
     ];
 
     const isPresidentConducteurs =

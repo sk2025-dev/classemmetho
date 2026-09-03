@@ -58,7 +58,6 @@ class TresorerieController extends Controller
                 'fimecoSuivi' => [],
                 'fimecoAnnee' => now()->year,
                 'fimecoAnneesDisponibles' => [now()->year],
-                'isFimecoResponsable' => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
                 'membresClasse' => [],
                 'membresClasseAssignables' => [],
                 'tresorierClasse' => null,
@@ -490,7 +489,6 @@ class TresorerieController extends Controller
             'fimecoSuivi' => $fimecoSuivi,
             'fimecoAnnee' => $fimecoAnnee,
             'fimecoAnneesDisponibles' => $fimecoAnneesDisponibles,
-            'isFimecoResponsable' => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
             'notificationsFinancieres' => $notificationsFinancieres,
         ]);
     }

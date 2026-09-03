@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n 'protected $fillable\\\\|=>' app/Models/Paiement.php)",
+      "Bash(php -l app/Traits/GeneratesIdentifier.php)",
+      "Bash(grep -n '\\\\$user' app/Http/Controllers/Pasteur/TresorerieController.php)",
+      "Bash(grep -nE \"^\\\\s+[a-z_]+: \\\\\\(|icons = \\\\{|\\\\},$\")",
+      "Bash(php -l app/Http/Controllers/Fimeco/ImportController.php)",
+      "Bash(php -l app/Http/Controllers/Fimeco/DashboardController.php)",
+      "Bash(php -l app/Models/FimecoImportLog.php)",
+      "Bash(php -l app/Support/FimecoCotisation.php)",
+      "Bash(perl -0pi -e \"s/\\('fimecoSouscription' => null,\\\\n\\)/\\\\$1                'fimecoVersements' => [],\\\\n/g\" app/Http/Controllers/ResponsableFamille/TresorerieController.php)",
+      "Bash(php -l app/Http/Controllers/ResponsableFamille/TresorerieController.php)",
+      "Bash(grep -n '\\\\$request' app/Http/Controllers/ResponsableFamille/TresorerieController.php)",
+      "Bash(cd /Applications/XAMPP/xamppfiles/htdocs/metholiste/ 2>/dev/null && pwd && echo \"--- top level ---\" && ls -la | head -40 && echo \"--- framework? ---\" && cat composer.json 2>/dev/null | grep -iE \"laravel|framework|codeigniter|symfony|require\" | head -20)",
+      "Read(//Applications/XAMPP/xamppfiles/htdocs/metholiste/**)",
+      "Bash(cd /Applications/XAMPP/xamppfiles/htdocs/metholiste *)",
+      "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root -e \"SHOW DATABASES;\")",
+      "Bash(mysql -u root -e \"SHOW DATABASES;\")",
+      "Bash(mysql -u root metholiste -e \"SELECT COUNT\\(*\\) total, COUNT\\(NULLIF\\(TRIM\\(photo_url\\),''\\)\\) avec_photo FROM rnm_membres;\")",
+      "Bash(mysql -u root metholiste -e \"SELECT id, code_membre, nom, prenoms, email, photo_url FROM rnm_membres WHERE TRIM\\(COALESCE\\(photo_url,''\\)\\)<>'' LIMIT 10;\")",
+      "Bash(mysql -u root metho1_jubile -e \"SELECT COUNT\\(*\\) total, COUNT\\(NULLIF\\(TRIM\\(code_membre\\),''\\)\\) avec_code, COUNT\\(NULLIF\\(TRIM\\(email\\),''\\)\\) avec_email, COUNT\\(NULLIF\\(TRIM\\(photo_path\\),''\\)\\) avec_photo FROM users;\")",
+      "Bash(mysql -u root metho1_jubile -e \"SELECT id, code_membre, nom, prenom, email FROM users LIMIT 8;\")",
+      "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root metholiste -e 'SELECT COUNT\\(*\\) total, COUNT\\(NULLIF\\(TRIM\\(photo_url\\),'\\\\'''\\\\''\\)\\) avec_photo FROM rnm_membres;')",
+      "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root metholiste -e 'SELECT id, code_membre, nom, prenoms, email, photo_url FROM rnm_membres WHERE TRIM\\(COALESCE\\(photo_url,'\\\\'''\\\\''\\)\\)<>'\\\\'''\\\\'' LIMIT 10;')",
+      "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root metho1_jubile -e 'SELECT COUNT\\(*\\) total, COUNT\\(NULLIF\\(TRIM\\(code_membre\\),'\\\\'''\\\\''\\)\\) avec_code, COUNT\\(NULLIF\\(TRIM\\(email\\),'\\\\'''\\\\''\\)\\) avec_email, COUNT\\(NULLIF\\(TRIM\\(photo_path\\),'\\\\'''\\\\''\\)\\) avec_photo FROM users;')",
+      "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root metho1_jubile -e 'SELECT id, code_membre, nom, prenom, email FROM users LIMIT 8;')",
+      "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root metho1_jubile -e 'SHOW COLUMNS FROM users;')",
+      "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root -e ' *)",
+      "Bash(php -l app/Console/Commands/ImportLegacyMemberPhotos.php)",
+      "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root metho1_jubile -e \"SELECT id, code_membre, nom, photo_path FROM users WHERE photo_path LIKE 'photos/users/legacy_%';\")",
+      "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root metho1_jubile -e \"UPDATE users SET photo_path = NULL WHERE photo_path LIKE 'photos/users/legacy_%';\")",
+      "Bash(rm -f storage/app/public/photos/users/legacy_*.jpg storage/app/private/legacy-photos-review.csv)",
+      "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root metho1_jubile -e \"SELECT COUNT\\(*\\) restant FROM users WHERE photo_path LIKE 'photos/users/legacy_%';\")"
+    ]
+  }
+}

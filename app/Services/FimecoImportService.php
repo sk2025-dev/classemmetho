@@ -123,8 +123,9 @@ class FimecoImportService
         ];
 
         $occurrences = [];
+        $legacyOccurrences = [];
 
-        DB::transaction(function () use ($rows, $importer, $cotisation, &$result, &$occurrences) {
+        DB::transaction(function () use ($rows, $importer, $cotisation, &$result, &$occurrences, &$legacyOccurrences) {
             foreach ($rows as $index => $row) {
                 $line = $index + 2;
 
@@ -162,29 +163,44 @@ class FimecoImportService
 
                 [$mode, $note] = $this->normalizeModePaiement($row['Mode paiement'] ?? null);
 
-                $key = $familyId . '|' . $date . '|' . $montant . '|' . $mode;
+                $key = $annee . '|' . $familyId . '|' . $date . '|' . $montant . '|' . $mode;
                 $occurrences[$key] = ($occurrences[$key] ?? 0) + 1;
-                $reference = 'FIMECO-' . $familyId . '-' . str_replace('-', '', $date) . '-' . $montant . '-' . $mode . '-' . $occurrences[$key];
+                $reference = 'FIMECO-' . $annee . '-' . $familyId . '-' . str_replace('-', '', $date) . '-' . $montant . '-' . $mode . '-' . $occurrences[$key];
 
-                $paiement = Paiement::query()->firstOrCreate(
-                    ['reference_recu' => $reference],
-                    [
-                        'family_id' => $familyId,
-                        'cotisation_id' => $cotisation->id,
-                        'montant' => $montant,
-                        'year' => $annee,
-                        'mode_paiement' => $mode,
-                        'date_paiement' => $date,
-                        'statut' => Paiement::STATUT_PAYE,
-                        'note' => $note,
-                    ]
-                );
+                // Compatibilité avec les imports réalisés avant l'ajout de l'année
+                // dans la référence. On ne considère l'ancienne référence comme un
+                // doublon que si elle appartient au même exercice.
+                $legacyKey = $familyId . '|' . $date . '|' . $montant . '|' . $mode;
+                $legacyOccurrences[$legacyKey] = ($legacyOccurrences[$legacyKey] ?? 0) + 1;
+                $legacyReference = 'FIMECO-' . $familyId . '-' . str_replace('-', '', $date) . '-' . $montant . '-' . $mode . '-' . $legacyOccurrences[$legacyKey];
 
-                if ($paiement->wasRecentlyCreated) {
-                    $result['created']++;
-                } else {
+                $existingPayment = Paiement::query()
+                    ->where('reference_recu', $reference)
+                    ->orWhere(function ($query) use ($legacyReference, $annee) {
+                        $query->where('reference_recu', $legacyReference)
+                            ->where('year', $annee);
+                    })
+                    ->first();
+
+                if ($existingPayment) {
                     $result['duplicates']++;
+                    continue;
                 }
+
+                Paiement::query()->create([
+                    'family_id' => $familyId,
+                    'cotisation_id' => $cotisation->id,
+                    'montant' => $montant,
+                    'year' => $annee,
+                    'mode_paiement' => $mode,
+                    'date_paiement' => $date,
+                    'reference_recu' => $reference,
+                    'statut' => Paiement::STATUT_PAYE,
+                    'payment_status' => Paiement::PAYMENT_STATUS_PAYE,
+                    'note' => $note,
+                ]);
+
+                $result['created']++;
             }
         });
 

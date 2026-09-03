@@ -152,7 +152,6 @@ class DashboardController extends Controller
             'tresorerieClasses'    => $tresorerie['classes'],
             'cotisationsParClasse' => $tresorerie['cotisationsParClasse'],
             'encouragements'       => $tresorerie['encouragements'],
-            'isFimecoResponsable'  => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
 
             // Flash info
             'flashInfos' => $this->buildFlashInfoData(),

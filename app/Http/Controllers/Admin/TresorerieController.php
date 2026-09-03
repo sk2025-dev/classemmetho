@@ -33,7 +33,6 @@ class TresorerieController extends Controller
                 'cotisations' => [],
                 'campagnes' => [],
                 'paiementsRecents' => [],
-                'isFimecoResponsable' => true,
             ]);
         }
 
@@ -156,7 +155,6 @@ class TresorerieController extends Controller
                     'statut' => $paiement->statut === Paiement::STATUT_PAYE ? '✓ Payé' : $paiement->statut,
                 ];
             })->values(),
-            'isFimecoResponsable' => true,
         ]);
     }
 

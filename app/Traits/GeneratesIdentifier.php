@@ -20,7 +20,7 @@ trait GeneratesIdentifier
      * @param string $dateNaissance Format: YYYY-MM-DD
      * @return string Identifiant généré (ex: "DuPa150590aB")
      */
-    public static function generateIdentifier(string $nom, string $prenom, string $dateNaissance = null): string
+    public static function generateIdentifier(string $nom, string $prenom, ?string $dateNaissance = null): string
     {
         // 1. Deux premières lettres du nom (majuscules)
         $nomPart = strtoupper(substr(trim($nom), 0, 2));
@@ -84,7 +84,7 @@ trait GeneratesIdentifier
      * @param string $dateNaissance
      * @return string
      */
-    public static function generateShortIdentifier(string $nom, string $prenom, string $dateNaissance = null): string
+    public static function generateShortIdentifier(string $nom, string $prenom, ?string $dateNaissance = null): string
     {
         // 1. Deux premières lettres du nom (majuscules)
         $nomPart = strtoupper(substr(trim($nom), 0, 2));

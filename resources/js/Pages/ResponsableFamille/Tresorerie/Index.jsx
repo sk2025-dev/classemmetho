@@ -19,7 +19,6 @@ import {
     Pencil,
 } from "lucide-react";
 import { PaymentModal } from "../../../Components/PaymentModal";
-import FimecoImportPanel from "../../../Components/Fimeco/FimecoImportPanel";
 import { withBasePath } from "../../../Utils/urlHelper";
 
 
@@ -2569,7 +2568,7 @@ export default function ResponsableFamilleFinances({
     donsFamille: donsProp,
     notifications: notifsProp,
     fimecoSouscription: fimecoSouscriptionProp,
-    isFimecoResponsable,
+    fimecoVersements: fimecoVersementsProp,
 }) {
     const [activeTab, setActiveTab] = useState("fimeco");
     const [openReceipt, setOpenReceipt] = useState(null);
@@ -2579,9 +2578,29 @@ export default function ResponsableFamilleFinances({
 
     const fimecoSouscription = fimecoSouscriptionProp || {
         annee: new Date().getFullYear(),
+        annees: [new Date().getFullYear()],
         montant_souscrit: 0,
         montant_paye: 0,
         montant_restant: 0,
+    };
+    const fimecoAnnees =
+        Array.isArray(fimecoSouscription.annees) && fimecoSouscription.annees.length
+            ? fimecoSouscription.annees
+            : [fimecoSouscription.annee];
+    const fimecoVersements = Array.isArray(fimecoVersementsProp)
+        ? fimecoVersementsProp
+        : [];
+
+    const changeFimecoAnnee = (annee) => {
+        router.get(
+            withBasePath("", "/responsable-famille/tresorerie"),
+            { fimeco_annee: annee },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                only: ["fimecoSouscription", "fimecoVersements"],
+            },
+        );
     };
 
     const handleSaveFimecoSouscription = async () => {
@@ -2602,12 +2621,15 @@ export default function ResponsableFamilleFinances({
                         Accept: "application/json",
                     },
                     credentials: "same-origin",
-                    body: JSON.stringify({ montant_souscrit: montant }),
+                    body: JSON.stringify({
+                        montant_souscrit: montant,
+                        annee: fimecoSouscription.annee,
+                    }),
                 },
             );
             if (!res.ok) throw new Error();
             setFimecoEditing(false);
-            router.reload({ only: ["fimecoSouscription"] });
+            router.reload({ only: ["fimecoSouscription", "fimecoVersements"] });
         } catch (e) {
             alert("Erreur lors de l'enregistrement de la souscription.");
         } finally {
@@ -2645,9 +2667,6 @@ export default function ResponsableFamilleFinances({
                 ? "FIMECO"
                 : "COTISATION"),
     }));
-    const fimecoCotisations = cotisationsNorm.filter(
-        (c) => c.type_finance === "FIMECO",
-    );
     const autresCotisations = cotisationsNorm.filter(
         (c) => c.type_finance !== "FIMECO",
     );
@@ -2918,7 +2937,6 @@ export default function ResponsableFamilleFinances({
                     <div style={{ padding: 24 }}>
                         {activeTab === "fimeco" && (
                             <>
-                                {isFimecoResponsable && <FimecoImportPanel />}
                                 <div
                                     style={{
                                         display: "flex",
@@ -2956,8 +2974,44 @@ export default function ResponsableFamilleFinances({
                                             }}
                                         >
                                             Montant que votre famille s'engage à verser
-                                            cette année.
+                                            pour l'exercice sélectionné.
                                         </p>
+                                        <label
+                                            style={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: 6,
+                                                marginTop: 8,
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                                color: "#6B7280",
+                                            }}
+                                        >
+                                            Exercice
+                                            <select
+                                                value={fimecoSouscription.annee}
+                                                onChange={(e) =>
+                                                    changeFimecoAnnee(
+                                                        Number(e.target.value),
+                                                    )
+                                                }
+                                                style={{
+                                                    padding: "6px 10px",
+                                                    borderRadius: 8,
+                                                    border: "1.5px solid #E3D9BE",
+                                                    background: "#fff",
+                                                    fontSize: 13,
+                                                    fontWeight: 700,
+                                                    color: "#2C2C2A",
+                                                }}
+                                            >
+                                                {fimecoAnnees.map((year) => (
+                                                    <option key={year} value={year}>
+                                                        {year}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
                                     </div>
 
                                     {fimecoEditing ? (
@@ -3127,12 +3181,92 @@ export default function ResponsableFamilleFinances({
                                         </div>
                                     )}
                                 </div>
-                                <TabCotisations
-                                    title="Cotisations FIMECO"
-                                    cotisations={fimecoCotisations}
-                                    historiquePaiements={historique}
-                                    familyInfo={familyInfo}
-                                />
+
+                                <div style={{ marginTop: 20 }}>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            flexWrap: "wrap",
+                                            gap: 8,
+                                            marginBottom: 12,
+                                        }}
+                                    >
+                                        <h3
+                                            style={{
+                                                fontSize: 15,
+                                                fontWeight: 800,
+                                                color: "#2C2C2A",
+                                                margin: 0,
+                                            }}
+                                        >
+                                            Historique des versements {fimecoSouscription.annee}
+                                        </h3>
+                                        <span style={{ fontSize: 12, color: "#6B7280" }}>
+                                            {fimecoVersements.length} versement(s) ·{" "}
+                                            {fmtCurrency(fimecoSouscription.montant_paye)}
+                                        </span>
+                                    </div>
+                                    {fimecoVersements.length === 0 ? (
+                                        <div
+                                            style={{
+                                                padding: 24,
+                                                textAlign: "center",
+                                                color: "#9CA3AF",
+                                                fontSize: 13,
+                                                border: "1px dashed #E5E7EB",
+                                                borderRadius: 12,
+                                            }}
+                                        >
+                                            Aucun versement FIMECO enregistré pour cet exercice.
+                                        </div>
+                                    ) : (
+                                        <div
+                                            style={{
+                                                overflowX: "auto",
+                                                border: "1px solid #EEF2F7",
+                                                borderRadius: 12,
+                                            }}
+                                        >
+                                            <table
+                                                style={{
+                                                    width: "100%",
+                                                    borderCollapse: "collapse",
+                                                    fontSize: 13,
+                                                }}
+                                            >
+                                                <thead>
+                                                    <tr
+                                                        style={{
+                                                            background: "#F9FAFB",
+                                                            textAlign: "left",
+                                                            color: "#6B7280",
+                                                            fontSize: 11,
+                                                            textTransform: "uppercase",
+                                                            fontWeight: 700,
+                                                        }}
+                                                    >
+                                                        <th style={{ padding: "10px 14px" }}>Date</th>
+                                                        <th style={{ padding: "10px 14px" }}>Mode</th>
+                                                        <th style={{ padding: "10px 14px", textAlign: "right" }}>Montant</th>
+                                                        <th style={{ padding: "10px 14px" }}>Référence</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {fimecoVersements.map((v) => (
+                                                        <tr key={v.id} style={{ borderTop: "1px solid #F3F4F6" }}>
+                                                            <td style={{ padding: "10px 14px", color: "#374151" }}>{v.date || "—"}</td>
+                                                            <td style={{ padding: "10px 14px", color: "#6B7280" }}>{String(v.mode || "—").replaceAll("_", " ")}</td>
+                                                            <td style={{ padding: "10px 14px", textAlign: "right", fontWeight: 800, color: "#15803D" }}>{fmtCurrency(v.montant)}</td>
+                                                            <td style={{ padding: "10px 14px", color: "#9CA3AF", fontFamily: "monospace", fontSize: 11 }}>{v.reference || "—"}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
                             </>
                         )}
                         {activeTab === "mes_cotisations" && (

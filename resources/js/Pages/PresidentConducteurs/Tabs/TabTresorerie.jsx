@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import { router, usePage } from "@inertiajs/react";
 import { BarChart3, Globe, TrendingUp, Users, Send, Clock, CheckCircle } from "lucide-react";
 import { withBasePath } from "../../../Utils/urlHelper";
-import FimecoImportPanel from "../../../Components/Fimeco/FimecoImportPanel";
 
 export default function TabTresorerie({
     globalStats: globalStatsProp,
@@ -11,7 +10,6 @@ export default function TabTresorerie({
     encouragements: encouragementsProp = [],
 }) {
     const { props } = usePage();
-    const isFimecoResponsable = !!props.isFimecoResponsable;
     const [activeTab, setActiveTab] = useState("fimeco");
     const [fimecoPage, setFimecoPage] = useState(1);
     const [encMessage, setEncMessage] = useState("");
@@ -211,7 +209,6 @@ export default function TabTresorerie({
                 <div className="p-6">
                     {activeTab === "fimeco" && (
                         <div className="space-y-6">
-                            {isFimecoResponsable && <FimecoImportPanel />}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg ">
                                     <p className="text-sm text-blue-900 font-semibold">

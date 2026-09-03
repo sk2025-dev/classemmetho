@@ -3,7 +3,7 @@ import { Upload, AlertCircle, CheckCircle, Loader, ChevronDown, ChevronUp } from
 import axios from "axios";
 import { withBasePath } from "../../Utils/urlHelper";
 
-function UploadBlock({ title, description, endpoint }) {
+function UploadBlock({ title, description, endpoint, onImported }) {
     const [file, setFile] = useState(null);
     const [loading, setLoading] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -56,6 +56,7 @@ function UploadBlock({ title, description, endpoint }) {
                 setResult(response.data);
                 setFile(null);
                 if (inputRef.current) inputRef.current.value = "";
+                onImported?.(endpoint, response.data);
             } else {
                 setError(response.data.message || "Une erreur est survenue lors de l'import");
             }
@@ -159,7 +160,28 @@ function UploadBlock({ title, description, endpoint }) {
     );
 }
 
-export default function FimecoImportPanel() {
+export default function FimecoImportPanel({ onImported, embedded = false }) {
+    const blocks = (
+        <div className="grid gap-4 md:grid-cols-2">
+            <UploadBlock
+                title="Souscriptions annuelles"
+                description='Fichier "Etat souscription par famille" — montant souscrit par famille et par année.'
+                endpoint="/fimeco/import/souscriptions"
+                onImported={onImported}
+            />
+            <UploadBlock
+                title="Versements annuels"
+                description='Fichier "Etat des versements annuels par famille" — historique des versements réels.'
+                endpoint="/fimeco/import/versements"
+                onImported={onImported}
+            />
+        </div>
+    );
+
+    if (embedded) {
+        return blocks;
+    }
+
     return (
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-6">
             <h3 className="text-lg font-bold text-slate-900 mb-1">Import annuel FIMECO</h3>
@@ -167,18 +189,7 @@ export default function FimecoImportPanel() {
                 Réservé au Responsable FIMECO — importez chaque année les fichiers de souscription et de
                 versements. Un fichier déjà importé peut être ré-uploadé sans créer de doublons.
             </p>
-            <div className="grid gap-4 md:grid-cols-2">
-                <UploadBlock
-                    title="Souscriptions annuelles"
-                    description='Fichier "Etat souscription par famille" — montant souscrit par famille et par année.'
-                    endpoint="/fimeco/import/souscriptions"
-                />
-                <UploadBlock
-                    title="Versements annuels"
-                    description='Fichier "Etat des versements annuels par famille" — historique des versements réels.'
-                    endpoint="/fimeco/import/versements"
-                />
-            </div>
+            {blocks}
         </div>
     );
 }

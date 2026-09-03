@@ -90,6 +90,13 @@ const Icon = ({ name, className }) => {
                 d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5C21.75 4.254 21.246 3.75 20.625 3.75H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
             />
         ),
+        fimeco: (
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 10h18M5 10V8l7-4 7 4v2M6 10v8m4-8v8m4-8v8m4-8v8M4 18h16v2H4z"
+            />
+        ),
     };
     return (
         <svg
@@ -210,6 +217,18 @@ export default function Dashboard({
             color: "text-teal-600",
             bg: "bg-teal-100",
         },
+        ...(auth?.user?.can_manage_fimeco
+            ? [
+                  {
+                      title: "Gestion FIMECO",
+                      desc: "Suivi global, toutes classes",
+                      icon: "fimeco",
+                      href: "/fimeco",
+                      color: "text-indigo-600",
+                      bg: "bg-indigo-100",
+                  },
+              ]
+            : []),
         {
             title: "Ma carte virtuelle",
             desc: "Votre carte de membre",

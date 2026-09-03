@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Helpers\PhotoHelper;
 use App\Models\ActeLiturgique;
+use App\Support\FimecoAccess;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -136,6 +137,7 @@ class HandleInertiaRequests extends Middleware
                         ),
                     'role' => $request->user()->role,
                     'is_secretariat' => (bool) $request->user()->is_secretariat,
+                    'can_manage_fimeco' => FimecoAccess::canManage($request->user()),
                     'identifier' => $request->user()->identifier,
                     'code_membre' => $request->user()->code_membre,
                     'classe' => $request->user()->classe ? [

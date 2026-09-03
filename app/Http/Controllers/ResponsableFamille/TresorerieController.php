@@ -43,7 +43,7 @@ class TresorerieController extends Controller
                 'historiquePaiements' => [],
                 'donsFamille' => [],
                 'fimecoSouscription' => null,
-                'isFimecoResponsable' => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
+                'fimecoVersements' => [],
                 'projection' => [
                     'expected' => 0,
                     'paid' => 0,
@@ -68,7 +68,7 @@ class TresorerieController extends Controller
                 'historiquePaiements' => [],
                 'donsFamille' => [],
                 'fimecoSouscription' => null,
-                'isFimecoResponsable' => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
+                'fimecoVersements' => [],
                 'projection' => [
                     'expected' => 0,
                     'paid' => 0,
@@ -331,37 +331,69 @@ class TresorerieController extends Controller
             })
             ->values();
 
-        // FIMECO : souscription annuelle propre à la famille (indépendante du montant fixe
-        // d'une cotisation classique) ; le montant payé reste suivi via la cotisation "FIMECO".
-        $fimecoAnnee = now()->year;
+        // FIMECO : souscription annuelle propre à la famille, suivie par exercice.
+        // Le montant souscrit vient de fimeco_souscriptions ; le montant versé est
+        // la somme des paiements FIMECO de la famille pour l'année sélectionnée.
+        $fimecoCotisationIds = Cotisation::query()
+            ->whereRaw('LOWER(nom) LIKE ?', ['%fimeco%'])
+            ->pluck('id');
+
+        $fimecoCurrentYear = (int) now()->year;
+        $fimecoYears = FimecoSouscription::query()
+            ->where('family_id', $family->id)
+            ->pluck('annee')
+            ->merge(
+                Paiement::query()
+                    ->where('family_id', $family->id)
+                    ->whereIn('cotisation_id', $fimecoCotisationIds)
+                    ->whereNotNull('year')
+                    ->pluck('year')
+            )
+            ->push($fimecoCurrentYear)
+            ->map(fn ($value) => (int) $value)
+            ->filter(fn (int $value) => $value >= 1900 && $value <= 2100)
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $requestedFimecoYear = (int) request()->integer('fimeco_annee');
+        $fimecoAnnee = $fimecoYears->contains($requestedFimecoYear)
+            ? $requestedFimecoYear
+            : (int) ($fimecoYears->first() ?? $fimecoCurrentYear);
+
         $fimecoSouscriptionRecord = FimecoSouscription::query()
             ->where('family_id', $family->id)
             ->where('annee', $fimecoAnnee)
             ->first();
 
-        $fimecoCotisation = Cotisation::query()
-            ->whereRaw('LOWER(nom) LIKE ?', ['%fimeco%'])
-            ->where(function ($query) use ($classeId) {
-                $query->whereNull('classe_id');
-                if ($classeId) {
-                    $query->orWhere('classe_id', $classeId);
-                }
-            })
-            ->orderByDesc('id')
-            ->first();
+        $fimecoPaymentsQuery = Paiement::query()
+            ->where('family_id', $family->id)
+            ->whereIn('cotisation_id', $fimecoCotisationIds)
+            ->where('year', $fimecoAnnee)
+            ->where('statut', '!=', Paiement::STATUT_ANNULE);
 
-        $fimecoPaye = 0;
-        if ($fimecoCotisation) {
-            $fimecoPaye = (int) Paiement::query()
-                ->where('family_id', $family->id)
-                ->where('cotisation_id', $fimecoCotisation->id)
-                ->sum('montant');
-        }
-
+        $fimecoPaye = (int) (clone $fimecoPaymentsQuery)->sum('montant');
         $fimecoSouscrit = (int) ($fimecoSouscriptionRecord->montant_souscrit ?? 0);
+
+        $fimecoVersements = (clone $fimecoPaymentsQuery)
+            ->orderByDesc('date_paiement')
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get(['id', 'montant', 'mode_paiement', 'date_paiement', 'reference_recu', 'year', 'note'])
+            ->map(fn (Paiement $paiement) => [
+                'id' => $paiement->id,
+                'date' => optional($paiement->date_paiement)->format('d/m/Y'),
+                'montant' => (int) $paiement->montant,
+                'mode' => $paiement->mode_paiement,
+                'reference' => $paiement->reference_recu,
+                'annee' => $paiement->year,
+                'note' => $paiement->note,
+            ])
+            ->values();
 
         $fimecoSouscription = [
             'annee' => $fimecoAnnee,
+            'annees' => $fimecoYears,
             'montant_souscrit' => $fimecoSouscrit,
             'montant_paye' => $fimecoPaye,
             'montant_restant' => max(0, $fimecoSouscrit - $fimecoPaye),
@@ -382,7 +414,7 @@ class TresorerieController extends Controller
             'historiquePaiements' => $historiquePaiements,
             'donsFamille' => $donsFamille,
             'fimecoSouscription' => $fimecoSouscription,
-            'isFimecoResponsable' => $user->hasFonction('Responsable FIMECO') || $user->role === 'admin',
+            'fimecoVersements' => $fimecoVersements,
             'projection' => $projection,
             'notifications' => $notifications,
         ]);
@@ -827,9 +859,10 @@ class TresorerieController extends Controller
 
         $validated = $request->validate([
             'montant_souscrit' => ['required', 'integer', 'min:0'],
+            'annee' => ['nullable', 'integer', 'between:1900,2100'],
         ]);
 
-        $annee = now()->year;
+        $annee = $validated['annee'] ?? now()->year;
 
         $souscription = FimecoSouscription::query()->updateOrCreate(
             ['family_id' => $family->id, 'annee' => $annee],

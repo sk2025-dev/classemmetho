@@ -63,6 +63,28 @@ return [
             ]) : [],
         ],
 
+        /*
+        | Ancienne plateforme "metholiste" (/metho/) — connexion en LECTURE SEULE,
+        | utilisée uniquement par la commande photos:import-legacy pour récupérer
+        | rnm_membres.photo_url. Renseigner les METHO_LEGACY_* dans .env.
+        */
+        'metho_legacy' => [
+            'driver' => 'mysql',
+            'url' => env('METHO_LEGACY_DB_URL'),
+            'host' => env('METHO_LEGACY_DB_HOST', '127.0.0.1'),
+            'port' => env('METHO_LEGACY_DB_PORT', '3306'),
+            'database' => env('METHO_LEGACY_DB_DATABASE', 'metholiste'),
+            'username' => env('METHO_LEGACY_DB_USERNAME', 'root'),
+            'password' => env('METHO_LEGACY_DB_PASSWORD', ''),
+            'unix_socket' => env('METHO_LEGACY_DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
+            'engine' => null,
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

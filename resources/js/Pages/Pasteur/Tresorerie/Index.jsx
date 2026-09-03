@@ -2,14 +2,12 @@ import React, { useMemo, useState } from "react";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { ArrowLeft, BarChart3, Globe, TrendingUp, Users, Send, Clock, CheckCircle } from "lucide-react";
 import { withBasePath } from "../../../Utils/urlHelper";
-import FimecoImportPanel from "../../../Components/Fimeco/FimecoImportPanel";
 
 export default function PasteurTresorerie({
     globalStats: globalStatsProp,
     classes: classesProp,
     cotisationsParClasse: cotisationsParClasseProp,
     encouragements: encouragementsProp = [],
-    isFimecoResponsable = false,
 }) {
     const { props } = usePage();
     const [activeTab, setActiveTab] = useState("fimeco");
@@ -238,7 +236,6 @@ export default function PasteurTresorerie({
                     <div className="p-6">
                         {activeTab === "fimeco" && (
                             <div className="space-y-6">
-                                {isFimecoResponsable && <FimecoImportPanel />}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg ">
                                         <p className="text-sm text-blue-900 font-semibold">
