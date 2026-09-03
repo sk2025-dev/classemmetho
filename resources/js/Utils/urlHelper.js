@@ -69,7 +69,18 @@ export function withBasePath(basePath = "", path = "") {
         return cleanBase || "/";
     }
 
-    const cleanPath = `/${String(path).replace(/^\/+/, "")}`;
+    const normalized = String(path);
+
+    // Idempotence : ne pas re-préfixer un chemin qui contient déjà le base path
+    // (ex. une URL photo renvoyée par le backend déjà en "/demo/storage/...").
+    if (
+        cleanBase &&
+        (normalized === cleanBase || normalized.startsWith(`${cleanBase}/`))
+    ) {
+        return normalized;
+    }
+
+    const cleanPath = `/${normalized.replace(/^\/+/, "")}`;
     return `${cleanBase}${cleanPath}`;
 }
 
