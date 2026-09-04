@@ -4,6 +4,7 @@ import { Link, usePage, router } from "@inertiajs/react";
 import MiniCalendar from "@/Components/MiniCalendar";
 import Select2Single from "@/Components/Select2Single";
 import { withBasePath } from "../../../Utils/urlHelper";
+import { formatProgrammeRow } from "../../Liturgie/forms/programmeObseques";
 
 function Pagination({ paginator }) {
     if (!paginator || !paginator.links) return null;
@@ -3864,6 +3865,32 @@ export default function Index({
                                                         value={activeActe.details.heure_culte}
                                                     />
                                                 )}
+                                                {Array.isArray(
+                                                    activeActe.details?.programme_evenements,
+                                                ) &&
+                                                    activeActe.details.programme_evenements.length > 0 && (
+                                                        <>
+                                                            <div className="modal-sep">
+                                                                Programme d'obsèques —{" "}
+                                                                {String(
+                                                                    activeActe.details?.programme_statut ||
+                                                                        "OUVERT",
+                                                                ).toUpperCase() === "CLOS"
+                                                                    ? "Clôturé"
+                                                                    : "Ouvert"}
+                                                            </div>
+                                                            <div className="modal-detail-box">
+                                                                {activeActe.details.programme_evenements.map((ev, i) => (
+                                                                    <div key={i} className="modal-detail-row">
+                                                                        <span className="modal-key">Étape {i + 1}</span>
+                                                                        <span className="modal-val">
+                                                                            {formatProgrammeRow(ev)}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 <div className="modal-sep">
                                                     Détails soumis
                                                 </div>
@@ -3880,7 +3907,7 @@ export default function Index({
                                                         activeActe.details || {},
                                                     ).filter(([k, v]) => {
                                                         // Exclure les champs techniques, booléens internes et valeurs vides
-                                                        const SKIP = ['decl1','decl2','decl3','contenu','titre','message','heure_culte','temoignage_public','motif','ceremonie_statut','ceremonie_transmise_pasteur_at','fiche_conducteur_envoye','fiche_pasteur_envoyee','fiche_bapteme_envoyee'];
+                                                        const SKIP = ['decl1','decl2','decl3','contenu','titre','message','heure_culte','temoignage_public','motif','ceremonie_statut','ceremonie_transmise_pasteur_at','fiche_conducteur_envoye','fiche_pasteur_envoyee','fiche_bapteme_envoyee','programme_evenements','programme_clos_par_id'];
                                                         if (SKIP.includes(k)) return false;
                                                         if (v === null || v === undefined || v === '' || v === false) return false;
                                                         return true;
@@ -3893,7 +3920,9 @@ export default function Index({
                                                                 {prettyKey(k)}
                                                             </span>
                                                             <span className="modal-val">
-                                                                {String(v)}
+                                                                {k === "programme_statut"
+                                                                    ? (String(v).toUpperCase() === "CLOS" ? "Clôturé" : "Ouvert")
+                                                                    : String(v)}
                                                             </span>
                                                         </div>
                                                     ))}

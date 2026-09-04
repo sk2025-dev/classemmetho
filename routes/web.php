@@ -181,6 +181,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Paramètres du site
         Route::post('/admin/parametres/carte-theme', [\App\Http\Controllers\Admin\SiteSettingController::class, 'updateCarteTheme'])->name('admin.parametres.carte-theme');
+        Route::post('/admin/parametres/pasteur-principal', [\App\Http\Controllers\Admin\SiteSettingController::class, 'updatePasteurPrincipal'])->name('admin.parametres.pasteur-principal');
 
         // Routes pour les fonctions
         Route::resource('/admin/fonctions', \App\Http\Controllers\Admin\FonctionController::class);
@@ -363,6 +364,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/conducteur/liturgie', [ConducteurLiturgieController::class, 'store'])->name('conducteur.liturgie.store');
         Route::post('/conducteur/liturgie/{id}/transition', [ConducteurLiturgieController::class, 'transition'])->name('conducteur.liturgie.transition');
         Route::post('/conducteur/liturgie/{id}/ceremonie/decision', [ConducteurLiturgieController::class, 'decisionCeremonie'])->name('conducteur.liturgie.ceremonie.decision');
+        Route::put('/conducteur/liturgie/{id}/programme', [ConducteurLiturgieController::class, 'updateProgramme'])->name('conducteur.liturgie.programme.update');
+        Route::post('/conducteur/liturgie/{id}/programme/cloture', [ConducteurLiturgieController::class, 'clotureProgramme'])->name('conducteur.liturgie.programme.cloture');
         Route::get('/conducteur/liturgie/{id}/certificat', [ConducteurLiturgieController::class, 'certificat'])->name('conducteur.liturgie.certificat');
         Route::get('/conducteur/liturgie/{id}/fiche-conducteur', [ConducteurLiturgieController::class, 'ficheConducteur'])->name('conducteur.liturgie.fiche_conducteur');
         Route::get('/conducteur/liturgie/{id}/fiche', [ConducteurLiturgieController::class, 'fiche'])->name('conducteur.liturgie.fiche');
@@ -549,6 +552,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/responsable-famille/liturgie/nouvelle/formulaire', [ResponsableFamilleLiturgieController::class, 'createForm'])->name('responsable_famille.liturgie.form');
         Route::post('/responsable-famille/liturgie', [ResponsableFamilleLiturgieController::class, 'store'])->name('responsable_famille.liturgie.store');
         Route::put('/responsable-famille/liturgie/{id}/ceremonie', [ResponsableFamilleLiturgieController::class, 'updateCeremonie'])->name('responsable_famille.liturgie.ceremonie.update');
+        Route::put('/responsable-famille/liturgie/{id}/programme', [ResponsableFamilleLiturgieController::class, 'updateProgramme'])->name('responsable_famille.liturgie.programme.update');
         Route::get('/responsable-famille/liturgie/{id}/certificat', [ResponsableFamilleLiturgieController::class, 'certificat'])->name('responsable_famille.liturgie.certificat');
         Route::get('/responsable-famille/liturgie/{id}/fiche', [ResponsableFamilleLiturgieController::class, 'fiche'])->name('responsable_famille.liturgie.fiche');
 
@@ -619,6 +623,8 @@ Route::middleware(['auth'])->group(function () {
         // Validation des actes
         Route::get('/president-conducteurs/liturgie/historique', [\App\Http\Controllers\PresidentConducteurs\LiturgieController::class, 'historique'])->name('president_conducteurs.liturgie.historique');
         Route::post('/president-conducteurs/liturgie/{id}/transition', [\App\Http\Controllers\PresidentConducteurs\LiturgieController::class, 'transition'])->name('president_conducteurs.liturgie.transition');
+        Route::put('/president-conducteurs/liturgie/{id}/programme', [\App\Http\Controllers\PresidentConducteurs\LiturgieController::class, 'updateProgramme'])->name('president_conducteurs.liturgie.programme.update');
+        Route::post('/president-conducteurs/liturgie/{id}/programme/cloture', [\App\Http\Controllers\PresidentConducteurs\LiturgieController::class, 'clotureProgramme'])->name('president_conducteurs.liturgie.programme.cloture');
         Route::get('/president-conducteurs/liturgie/{id}/fiche-conducteur', [\App\Http\Controllers\PresidentConducteurs\LiturgieController::class, 'ficheConducteur'])->name('president_conducteurs.liturgie.fiche_conducteur');
         Route::get('/president-conducteurs/liturgie/{id}/fiche-priere', [\App\Http\Controllers\PresidentConducteurs\LiturgieController::class, 'fichePriere'])->name('president_conducteurs.liturgie.fiche_priere');
         Route::post('/president-conducteurs/annonces', [\App\Http\Controllers\PresidentConducteurs\AnnonceController::class, 'store'])->name('president_conducteurs.annonces.store');

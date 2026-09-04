@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Helpers\PhotoHelper;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -166,6 +167,10 @@ class LoginController extends Controller
                     'code_membre' => $user->code_membre,
                     'identifier' => $user->identifier,
                     'role' => $user->role,
+                    // URL de la vraie photo de profil, ou null si absente
+                    // (le loader de bienvenue affiche le logo dans ce cas).
+                    'photo_url' => $user->profile_photo_url
+                        ?: PhotoHelper::getImageUrl($user->photo_path),
                 ],
                 'redirect_url' => $redirectUrl
             ], 200);

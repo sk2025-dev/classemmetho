@@ -4,6 +4,10 @@ import { ArrowLeft, Download } from "lucide-react";
 import axios from "axios";
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 import { withBasePath } from "../../../Utils/urlHelper";
+import {
+    formatProgrammeRow,
+    programmeStatutLabel,
+} from "../../Liturgie/forms/programmeObseques";
 
 /* ── CONSTANTS ── */
 const IN_PROGRESS = [
@@ -1517,6 +1521,23 @@ export default function Index({
                                     value={formatDate(selectedActe.created_at)}
                                 />
                             </div>
+                            {String(selectedActe.type_acte || "").toLowerCase() === "deces" &&
+                                Array.isArray(selectedActe.details?.programme_evenements) &&
+                                selectedActe.details.programme_evenements.length > 0 && (
+                                    <>
+                                        <div className="rf-details-title">
+                                            Programme d'obsèques —{" "}
+                                            {programmeStatutLabel(selectedActe.details?.programme_statut)}
+                                        </div>
+                                        {selectedActe.details.programme_evenements.map((ev, i) => (
+                                            <InfoRow
+                                                key={i}
+                                                label={`Étape ${i + 1}`}
+                                                value={formatProgrammeRow(ev)}
+                                            />
+                                        ))}
+                                    </>
+                                )}
                             <div className="rf-details-title">
                                 Informations renseignées
                             </div>
@@ -2265,10 +2286,11 @@ function contactConducteur(c) {
     }
     if (c.email) window.location.href = `mailto:${c.email}`;
 }
+const MF_DETAIL_SKIP = new Set(["programme_evenements", "programme_clos_par_id"]);
 function formatDetails(d) {
     if (!d || typeof d !== "object") return [];
     return Object.entries(d)
-        .filter(([, v]) => v !== null && v !== "" && v !== false)
+        .filter(([k, v]) => !MF_DETAIL_SKIP.has(k) && v !== null && v !== "" && v !== false)
         .map(([k, v]) => ({
             key: k,
             label: DETAIL_LABELS[k] || prettifyKey(k),
@@ -2276,16 +2298,28 @@ function formatDetails(d) {
         }));
 }
 function formatDetailValue(v) {
-    if (Array.isArray(v)) return v.join(", ");
+    if (Array.isArray(v)) {
+        if (v.length && typeof v[0] === "object") {
+            return v.map(formatProgrammeRow).join(" · ");
+        }
+        return v.join(", ");
+    }
     if (typeof v === "boolean") return v ? "Oui" : "Non";
     if (v === "1") return "Oui";
     if (v === "0") return "Non";
+    if (v === "OUVERT") return "Ouvert";
+    if (v === "CLOS") return "Clôturé";
     return String(v);
 }
 function prettifyKey(k) {
     return k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 const DETAIL_LABELS = {
+    programme_obseques: "Programme d'obsèques fourni",
+    programme_statut: "Statut du programme d'obsèques",
+    programme_maj_at: "Programme mis à jour le",
+    programme_clos_at: "Programme clôturé le",
+    programme_clos_par_nom: "Programme clôturé par",
     declarant_nom: "Nom du déclarant",
     declarant_prenom: "Prénom du déclarant",
     declarant_tel: "Téléphone du déclarant",

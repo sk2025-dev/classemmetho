@@ -1,10 +1,16 @@
 import React, { useMemo, useState, useEffect } from "react";
 import axios from "axios";
 import { Link, usePage } from "@inertiajs/react";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, HeartHandshake } from "lucide-react";
 import { useToastWithErrorHandling } from "../../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../../Components/ToastContainer";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
+import ProgrammeObsequesEditor from "./ProgrammeObsequesEditor";
+import {
+    emptyProgrammeRow,
+    validateProgrammeRows,
+    formatProgrammeRow,
+} from "./programmeObseques";
 
 export default function DecesForm({
     backHref,
@@ -54,8 +60,8 @@ export default function DecesForm({
             heure_culte: "",
             programme_obseques: "",
         },
-        programme_piece: null,
     });
+    const [programmeRows, setProgrammeRows] = useState([emptyProgrammeRow()]);
 
     // Pré-remplir les infos du défunt quand un membre inscrit est sélectionné
     useEffect(() => {
@@ -140,6 +146,18 @@ export default function DecesForm({
             if (!form.details.date_deces)
                 nextErrors["details.date_deces"] = "Champ requis.";
 
+            if (form.details.programme_obseques === "oui") {
+                const { valid, errors: rowErrors } =
+                    validateProgrammeRows(programmeRows);
+                if (!valid) {
+                    Object.entries(rowErrors).forEach(([k, v]) => {
+                        nextErrors[`details.programme_evenements.${k}`] = v;
+                    });
+                    nextErrors.submit =
+                        "Complétez chaque étape du programme d'obsèques (date et désignation).";
+                }
+            }
+
             if (Object.keys(nextErrors).length)
                 return setErrors((prev) => ({ ...prev, ...nextErrors }));
         }
@@ -194,8 +212,27 @@ export default function DecesForm({
             "details[programme_obseques]",
             form.details.programme_obseques || "",
         );
-        if (form.programme_piece) {
-            payload.append("programme_file", form.programme_piece);
+        if (form.details.programme_obseques === "oui") {
+            const { valid, errors: rowErrors, cleaned } =
+                validateProgrammeRows(programmeRows);
+            if (!valid) {
+                const flat = {};
+                Object.entries(rowErrors).forEach(([k, v]) => {
+                    flat[`details.programme_evenements.${k}`] = v;
+                });
+                flat.submit = "Vérifiez les étapes du programme d'obsèques.";
+                setErrors((prev) => ({ ...prev, ...flat }));
+                setProcessing(false);
+                return;
+            }
+            cleaned.forEach((r, idx) => {
+                payload.append(`details[programme_evenements][${idx}][date_debut]`, r.date_debut || "");
+                payload.append(`details[programme_evenements][${idx}][date_fin]`, r.date_fin || "");
+                payload.append(`details[programme_evenements][${idx}][heure]`, r.heure || "");
+                payload.append(`details[programme_evenements][${idx}][heure_fin]`, r.heure_fin || "");
+                payload.append(`details[programme_evenements][${idx}][libelle]`, r.libelle || "");
+                payload.append(`details[programme_evenements][${idx}][lieu]`, r.lieu || "");
+            });
         }
         payload.append(
             "details[declarant_lien]",
@@ -252,8 +289,8 @@ export default function DecesForm({
                 heure_culte: "",
                 programme_obseques: "",
             },
-            programme_piece: null,
         });
+        setProgrammeRows([emptyProgrammeRow()]);
     };
 
     return (
@@ -285,10 +322,10 @@ export default function DecesForm({
                     </p>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded-md overflow-hidden shadow-2xl">
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xl">
                     {!success && (
                         <>
-                            <div className="h-[3px] bg-gradient-to-r from-transparent via-slate-500 to-transparent" />
+                            <div className="h-1 bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-500" />
                             <div className="grid grid-cols-2 bg-slate-50 border-b border-slate-200">
                                 {["Déclaration décès", "Confirmation"].map(
                                     (label, idx) => {
@@ -298,14 +335,25 @@ export default function DecesForm({
                                         return (
                                             <div
                                                 key={label}
-                                                className={`text-center py-3 text-[10px] uppercase tracking-wider font-bold border-b-2 ${
+                                                className={`flex items-center justify-center gap-2 py-3.5 text-[11px] uppercase tracking-wider font-bold border-b-2 transition-colors ${
                                                     active
-                                                        ? "text-slate-700 border-slate-600"
+                                                        ? "text-indigo-700 border-indigo-600 bg-white"
                                                         : done
-                                                          ? "text-amber-700 border-amber-600"
+                                                          ? "text-emerald-700 border-emerald-500"
                                                           : "text-slate-400 border-transparent"
                                                 }`}
                                             >
+                                                <span
+                                                    className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
+                                                        active
+                                                            ? "bg-indigo-600 text-white"
+                                                            : done
+                                                              ? "bg-emerald-500 text-white"
+                                                              : "bg-slate-200 text-slate-500"
+                                                    }`}
+                                                >
+                                                    {done ? "✓" : sn}
+                                                </span>
                                                 {label}
                                             </div>
                                         );
@@ -748,42 +796,54 @@ export default function DecesForm({
                                     </div>
                                 </div>
 
-                                <Field label="Disposez-vous d'un programme d'enterrement ?">
-                                    <select
-                                        value={form.details.programme_obseques}
-                                        onChange={(e) =>
-                                            setDetail(
-                                                "programme_obseques",
-                                                e.target.value,
-                                            )
-                                        }
-                                    >
-                                        <option value="">Choisir</option>
-                                        <option value="oui">Oui</option>
-                                        <option value="non">Non</option>
-                                    </select>
-                                </Field>
-                                {form.details.programme_obseques === "oui" && (
-                                    <Field label="Joindre le programme (PDF)">
-                                        <input
-                                            type="file"
-                                            accept=".pdf"
+                                <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <HeartHandshake size={16} className="text-slate-500" />
+                                        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                            Programme d'obsèques
+                                        </p>
+                                    </div>
+                                    <Field label="Disposez-vous déjà d'un programme d'obsèques ?">
+                                        <select
+                                            value={form.details.programme_obseques}
                                             onChange={(e) =>
-                                                setForm((prev) => ({
-                                                    ...prev,
-                                                    programme_piece:
-                                                        (e.target.files ||
-                                                            [])[0] || null,
-                                                }))
+                                                setDetail(
+                                                    "programme_obseques",
+                                                    e.target.value,
+                                                )
                                             }
-                                        />
-                                        {form.programme_piece && (
-                                            <p className="text-xs text-slate-500 mt-1">
-                                                {form.programme_piece.name}
-                                            </p>
-                                        )}
+                                        >
+                                            <option value="">Choisir</option>
+                                            <option value="oui">Oui, je le saisis maintenant</option>
+                                            <option value="non">Pas encore (je le renseignerai plus tard)</option>
+                                        </select>
                                     </Field>
-                                )}
+                                    {form.details.programme_obseques === "non" && (
+                                        <p className="mt-2 text-xs italic text-slate-500">
+                                            Vous pourrez ajouter le programme (dates, veillées, culte,
+                                            inhumation…) après la déclaration, tant que le conducteur
+                                            ne l'a pas clôturé.
+                                        </p>
+                                    )}
+                                    {form.details.programme_obseques === "oui" && (
+                                        <div className="mt-4">
+                                            <ProgrammeObsequesEditor
+                                                value={programmeRows}
+                                                onChange={setProgrammeRows}
+                                                errors={Object.fromEntries(
+                                                    Object.entries(errors)
+                                                        .filter(([k]) =>
+                                                            k.startsWith("details.programme_evenements."),
+                                                        )
+                                                        .map(([k, v]) => [
+                                                            k.replace("details.programme_evenements.", ""),
+                                                            v,
+                                                        ]),
+                                                )}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
                                 <FooterButtons onNext={next} />
                             </section>
                         )}
@@ -808,6 +868,23 @@ export default function DecesForm({
                                 <RecapCard title="Culte / Obsèques">
                                     <RecapRow k="Date souhaitée du culte" v={recap.dateCulte} />
                                     <RecapRow k="Heure du culte" v={recap.heureCulte} />
+                                    <RecapRow
+                                        k="Programme d'obsèques"
+                                        v={
+                                            form.details.programme_obseques === "oui"
+                                                ? `${validateProgrammeRows(programmeRows).cleaned.length} étape(s)`
+                                                : "À renseigner ultérieurement"
+                                        }
+                                    />
+                                    {form.details.programme_obseques === "oui" &&
+                                        validateProgrammeRows(programmeRows).cleaned.map((r, i) => (
+                                            <div
+                                                key={i}
+                                                className="border-b border-slate-200/70 py-1.5 text-sm text-slate-700 last:border-b-0"
+                                            >
+                                                • {formatProgrammeRow(r)}
+                                            </div>
+                                        ))}
                                 </RecapCard>
                                 {errors.submit && <Err>{errors.submit}</Err>}
                                 <div className="flex justify-between gap-3 mt-8 pt-5 border-t border-slate-200">
@@ -879,11 +956,16 @@ export default function DecesForm({
             </div>
 
             <style>{`
-                input, select, textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 2px; padding: 10px 12px; background: #fff; color: #0f172a; outline: none; transition: all .2s; font-size: 13px; }
-                input:focus, select:focus, textarea:focus { border-color: #475569; box-shadow: 0 0 0 3px rgba(71,85,105,.12); }
-                textarea { min-height: 90px; resize: vertical; }
-                .btn-main{ border: 1px solid #475569; background: #475569; color: #fff; border-radius: 2px; padding: 10px 18px; font-size: 13px; font-weight: 700; }
-                .btn-ghost{ border: 1px solid #cbd5e1; background: #fff; color: #475569; border-radius: 2px; padding: 10px 18px; font-size: 13px; font-weight: 700; }
+                input, select, textarea { width: 100%; border: 1px solid #d5dbe3; border-radius: 12px; padding: 11px 14px; background: #fff; color: #0f172a; outline: none; transition: border-color .15s, box-shadow .15s; font-size: 13.5px; }
+                input:hover, select:hover, textarea:hover { border-color: #b8c1cd; }
+                input:focus, select:focus, textarea:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,.14); }
+                input[type=checkbox] { width: auto; }
+                textarea { min-height: 72px; resize: vertical; }
+                .btn-main{ border: 1px solid #4f46e5; background: #4f46e5; color: #fff; border-radius: 12px; padding: 11px 22px; font-size: 13.5px; font-weight: 700; transition: background .15s; }
+                .btn-main:hover:not(:disabled){ background: #4338ca; }
+                .btn-main:disabled{ opacity:.6; cursor:not-allowed; }
+                .btn-ghost{ border: 1px solid #d5dbe3; background: #fff; color: #475569; border-radius: 12px; padding: 11px 22px; font-size: 13.5px; font-weight: 700; }
+                .btn-ghost:hover{ background:#f8fafc; }
             `}</style>
             <ToastContainer toasts={toasts} removeToast={removeToast} />
         </div>

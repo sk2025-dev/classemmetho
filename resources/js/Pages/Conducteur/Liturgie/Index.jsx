@@ -409,6 +409,14 @@ import AnnoncesTab from "./tabs/AnnoncesTab";
 import MesDemandesTab from "./tabs/MesDemandesTab";
 import HistoriqueTab from "./tabs/HistoriqueTab";
 import StatsTab from "./tabs/StatsTab";
+import ProgrammeObsequesEditor from "../../Liturgie/forms/ProgrammeObsequesEditor";
+import {
+    emptyProgrammeRow,
+    validateProgrammeRows,
+    formatProgrammeRow,
+    normalizeRowFromServer as normalizeProgrammeRowFromServer,
+    programmeStatutLabel,
+} from "../../Liturgie/forms/programmeObseques";
 
 const SOUMISES_PER_PAGE = 6;
 const HISTO_PER_PAGE = 8;
@@ -527,6 +535,10 @@ export default function Index({
     const [localActes, setLocalActes] = useState(actes);
     const [tab, setTab] = useState("soumises");
     const [modal, setModal] = useState(null);
+    const [programmeEdit, setProgrammeEdit] = useState(null);
+    const [programmeEditRows, setProgrammeEditRows] = useState([]);
+    const [programmeEditErrors, setProgrammeEditErrors] = useState({});
+    const [programmeBusy, setProgrammeBusy] = useState(false);
     const [detailTab, setDetailTab] = useState("infos");
     const [selected, setSelected] = useState(null);
     const [commentaire, setCommentaire] = useState("");
@@ -1248,6 +1260,67 @@ export default function Index({
             );
         } finally {
             setProcessing(false);
+        }
+    };
+
+    const patchActeLocal = (updated) => {
+        if (!updated) return;
+        setLocalActes((prev) =>
+            prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)),
+        );
+        setSelected((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : prev));
+    };
+
+    const openProgrammeEditor = (acte) => {
+        const rows = Array.isArray(acte?.details?.programme_evenements)
+            ? acte.details.programme_evenements.map(normalizeProgrammeRowFromServer)
+            : [];
+        setProgrammeEditRows(rows.length ? rows : [emptyProgrammeRow()]);
+        setProgrammeEditErrors({});
+        setProgrammeEdit(acte);
+    };
+
+    const submitProgrammeEdit = async () => {
+        if (!programmeEdit) return;
+        const { valid, errors, cleaned } = validateProgrammeRows(programmeEditRows);
+        if (!valid) {
+            setProgrammeEditErrors(errors);
+            showToast("Vérifiez les dates et désignations du programme.");
+            return;
+        }
+        try {
+            setProgrammeBusy(true);
+            const { data } = await axios.put(
+                withBasePath("", `/conducteur/liturgie/${programmeEdit.id}/programme`),
+                { programme_evenements: cleaned },
+            );
+            patchActeLocal(data?.acte);
+            setProgrammeEdit(null);
+            showToast(data?.message || "Programme d'obsèques enregistré.");
+        } catch (e) {
+            showToast(e?.response?.data?.message || "Echec de l'enregistrement du programme.");
+        } finally {
+            setProgrammeBusy(false);
+        }
+    };
+
+    const toggleProgrammeCloture = async (acte) => {
+        if (!acte?.id) return;
+        const clos =
+            acte.programme_est_clos === true ||
+            String(acte.details?.programme_statut || "OUVERT").toUpperCase() === "CLOS";
+        try {
+            setProgrammeBusy(true);
+            const { data } = await axios.post(
+                withBasePath("", `/conducteur/liturgie/${acte.id}/programme/cloture`),
+                { action: clos ? "REOUVRIR" : "CLOTURER" },
+            );
+            patchActeLocal(data?.acte);
+            showToast(data?.message || (clos ? "Programme ré-ouvert." : "Programme clôturé."));
+        } catch (e) {
+            showToast(e?.response?.data?.message || "Echec de l'opération sur le programme.");
+        } finally {
+            setProgrammeBusy(false);
         }
     };
 
@@ -2553,6 +2626,58 @@ export default function Index({
                                                     </span>
                                                 </span>
                                             </div>
+                                            {String(selected?.type_acte || "").toLowerCase() === "deces" && (
+                                                <div style={{ marginTop: 14, borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
+                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+                                                        <span className="modal-info-key">
+                                                            Programme d'obsèques —{" "}
+                                                            {programmeStatutLabel(selected?.details?.programme_statut)}
+                                                            {selected?.details?.programme_clos_par_nom
+                                                                ? ` (par ${selected.details.programme_clos_par_nom})`
+                                                                : ""}
+                                                        </span>
+                                                        <span style={{ display: "flex", gap: 6 }}>
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-ghost"
+                                                                disabled={
+                                                                    programmeBusy ||
+                                                                    selected?.programme_est_clos === true ||
+                                                                    String(selected?.details?.programme_statut || "OUVERT").toUpperCase() === "CLOS"
+                                                                }
+                                                                onClick={() => openProgrammeEditor(selected)}
+                                                            >
+                                                                Éditer
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-ghost"
+                                                                disabled={programmeBusy}
+                                                                onClick={() => toggleProgrammeCloture(selected)}
+                                                            >
+                                                                {selected?.programme_est_clos === true ||
+                                                                String(selected?.details?.programme_statut || "OUVERT").toUpperCase() === "CLOS"
+                                                                    ? "Ré-ouvrir le programme"
+                                                                    : "Clôturer le programme"}
+                                                            </button>
+                                                        </span>
+                                                    </div>
+                                                    {Array.isArray(selected?.details?.programme_evenements) &&
+                                                    selected.details.programme_evenements.length > 0 ? (
+                                                        <ul style={{ margin: 0, paddingLeft: 16 }}>
+                                                            {selected.details.programme_evenements.map((ev, i) => (
+                                                                <li key={i} style={{ fontSize: 13, color: "#334155", padding: "2px 0" }}>
+                                                                    {formatProgrammeRow(ev)}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <p style={{ fontSize: 13, color: "#94a3b8", margin: 0 }}>
+                                                            Aucune étape renseignée par la famille.
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
                                         </>
                                     )}
                                     {selectedIsMariage &&
@@ -3169,6 +3294,54 @@ export default function Index({
                                     )}
                                 </button>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ══════════ MODAL ÉDITION PROGRAMME D'OBSÈQUES ══════════ */}
+            {programmeEdit && (
+                <div
+                    className="modal-overlay open"
+                    onClick={() => !programmeBusy && setProgrammeEdit(null)}
+                >
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-head">
+                            <div>
+                                <div className="modal-title">Programme d'obsèques</div>
+                                <div className="modal-sub">
+                                    {programmeEdit.membre?.prenom} {programmeEdit.membre?.nom}
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="modal-close"
+                                onClick={() => !programmeBusy && setProgrammeEdit(null)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="modal-body" style={{ padding: 20 }}>
+                            <ProgrammeObsequesEditor
+                                value={programmeEditRows}
+                                onChange={setProgrammeEditRows}
+                                errors={programmeEditErrors}
+                            />
+                        </div>
+                        <div className="modal-foot">
+                            <button
+                                className="btn-modal btn-modal-ghost"
+                                onClick={() => !programmeBusy && setProgrammeEdit(null)}
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                className="btn-modal btn-modal-gold"
+                                disabled={programmeBusy}
+                                onClick={submitProgrammeEdit}
+                            >
+                                {programmeBusy ? "Enregistrement..." : "Enregistrer le programme"}
+                            </button>
                         </div>
                     </div>
                 </div>

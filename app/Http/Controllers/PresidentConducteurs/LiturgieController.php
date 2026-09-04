@@ -7,16 +7,86 @@ use App\Http\Requests\ActesLiturgiques\TransitionActeLiturgiqueRequest;
 use App\Models\ActeLiturgique;
 use App\Models\User;
 use App\Services\ActeLiturgiqueService;
+use App\Services\ProgrammeObsequesService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use InvalidArgumentException;
 
 class LiturgieController extends Controller
 {
-    public function __construct(private ActeLiturgiqueService $service) {}
+    public function __construct(
+        private ActeLiturgiqueService $service,
+        private ProgrammeObsequesService $programme,
+    ) {}
+
+    /** Le président des conducteurs corrige / complète le programme d'obsèques. */
+    public function updateProgramme(Request $request, int $id)
+    {
+        $acte = $this->decesActe($id);
+
+        if ($acte->programmeEstClos()) {
+            return response()->json(['success' => false, 'message' => 'Le programme est clôturé. Ré-ouvrez-le pour le modifier.'], 422);
+        }
+        if (in_array($acte->statut, ProgrammeObsequesService::STATUTS_ACTE_BLOQUANTS, true)) {
+            return response()->json(['success' => false, 'message' => 'Cette demande ne peut plus être modifiée.'], 422);
+        }
+
+        $validated = $request->validate(
+            array_merge(['programme_evenements' => ['present', 'array']], $this->programme->rules('programme_evenements')),
+            $this->programme->messages('programme_evenements'),
+        );
+
+        $acte = $this->programme->apply($acte, $validated['programme_evenements'] ?? []);
+        $acte->programme_est_clos = $acte->programmeEstClos();
+
+        return response()->json(['success' => true, 'message' => "Programme d'obsèques enregistré.", 'acte' => $acte]);
+    }
+
+    /** Clôture / ré-ouvre le programme d'obsèques. */
+    public function clotureProgramme(Request $request, int $id)
+    {
+        $user = Auth::user();
+        $payload = Validator::make($request->all(), [
+            'action' => ['required', 'in:CLOTURER,REOUVRIR'],
+            'commentaire' => ['nullable', 'string', 'max:1000'],
+        ])->validate();
+
+        $acte = $this->decesActe($id);
+        $dejaClos = $acte->programmeEstClos();
+
+        if ($payload['action'] === 'CLOTURER' && $dejaClos) {
+            return response()->json(['success' => false, 'message' => 'Le programme est déjà clôturé.'], 422);
+        }
+        if ($payload['action'] === 'REOUVRIR' && !$dejaClos) {
+            return response()->json(['success' => false, 'message' => "Le programme n'est pas clôturé."], 422);
+        }
+
+        $acte = $this->programme->cloture($acte, $user, $payload['action'], $payload['commentaire'] ?? null);
+        $acte->programme_est_clos = $acte->programmeEstClos();
+
+        return response()->json([
+            'success' => true,
+            'message' => $payload['action'] === 'CLOTURER' ? "Programme d'obsèques clôturé." : "Programme d'obsèques ré-ouvert.",
+            'acte' => $acte,
+        ]);
+    }
+
+    private function decesActe(int $id): ActeLiturgique
+    {
+        $acte = ActeLiturgique::with(['membre', 'classe', 'historiques.acteur'])->findOrFail($id);
+        if (strtolower((string) $acte->type_acte) !== 'deces') {
+            abort(response()->json([
+                'success' => false,
+                'message' => "Le programme d'obsèques concerne uniquement les déclarations de décès.",
+            ], 422));
+        }
+
+        return $acte;
+    }
 
     /**
      * Suivi des actes (naissance, décès, prière d'intercession, action de

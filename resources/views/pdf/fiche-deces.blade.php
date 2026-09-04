@@ -52,6 +52,9 @@ $culteDisplay = $dateCulte !== '—'
     ? trim($dateCulte . ($heureCulte !== '' ? ' à ' . $heureCulte : ''))
     : '—';
 
+$programmeEvenements = (array) ($details['programme_evenements'] ?? []);
+$programmeClos = strtoupper((string) ($details['programme_statut'] ?? 'OUVERT')) === 'CLOS';
+
 $reference = $acte->reference ?? '—';
 $dateEmission = optional($acte->created_at)->format('d/m/Y') ?? now()->format('d/m/Y');
 
@@ -129,6 +132,108 @@ $bureauConducteurSignatureDataUri = $bureauConducteurSignatureDataUri ?? $toStor
 
 $logoTempleSrc = $logoDataUri ?? $toPublicImageDataUri(public_path('images/logo.png'));
 $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho.jpg'));
+
+/* ── Contenu des 3 pages (lettre / nécrologie / programme) ── */
+
+$pasteurPrincipal = trim((string) \App\Models\SiteSetting::get('pasteur_principal_nom', ''));
+
+$membre = $acte->membre ?? null;
+$nomMembre = $membre
+    ? trim(($membre->prenom ?? '') . ' ' . ($membre->nom ?? ''))
+    : '';
+
+$genreMembre = strtoupper(substr((string) ($membre->genre ?? ''), 0, 1));
+$fratMot = $genreMembre === 'F' ? 'sœur' : ($genreMembre === 'M' ? 'frère' : 'membre');
+
+$genreDefunt = mb_strtolower((string) ($details['sexe_defunt'] ?? $details['genre_defunt'] ?? ''), 'UTF-8');
+$defuntFeminin = str_starts_with($genreDefunt, 'f');
+$defuntMasculin = str_starts_with($genreDefunt, 'm');
+
+$lienBrut = mb_strtolower((string) ($details['lien_familial'] ?? $details['declarant_lien'] ?? $details['dec_lien'] ?? ''), 'UTF-8');
+$lienBrut = strtr($lienBrut, ['é' => 'e', 'è' => 'e', 'œ' => 'oe']);
+
+$motLien = match (true) {
+    in_array($lienBrut, ['enfant', 'fils', 'fille'], true) =>
+        $defuntFeminin ? 'mère' : ($defuntMasculin ? 'père' : 'parent'),
+    in_array($lienBrut, ['parent', 'pere', 'mere'], true) =>
+        $defuntFeminin ? 'fille' : ($defuntMasculin ? 'fils' : 'enfant'),
+    in_array($lienBrut, ['conjoint', 'conjointe', 'epoux', 'epouse', 'mari', 'femme'], true) =>
+        $defuntFeminin ? 'épouse' : ($defuntMasculin ? 'époux' : 'conjoint(e)'),
+    in_array($lienBrut, ['frere_soeur', 'frere', 'soeur'], true) =>
+        $defuntFeminin ? 'sœur' : ($defuntMasculin ? 'frère' : 'frère/sœur'),
+    default => 'proche',
+};
+
+// "mère de notre frère TURKSON Christian"
+$lienPhrase = $nomMembre !== ''
+    ? "{$motLien} de notre {$fratMot} " . $nomMembre
+    : $motLien;
+
+$defuntMaj = mb_strtoupper((string) $nomDefunt, 'UTF-8');
+$classeMaj = $classe;
+
+$decesLieuTexte = $lieuDeces !== '' ? " à {$lieuDeces}" : '';
+$nomConducteurAff = $nomConducteur ?: 'Le conducteur de la classe';
+
+/* ── Données de l'affiche « Programme des obsèques » (page 3) ── */
+
+$ageDefunt = null;
+if (!empty($details['date_naissance_defunt']) && !empty($details['date_deces'])) {
+    try {
+        $ageDefunt = (int) Carbon::parse($details['date_naissance_defunt'])
+            ->diffInYears(Carbon::parse($details['date_deces']));
+    } catch (\Throwable $e) {
+        $ageDefunt = null;
+    }
+}
+
+$photoDefuntSrc = null;
+if ($membre && !empty($membre->photo_path)) {
+    $photoDefuntSrc = $toStorageSignatureDataUri($membre->photo_path);
+}
+
+$fmtJour = function ($iso) {
+    try {
+        return mb_strtoupper(Carbon::parse($iso)->locale('fr')->isoFormat('dddd D MMMM YYYY'), 'UTF-8');
+    } catch (\Throwable $e) {
+        return (string) $iso;
+    }
+};
+
+$programmeParJour = [];
+foreach ($programmeEvenements as $ev) {
+    $dfin = !empty($ev['date_fin']) && ($ev['date_fin'] !== ($ev['date_debut'] ?? null));
+    $label = $dfin
+        ? 'DU ' . $fmtJour($ev['date_debut'] ?? null) . ' AU ' . $fmtJour($ev['date_fin'])
+        : $fmtJour($ev['date_debut'] ?? null);
+
+    $hd = !empty($ev['heure'])
+        ? (function () use ($ev) { try { return Carbon::createFromFormat('H:i', substr((string) $ev['heure'], 0, 5))->format('H\hi'); } catch (\Throwable $e) { return (string) $ev['heure']; } })()
+        : '';
+    $hf = !empty($ev['heure_fin'])
+        ? (function () use ($ev) { try { return Carbon::createFromFormat('H:i', substr((string) $ev['heure_fin'], 0, 5))->format('H\hi'); } catch (\Throwable $e) { return (string) $ev['heure_fin']; } })()
+        : '';
+
+    $programmeParJour[$label][] = [
+        'heure' => $hf !== '' ? ($hd . ' - ' . $hf) : $hd,
+        'libelle' => $ev['libelle'] ?? '',
+        'lieu' => $ev['lieu'] ?? '',
+    ];
+}
+
+$lieuPrincipal = '';
+foreach (array_reverse($programmeEvenements) as $ev) {
+    if (!empty($ev['lieu'])) { $lieuPrincipal = $ev['lieu']; break; }
+}
+if ($lieuPrincipal === '') {
+    $lieuPrincipal = $lieuDeces;
+}
+
+$contactsTel = collect([
+    optional($acte->createur)->telephone,
+    optional($acte->membre)->telephone,
+    optional($acte->conducteur)->telephone,
+])->filter()->map(fn ($t) => trim((string) $t))->filter()->unique()->take(2)->implode('  /  ');
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -147,13 +252,29 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
             margin: 0;
             color: #1a1a1a;
             background: #ffffff;
-            font-family: DejaVu Serif, "Times New Roman", serif;
-            font-size: 11.2px;
-            line-height: 1.68;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
         }
 
         .page {
-            padding: 6mm 8mm 4mm;
+            padding: 3mm 8mm;
+        }
+
+        .doc-footer {
+            position: fixed;
+            left: 0; right: 0; bottom: 4mm;
+            text-align: center;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
+            font-size: 9.5px;
+            color: #7b8697;
+            padding-top: 3mm;
+            border-top: 1px solid #dce2eb;
+        }
+        .sheet { width: 100%; border-collapse: collapse; }
+        .sheet > tbody > tr > td {
+            vertical-align: bottom; /* corps + signature poussés vers le bas de page */
+            padding-bottom: 8mm;    /* dégagement au-dessus du pied CONTACTS */
         }
 
         /* Header uses a table for stable PDF alignment with two logos and centered text. */
@@ -192,7 +313,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
         }
 
         .header-kicker {
-            font-family: DejaVu Sans, Arial, sans-serif;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
             font-size: 15px;
             font-weight: 700;
             letter-spacing: 1.1px;
@@ -208,8 +329,8 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
         }
 
         .header-sub {
-            font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 14px;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
+            font-size: 13px;
             font-weight: 700;
             letter-spacing: 1px;
             text-transform: uppercase;
@@ -218,7 +339,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
 
         .header-temple {
             margin-top: 8px;
-            font-size: 18.5px;
+            font-size: 16px;
             font-weight: 700;
             color: #1d2736;
         }
@@ -231,8 +352,8 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
         }
 
         .title-label {
-            font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 25px;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
+            font-size: 17px;
             font-weight: 800;
             letter-spacing: 1.8px;
             text-transform: uppercase;
@@ -253,7 +374,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
 
         .meta-label {
             width: 155px;
-            font-family: DejaVu Sans, Arial, sans-serif;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
             font-size: 9.3px;
             font-weight: 700;
             letter-spacing: .8px;
@@ -283,7 +404,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
         .verse-ref {
             margin-top: 5px;
             text-align: right;
-            font-family: DejaVu Sans, Arial, sans-serif;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
             font-size: 9.3px;
             font-weight: 700;
             color: #6b7280;
@@ -322,7 +443,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
 
         .support-ref {
             text-align: right;
-            font-family: DejaVu Sans, Arial, sans-serif;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
             font-size: 9.3px;
             font-weight: 700;
             color: #6b7280;
@@ -343,7 +464,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
         }
 
         .signature-role {
-            font-family: DejaVu Sans, Arial, sans-serif;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
             font-size: 9.6px;
             font-weight: 700;
             text-transform: uppercase;
@@ -373,7 +494,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
 
         .signature-name {
             margin-top: 12px;
-            font-family: DejaVu Sans, Arial, sans-serif;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
             font-size: 10px;
             font-weight: 800;
             text-transform: uppercase;
@@ -382,7 +503,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
 
         .signature-missing {
             margin-top: 18px;
-            font-family: DejaVu Sans, Arial, sans-serif;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
             font-size: 8.9px;
             font-style: italic;
             color: #8b95a5;
@@ -393,122 +514,259 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
             padding-top: 3mm;
             border-top: 1px solid #dce2eb;
             text-align: center;
-            font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 8.6px;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
+            font-size: 9.5px;
             color: #7b8697;
+        }
+
+        .page-break { page-break-after: always; }
+
+        /* Gabarit pleine hauteur : en-tête en haut, corps centré, signature en bas. */
+        .sheet-layout { width: 100%; height: 252mm; border-collapse: collapse; }
+        .sheet-layout td { padding: 0; }
+        .sheet-top { vertical-align: top; }
+        .sheet-mid { vertical-align: middle; }
+        .sheet-bot { vertical-align: bottom; }
+
+        .letter-addressee {
+            width: 62%;
+            margin: 4mm 0 8mm auto;
+            text-align: center;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .letter-addressee .rev { font-weight: 700; }
+
+        .letter-object {
+            margin: 2mm 0 6mm;
+            font-weight: 700;
+            text-decoration: underline;
+        }
+
+        .letter-body p { font-size: 14px; line-height: 1.7; margin: 0 0 4.5mm; text-align: justify; }
+
+        .sign-block {
+            margin-top: 4mm;
+            text-align: center;
+        }
+        .sign-block .sign-role {
+            font-weight: 700;
+            text-decoration: underline;
+            margin-bottom: 4mm;
+        }
+        .sign-block .sign-img {
+            display: block;
+            max-width: 180px;
+            max-height: 90px;
+            margin: 0 auto 4px;
+            object-fit: contain;
+        }
+        .sign-block .sign-name {
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
+            font-weight: 800;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        /* ── Programme des obsèques (page 3) ── */
+        .poster { padding: 4mm 2mm 6mm; }
+        .poster-title { text-align: center; margin-bottom: 4mm; }
+        .poster-title .sub {
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 1.6px;
+            text-transform: uppercase;
+            color: #0f2557;
+        }
+        .poster-hr {
+            width: 64px; height: 2px; background: #b8860b; margin: 3mm auto 0;
+        }
+        .poster-identity td { vertical-align: middle; padding: 0 4mm; }
+        .poster-photo {
+            width: 110px; height: 138px; border: 3px solid #b8860b;
+        }
+        .poster-name {
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
+            font-size: 15px; font-weight: 800; color: #0f2557; letter-spacing: .5px;
+        }
+        .poster-name-sub {
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
+            font-size: 10px; text-transform: uppercase; letter-spacing: .8px;
+            margin-top: 1.5mm; color: #4b5563;
+        }
+        .day-band {
+            background: #b8860b; color: #ffffff;
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
+            font-weight: 800; font-size: 11.5px; letter-spacing: 1px;
+            padding: 2.6mm 4mm; margin: 6mm 0 0; text-transform: uppercase;
+        }
+        .ev-table { width: 100%; border-collapse: collapse; }
+        .ev-table td {
+            padding: 2.8mm 3mm; vertical-align: top; border-bottom: 1px solid #e2e6ec;
+        }
+        .ev-time {
+            width: 96px; font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
+            font-weight: 800; font-size: 12px; color: #0f2557; white-space: nowrap;
+        }
+        .ev-desc { font-size: 11.3px; color: #1f2937; }
+        .ev-desc .ev-lieu {
+            display: block; font-size: 9.6px; color: #6b7280; margin-top: 1mm;
+        }
+        .poster-box { margin-top: 5mm; }
+        .poster-box .k {
+            font-family: Arial, "DejaVu Sans", Helvetica, sans-serif;
+            font-weight: 800; color: #b8860b; font-size: 11.5px; letter-spacing: 1px;
+        }
+        .poster-box .v { color: #1f2937; font-size: 11.5px; }
+        .poster-empty {
+            margin: 10mm auto 0; max-width: 130mm; text-align: center;
+            font-style: italic; color: #374151; font-size: 16px; line-height: 1.7;
         }
     </style>
 </head>
 
 <body>
-    <div class="page">
-        <!-- Official church header: logo / institution / logo -->
+    @php
+        $enTete = '<table class="header-table"><tr>'
+            . '<td class="logo-col left">' . ($logoMethoSrc ? '<img src="' . $logoMethoSrc . '" class="logo">' : '') . '</td>'
+            . '<td class="header-center">'
+            . '<div class="header-kicker">Eglise Methodiste de Cote d\'Ivoire</div>'
+            . '<div class="header-rule"></div>'
+            . '<div class="header-sub">District Abidjan Nord</div>'
+            . '<div class="header-rule"></div>'
+            . '<div class="header-temple">Temple du JUBILE de Cocody</div>'
+            . '</td>'
+            . '<td class="logo-col right">' . ($logoTempleSrc ? '<img src="' . $logoTempleSrc . '" class="logo">' : '') . '</td>'
+            . '</tr></table>';
+
+        $signature = '<div class="sign-block"><div class="sign-role">Pour les conducteurs de la classe</div>'
+            . ($conducteurSignatureDataUri ? '<img src="' . $conducteurSignatureDataUri . '" class="sign-img">' : '')
+            . '<div class="sign-name">' . e($nomConducteurAff) . '</div></div>';
+    @endphp
+
+    <div class="doc-footer">CONTACTS — israelclasse@gmail.com · www.classeisrael.org · Facebook : classeisraeljubile</div>
+
+    {{-- ═══════════════ PAGE 1 — LETTRE AU PASTEUR ═══════════════ --}}
+    <div class="page page-break">
+        {!! $enTete !!}
+        <div style="height:10mm"></div>
+        @if($pasteurPrincipal !== '')
+            <div class="letter-addressee">
+                <span class="rev">Révérend {{ $pasteurPrincipal }}</span><br>
+                Pasteur Principal du Jubilé de Cocody
+            </div>
+        @endif
+        <div class="letter-object">Objet : Décès</div>
+        <div class="letter-body">
+            <p>Révérend Pasteur,</p>
+            <p>Que la grâce et la paix du Seigneur Jésus-Christ, soient avec vous.</p>
+            <p>
+                La classe {{ $classeMaj }} a le regret de vous annoncer le décès de
+                <strong>{{ $defuntMaj }}</strong>, {{ $lienPhrase }}, membre de la Classe {{ $classeMaj }}.
+            </p>
+            <p>Décès survenu le <strong>{{ $dateDeces }}</strong>{{ $decesLieuTexte }}.</p>
+        </div>
+        <table class="sheet"><tr><td style="height:420px">{!! $signature !!}</td></tr></table>
+    </div>
+
+    {{-- ═══════════════ PAGE 2 — NÉCROLOGIE ═══════════════ --}}
+    <div class="page page-break">
+        {!! $enTete !!}
+        <div class="title-band"><div class="title-label">Nécrologie</div></div>
+        <div style="height:8mm"></div>
+        <div class="letter-body">
+            <p>
+                Le Conseil de l'Église{{ $pasteurPrincipal !== '' ? ', le Révérend ' . $pasteurPrincipal . ',' : ',' }}
+                la Classe {{ $classeMaj }}, ont le regret de vous annoncer le décès de
+                <strong>{{ $defuntMaj }}</strong>, {{ $lienPhrase }}, membre de la Classe {{ $classeMaj }}.
+            </p>
+            <p style="margin-top:7mm">Décès survenu le <strong>{{ $dateDeces }}</strong>{{ $decesLieuTexte }}.</p>
+        </div>
+        <table class="sheet"><tr><td style="height:400px">{!! $signature !!}</td></tr></table>
+    </div>
+
+    {{-- ═══════════════ PAGE 3 — PROGRAMME DES OBSÈQUES ═══════════════ --}}
+    <div class="page poster">
         <table class="header-table">
             <tr>
                 <td class="logo-col left">
-                    @if($logoMethoSrc)
-                    <img src="{{ $logoMethoSrc }}" alt="Logo Methodiste" class="logo">
-                    @endif
+                    @if($logoMethoSrc)<img src="{{ $logoMethoSrc }}" alt="Logo Methodiste" class="logo">@endif
                 </td>
                 <td class="header-center">
                     <div class="header-kicker">Eglise Methodiste de Cote d'Ivoire</div>
                     <div class="header-rule"></div>
-                   
+                    <div class="header-sub">District Abidjan Nord</div>
+                    <div class="header-rule"></div>
                     <div class="header-temple">Temple du JUBILE de Cocody</div>
                 </td>
                 <td class="logo-col right">
-                    @if($logoTempleSrc)
-                    <img src="{{ $logoTempleSrc }}" alt="Logo Temple" class="logo">
-                    @endif
+                    @if($logoTempleSrc)<img src="{{ $logoTempleSrc }}" alt="Logo Temple" class="logo">@endif
                 </td>
             </tr>
         </table>
 
-        <!-- Main title band -->
-        <div class="title-band">
-            <div class="title-label">Annonce Décès</div>
-        </div>
-
-        <!-- Compact metadata keeps the first reading level clean -->
-        <table class="meta-table">
-            <tr>
-                <td class="meta-label">Classe Methodiste</td>
-                <td class="meta-value">{{ $classe }}</td>
-            </tr>
-        </table>
-
-        <!-- Opening verse -->
-        <div class="verse-card">
-            <div class="verse-text">
-                &laquo; J&eacute;sus lui dit : Je suis la r&eacute;surrection et la vie. Celui qui croit en moi vivra, quand m&ecirc;me il serait mort. &raquo;
+        <table class="sheet"><tr><td style="height:800px;vertical-align:middle;padding-bottom:0">
+            <div class="poster-title">
+                <div class="sub">Programme des obsèques</div>
+                <div class="poster-hr"></div>
             </div>
-            <div class="verse-ref">Jean 11 : 25</div>
-        </div>
 
-        <!-- Main notice body -->
-        <div class="notice-block">
-            <p class="notice-paragraph">
-                La famille <span class="family-name">{{ mb_strtoupper($famille, 'UTF-8') }}</span>
-                annonce, avec une profonde tristesse, &agrave; l'ensemble de la communaut&eacute; chr&eacute;tienne,
-                le rappel &agrave; Dieu de leur bien-aim&eacute;(e),
-                <span class="deceased-name">{{ $nomDefunt }}</span>,
-                survenu le <strong>{{ $dateDeces }}</strong>@if($lieuDeces !== '') &agrave; <strong>{{ $lieuDeces }}</strong>@endif.
-            </p>
-            <p class="notice-paragraph">
-                En cette douloureuse &eacute;preuve, la famille sollicite vos pri&egrave;res et votre soutien spirituel.
-            </p>
-            <p class="notice-paragraph">
-                Les informations relatives aux obs&egrave;ques vous seront communiqu&eacute;es ult&eacute;rieurement.
-            </p>
-        </div>
+            <table class="poster-identity" style="width:100%;border-collapse:collapse;margin-top:6mm">
+                <tr>
+                    <td style="width:130px">
+                        @if($photoDefuntSrc)
+                            <img src="{{ $photoDefuntSrc }}" alt="Photo" class="poster-photo">
+                        @endif
+                    </td>
+                    <td>
+                        @if($defuntMaj !== '' && $defuntMaj !== '—')
+                            <div class="poster-name">{{ $defuntMaj }}</div>
+                        @endif
+                        @if($nomMembre !== '')
+                            <div class="poster-name-sub">{{ ucfirst($motLien) }} de {{ $nomMembre }}</div>
+                        @endif
+                        @if($ageDefunt)
+                            <div class="poster-name-sub">
+                                {{ $defuntFeminin ? 'Décédée' : 'Décédé' }} dans sa {{ $ageDefunt }}<sup>e</sup> année
+                            </div>
+                        @endif
+                    </td>
+                </tr>
+            </table>
 
-        <!-- Signature area -->
-        <table class="signature-table">
-            <tr>
-                <td>
-                    <div class="signature-role">Conducteur de la Classe</div>
-                    <div class="signature-rule"></div>
-                    <div class="signature-box">
-                        @if($conducteurSignatureDataUri)
-                        <img src="{{ $conducteurSignatureDataUri }}" alt="Signature conducteur" class="signature-image">
-                        @endif
+            @if(count($programmeParJour))
+                @foreach($programmeParJour as $jour => $evenements)
+                    <div class="day-band">{{ $jour }}</div>
+                    <table class="ev-table">
+                        @foreach($evenements as $ev)
+                            <tr>
+                                <td class="ev-time">{{ $ev['heure'] !== '' ? $ev['heure'] : '—' }}</td>
+                                <td class="ev-desc">
+                                    {{ $ev['libelle'] }}
+                                    @if(!empty($ev['lieu']))<span class="ev-lieu">{{ $ev['lieu'] }}</span>@endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </table>
+                @endforeach
+
+                @if($lieuPrincipal !== '')
+                    <div class="poster-box">
+                        <span class="k">LIEU :</span> <span class="v">{{ $lieuPrincipal }}</span>
                     </div>
-                    @if($nomConducteur)
-                    <div class="signature-name">{{ $nomConducteur }}</div>
-                    @else
-                    <div class="signature-missing">Non renseigne</div>
-                    @endif
-                </td>
-                <td>
-                    <div class="signature-role">Bureau des Conducteurs</div>
-                    <div class="signature-rule"></div>
-                    <div class="signature-box">
-                        @if($bureauConducteurSignatureDataUri)
-                        <img src="{{ $bureauConducteurSignatureDataUri }}" alt="Signature Bureau" class="signature-image">
-                        @endif
-                    </div>
-                    @if($nomBureauConducteur)
-                    <div class="signature-name">{{ $nomBureauConducteur }}</div>
-                    @else
-                    <div class="signature-missing">Non renseigne</div>
-                    @endif
-                </td>
-                <td>
-                    <div class="signature-role">Pasteur</div>
-                    <div class="signature-rule"></div>
-                    <div class="signature-box">
-                        @if($pasteurSignatureDataUri)
-                        <img src="{{ $pasteurSignatureDataUri }}" alt="Signature pasteur" class="signature-image">
-                        @endif
-                    </div>
-                    @if($nomPasteur)
-                    <div class="signature-name">{{ $nomPasteur }}</div>
-                    @else
-                    <div class="signature-missing">Non renseigne</div>
-                    @endif
-                </td>
-            </tr>
-        </table>
+                @endif
+                @if(!$programmeClos)
+                    <p style="margin-top:6mm;font-style:italic;font-size:11px;color:#6b7280">
+                        Programme provisoire, susceptible d'être modifié.
+                    </p>
+                @endif
+            @else
+                <div class="poster-empty">
+                    Le programme des obsèques sera communiqué ultérieurement.
+                </div>
+            @endif
+        </td></tr></table>
     </div>
 </body>
 

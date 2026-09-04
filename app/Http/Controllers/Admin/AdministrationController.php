@@ -486,6 +486,10 @@ class AdministrationController extends Controller
                 \App\Http\Controllers\Admin\SiteSettingController::CARTE_THEME_KEY,
                 \App\Http\Controllers\Admin\SiteSettingController::CARTE_THEME_DEFAULT,
             ),
+            'pasteurPrincipalNom' => \App\Models\SiteSetting::get(
+                \App\Http\Controllers\Admin\SiteSettingController::PASTEUR_PRINCIPAL_KEY,
+                \App\Http\Controllers\Admin\SiteSettingController::PASTEUR_PRINCIPAL_DEFAULT,
+            ),
         ]);
     }
 

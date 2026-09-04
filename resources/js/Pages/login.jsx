@@ -14,6 +14,7 @@ export default function Login() {
     const [errorMessage, setErrorMessage] = useState("");
     const [showWelcomeLoader, setShowWelcomeLoader] = useState(false);
     const [welcomeUserName, setWelcomeUserName] = useState("");
+    const [welcomePhotoUrl, setWelcomePhotoUrl] = useState(null);
     const [redirectUrl, setRedirectUrl] = useState("");
     const [postLoginRedirect, setPostLoginRedirect] = useState("");
 
@@ -88,13 +89,17 @@ export default function Login() {
 
                 const redirectUrl = responseData.redirect_url || "/dashboard";
 
+                const welcomePhoto = responseData.user?.photo_url || null;
+
                 // Stocker les données dans window pour AppLayout
                 window.justLoggedIn = true;
                 window.welcomeUserName = welcomeName;
                 window.welcomeRedirectUrl = redirectUrl;
+                window.welcomePhotoUrl = welcomePhoto;
 
                 // Afficher le welcome loader pendant 2.5s puis naviguer
                 setWelcomeUserName(welcomeName);
+                setWelcomePhotoUrl(welcomePhoto);
                 setRedirectUrl(redirectUrl);
                 setShowWelcomeLoader(true);
             } else {
@@ -117,6 +122,7 @@ export default function Login() {
                 <WelcomeLoader
                     userName={welcomeUserName}
                     redirectUrl={redirectUrl}
+                    photoUrl={welcomePhotoUrl}
                 />
             )}
 

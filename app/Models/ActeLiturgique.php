@@ -215,6 +215,56 @@ class ActeLiturgique extends Model
             || ($this->family_id && $this->family_id === $user->family_id);
     }
 
+    /* ─────────────── Programme d'obsèques (annonce décès) ─────────────── */
+
+    public const PROGRAMME_STATUT_OUVERT = 'OUVERT';
+    public const PROGRAMME_STATUT_CLOS = 'CLOS';
+
+    /** @return array<int, array<string, mixed>> */
+    public function programmeEvenements(): array
+    {
+        return (array) ($this->details['programme_evenements'] ?? []);
+    }
+
+    public function programmeStatut(): string
+    {
+        return strtoupper((string) ($this->details['programme_statut'] ?? self::PROGRAMME_STATUT_OUVERT));
+    }
+
+    public function programmeEstClos(): bool
+    {
+        return $this->programmeStatut() === self::PROGRAMME_STATUT_CLOS;
+    }
+
+    /**
+     * La famille (propriétaire / même famille) peut-elle éditer le programme ?
+     * Possible tant que le conducteur n'a pas clôturé et que l'acte n'est pas
+     * dans un statut terminal — sans exiger la validation pastorale.
+     */
+    public function peutEditerProgramme(User $user): bool
+    {
+        if (strtolower((string) $this->type_acte) !== self::TYPE_DECES) {
+            return false;
+        }
+
+        if ($this->programmeEstClos()) {
+            return false;
+        }
+
+        if (in_array($this->statut, ['REFUSEE_PAR_CONDUCTEUR', 'REFUSEE_PAR_PASTEUR', 'ARCHIVEE'], true)) {
+            return false;
+        }
+
+        if ((int) $this->created_by === (int) $user->id) {
+            return true;
+        }
+
+        return $this->membre_id
+            && User::where('id', $this->membre_id)
+                ->where('family_id', $user->family_id)
+                ->exists();
+    }
+
     public function peutEtreValideParConducteur(User $user): bool
     {
         if ($this->statut !== self::STATUT_Soumise) {

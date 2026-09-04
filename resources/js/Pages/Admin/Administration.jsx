@@ -24,6 +24,7 @@ export default function AdminPage({
     availableFonctions: initialAvailableFonctions = [], // ✅ Fonctions disponibles
     total_users_count = 0, // ✅ Total global des personnes
     carteVirtuelleTheme = "",
+    pasteurPrincipalNom = "",
 }) {
     // Lire le query param 'tab' depuis l'URL pour conserver l'onglet actif après un reload
     const urlParams = new URLSearchParams(window.location.search);
@@ -45,7 +46,7 @@ export default function AdminPage({
         { id: "familles", label: "Familles" },
         { id: "classes", label: "Classes" },
         { id: "fonctions", label: "Fonctions" },
-        { id: "carte", label: "Carte virtuelle" },
+        { id: "carte", label: "Paramètres" },
     ];
 
     // Toast state
@@ -526,6 +527,7 @@ export default function AdminPage({
                 {activeTab === "carte" && (
                     <TabCarteVirtuelle
                         theme={carteVirtuelleTheme}
+                        pasteurPrincipalNom={pasteurPrincipalNom}
                         onSuccess={toast.success}
                     />
                 )}

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\ActesLiturgiques;
 
+use App\Services\ProgrammeObsequesService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,9 +13,45 @@ class StoreActeLiturgiqueRequest extends FormRequest
         return true;
     }
 
+    /**
+     * Normalise le programme d'obsèques (lignes structurées) avant validation,
+     * pour que le service qui persiste `details` reçoive des lignes propres.
+     */
+    protected function prepareForValidation(): void
+    {
+        $details = $this->input('details');
+
+        if (is_array($details) && isset($details['programme_evenements']) && is_array($details['programme_evenements'])) {
+            $details['programme_evenements'] = app(ProgrammeObsequesService::class)
+                ->normalize($details['programme_evenements']);
+            $this->merge(['details' => $details]);
+        }
+    }
+
+    /**
+     * Les règles imbriquées `details.programme_evenements.*` amènent Laravel à
+     * ne conserver, dans `validated()['details']`, que la clé `programme_evenements`
+     * et à supprimer `nom_defunt`, `lien_familial`, `sexe_defunt`, etc.
+     * On restitue donc le tableau `details` complet (déjà normalisé dans
+     * prepareForValidation()) après validation.
+     */
+    public function validated($key = null, $default = null)
+    {
+        $data = parent::validated();
+
+        $fullDetails = (array) $this->input('details', []);
+        if ($fullDetails !== []) {
+            $data['details'] = array_merge($fullDetails, $data['details'] ?? []);
+        }
+
+        return data_get($data, $key, $default);
+    }
+
     public function rules(): array
     {
-        return [
+        return array_merge(
+            app(ProgrammeObsequesService::class)->rules('details.programme_evenements'),
+            [
             'type_acte' => ['required', Rule::in([
                 'bapteme',
                 'premiere_communion',
@@ -33,7 +70,13 @@ class StoreActeLiturgiqueRequest extends FormRequest
             'note_conducteur' => ['nullable', 'string'],
             'note_pastorale' => ['nullable', 'string'],
             'note_admin' => ['nullable', 'string'],
-        ];
+            ]
+        );
+    }
+
+    public function messages(): array
+    {
+        return app(ProgrammeObsequesService::class)->messages('details.programme_evenements');
     }
 
     public function withValidator($validator): void
@@ -62,6 +105,19 @@ class StoreActeLiturgiqueRequest extends FormRequest
                 if (!array_key_exists($field, $details) || $details[$field] === null || $details[$field] === '') {
                     $validator->errors()->add("details.{$field}", "Le champ {$field} est obligatoire pour le type {$type}.");
                 }
+            }
+
+            // Décès : si la famille déclare disposer d'un programme d'obsèques,
+            // au moins une étape doit être renseignée.
+            if (
+                $type === 'deces'
+                && ($details['programme_obseques'] ?? null) === 'oui'
+                && empty($details['programme_evenements'])
+            ) {
+                $validator->errors()->add(
+                    'details.programme_evenements',
+                    "Ajoutez au moins une étape au programme d'obsèques, ou indiquez que vous n'en disposez pas encore."
+                );
             }
 
             if ($type === 'naissance') {

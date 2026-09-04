@@ -1,11 +1,18 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { usePage } from "@inertiajs/react";
 import { withBasePath } from "../Utils/urlHelper";
 
-export default function WelcomeLoader({ userName, redirectUrl }) {
+export default function WelcomeLoader({ userName, redirectUrl, photoUrl }) {
     const { app } = usePage().props;
     const basePath = app?.basePath || "";
     const withBase = (path) => withBasePath(basePath, path);
+
+    const [photoFailed, setPhotoFailed] = useState(false);
+    const hasPhoto =
+        !photoFailed &&
+        typeof photoUrl === "string" &&
+        photoUrl.trim() !== "" &&
+        photoUrl.trim().toLowerCase() !== "null";
 
     useEffect(() => {
         // Notifier app.jsx que le welcome loader est actif
@@ -43,9 +50,10 @@ export default function WelcomeLoader({ userName, redirectUrl }) {
             </div>
             <div className="welcome-content">
                 <img
-                    src={withBase("/images/image.png")}
-                    alt="Logo"
+                    src={hasPhoto ? photoUrl : withBase("/images/image.png")}
+                    alt={hasPhoto ? "Photo de profil" : "Logo"}
                     className="welcome-logo"
+                    onError={() => setPhotoFailed(true)}
                 />
                 <div className="welcome-text-container">
                     <h1 className="welcome-title">{`Bienvenue, ${userName} !`}</h1>

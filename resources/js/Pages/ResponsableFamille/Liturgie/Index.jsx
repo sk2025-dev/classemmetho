@@ -4,6 +4,14 @@ import { ArrowLeft, Download, Eye } from "lucide-react";
 import axios from "axios";
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 import { withBasePath } from "../../../Utils/urlHelper";
+import ProgrammeObsequesEditor from "../../Liturgie/forms/ProgrammeObsequesEditor";
+import {
+    emptyProgrammeRow,
+    validateProgrammeRows,
+    formatProgrammeRow,
+    normalizeRowFromServer as normalizeProgrammeRowFromServer,
+    programmeStatutLabel,
+} from "../../Liturgie/forms/programmeObseques";
 
 /* ── CONSTANTS ── */
 const IN_PROGRESS = [
@@ -170,6 +178,10 @@ export default function Index({
         temoin_homme: "",
         temoin_femme: "",
     });
+    const [programmeActe, setProgrammeActe] = useState(null);
+    const [programmeRows, setProgrammeRows] = useState([]);
+    const [programmeErrors, setProgrammeErrors] = useState({});
+    const [programmeProcessing, setProgrammeProcessing] = useState(false);
     const [detailTab, setDetailTab] = useState("infos");
     const [page, setPage] = useState(1);
     const [contactConducteurs, setContact] = useState(null);
@@ -610,6 +622,87 @@ export default function Index({
         }
     };
 
+    /* ── Programme d'obsèques (annonce décès) ── */
+    const openProgrammeModal = (acte) => {
+        const rows = Array.isArray(acte?.details?.programme_evenements)
+            ? acte.details.programme_evenements.map(normalizeProgrammeRowFromServer)
+            : [];
+        setProgrammeActe(acte);
+        setProgrammeRows(rows.length ? rows : [emptyProgrammeRow()]);
+        setProgrammeErrors({});
+    };
+    const closeProgrammeModal = () => {
+        if (programmeProcessing) return;
+        setProgrammeActe(null);
+    };
+    const submitProgramme = async () => {
+        if (!programmeActe) return;
+        const { valid, errors: rowErrors, cleaned } =
+            validateProgrammeRows(programmeRows);
+        if (!valid) {
+            setProgrammeErrors(rowErrors);
+            notify(
+                "Vérifiez les dates et désignations de chaque étape.",
+                "error",
+            );
+            return;
+        }
+        try {
+            setProgrammeProcessing(true);
+            const res = await axios.put(
+                withBasePath(
+                    "",
+                    `/responsable-famille/liturgie/${programmeActe.id}/programme`,
+                ),
+                { programme_evenements: cleaned },
+            );
+            const updatedActe = res.data?.acte;
+            if (updatedActe) {
+                setLocalActes((prev) =>
+                    prev.map((item) =>
+                        item.id === updatedActe.id
+                            ? normalizeActe(updatedActe)
+                            : item,
+                    ),
+                );
+                setSelectedActe((prev) =>
+                    prev?.id === updatedActe.id ? updatedActe : prev,
+                );
+            }
+            closeProgrammeModal();
+            notify(
+                res.data?.message || "Programme d'obsèques enregistré.",
+                "success",
+            );
+        } catch (e) {
+            const data = e?.response?.data || {};
+            if (data.message) notify(data.message, "error");
+            const flat = {};
+            Object.entries(data.errors || {}).forEach(([k, v]) => {
+                const m = k.match(/programme_evenements\.(\d+)\.(\w+)/);
+                if (m) flat[`${m[1]}.${m[2]}`] = Array.isArray(v) ? v[0] : v;
+            });
+            setProgrammeErrors(flat);
+            // Le programme a peut-être été clôturé entre-temps → passer en lecture seule.
+            if (/clôtur/i.test(data.message || "")) {
+                setProgrammeActe((prev) =>
+                    prev
+                        ? {
+                              ...prev,
+                              programme_est_clos: true,
+                              details: {
+                                  ...(prev.details || {}),
+                                  programme_statut: "CLOS",
+                              },
+                          }
+                        : prev,
+                );
+            }
+        } finally {
+            setProgrammeProcessing(false);
+        }
+    };
+
     /* ════════════════════════ RENDER ════════════════════════ */
     return (
         <div className="rf-page">
@@ -957,6 +1050,23 @@ export default function Index({
                                     const etapeFinal =
                                         getEtape("CELEBRE") ||
                                         getEtape("TERMINE");
+                                    const isDeces =
+                                        String(acte.type_acte || "")
+                                            .trim()
+                                            .toLowerCase() === "deces";
+                                    const programmeClos =
+                                        acte.programme_est_clos === true ||
+                                        String(
+                                            acte.details?.programme_statut || "OUVERT",
+                                        ).toUpperCase() === "CLOS";
+                                    const canEditProgramme =
+                                        isDeces &&
+                                        !programmeClos &&
+                                        ![
+                                            "REFUSEE_PAR_CONDUCTEUR",
+                                            "REFUSEE_PAR_PASTEUR",
+                                            "ARCHIVEE",
+                                        ].includes(statut);
                                     return (
                                         <article
                                             key={acte.id}
@@ -1130,6 +1240,27 @@ export default function Index({
                                                 >
                                                     Voir le détail
                                                 </button>
+                                                {isDeces &&
+                                                    !DONE.includes(statut) && (
+                                                        <button
+                                                            type="button"
+                                                            className={`btn-pdf ${!canEditProgramme ? "btn-disabled" : ""}`}
+                                                            disabled={!canEditProgramme}
+                                                            title={
+                                                                programmeClos
+                                                                    ? `Programme clôturé par ${acte.details?.programme_clos_par_nom || "le conducteur"}`
+                                                                    : "Renseigner / modifier le programme d'obsèques"
+                                                            }
+                                                            onClick={() =>
+                                                                canEditProgramme &&
+                                                                openProgrammeModal(acte)
+                                                            }
+                                                        >
+                                                            {programmeClos
+                                                                ? "Programme clôturé"
+                                                                : "Programme d'obsèques"}
+                                                        </button>
+                                                    )}
                                                 {String(acte.type_acte) ===
                                                     "mariage" &&
                                                     !DONE.includes(statut) && (
@@ -2424,6 +2555,77 @@ export default function Index({
                 </div>
             )}
 
+            {/* ── MODAL PROGRAMME D'OBSÈQUES ── */}
+            {programmeActe && (
+                <div className="modal-overlay" onClick={closeProgrammeModal}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-head">
+                            <div>
+                                <div className="modal-title">
+                                    Programme d'obsèques
+                                </div>
+                                <div className="modal-sub">
+                                    {programmeActe.membre?.prenom}{" "}
+                                    {programmeActe.membre?.nom}
+                                    {" · "}
+                                    {programmeStatutLabel(
+                                        programmeActe.details?.programme_statut,
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="modal-close"
+                                onClick={closeProgrammeModal}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="modal-body">
+                            <ProgrammeObsequesEditor
+                                value={programmeRows}
+                                onChange={setProgrammeRows}
+                                errors={programmeErrors}
+                                disabled={
+                                    programmeActe.programme_est_clos === true ||
+                                    String(
+                                        programmeActe.details?.programme_statut ||
+                                            "OUVERT",
+                                    ).toUpperCase() === "CLOS"
+                                }
+                            />
+                        </div>
+                        <div className="modal-foot">
+                            <button
+                                type="button"
+                                className="btn-mghost"
+                                onClick={closeProgrammeModal}
+                            >
+                                Fermer
+                            </button>
+                            {!(
+                                programmeActe.programme_est_clos === true ||
+                                String(
+                                    programmeActe.details?.programme_statut ||
+                                        "OUVERT",
+                                ).toUpperCase() === "CLOS"
+                            ) && (
+                                <button
+                                    type="button"
+                                    className="btn-msubmit"
+                                    disabled={programmeProcessing}
+                                    onClick={submitProgramme}
+                                >
+                                    {programmeProcessing
+                                        ? "Enregistrement..."
+                                        : "Enregistrer le programme"}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ── MODAL DÉTAIL ACTE ── */}
             {selectedActe && (
                 <div
@@ -2511,6 +2713,39 @@ export default function Index({
                                             )}
                                         />
                                     </div>
+                                    {String(selectedActe.type_acte || "")
+                                        .toLowerCase() === "deces" &&
+                                        Array.isArray(
+                                            selectedActe.details
+                                                ?.programme_evenements,
+                                        ) &&
+                                        selectedActe.details.programme_evenements
+                                            .length > 0 && (
+                                            <>
+                                                <div className="rf-details-title">
+                                                    Programme d'obsèques —{" "}
+                                                    {programmeStatutLabel(
+                                                        selectedActe.details
+                                                            ?.programme_statut,
+                                                    )}
+                                                    {selectedActe.details
+                                                        ?.programme_clos_par_nom
+                                                        ? ` (par ${selectedActe.details.programme_clos_par_nom})`
+                                                        : ""}
+                                                </div>
+                                                {selectedActe.details.programme_evenements.map(
+                                                    (ev, i) => (
+                                                        <InfoRow
+                                                            key={i}
+                                                            label={`Étape ${i + 1}`}
+                                                            value={formatProgrammeRow(
+                                                                ev,
+                                                            )}
+                                                        />
+                                                    ),
+                                                )}
+                                            </>
+                                        )}
                                     <div className="rf-details-title">
                                         Informations renseignées
                                     </div>
@@ -3293,10 +3528,14 @@ function contactConducteur(c) {
     }
     if (c.email) window.location.href = `mailto:${c.email}`;
 }
+const DETAIL_KEYS_SKIP = new Set([
+    "programme_evenements",
+    "programme_clos_par_id",
+]);
 function formatDetails(d) {
     if (!d || typeof d !== "object") return [];
     return Object.entries(d)
-        .filter(([, v]) => v !== null && v !== "" && v !== false)
+        .filter(([k, v]) => !DETAIL_KEYS_SKIP.has(k) && v !== null && v !== "" && v !== false)
         .map(([k, v]) => ({
             key: k,
             label: DETAIL_LABELS[k] || prettifyKey(k),
@@ -3304,10 +3543,17 @@ function formatDetails(d) {
         }));
 }
 function formatDetailValue(v) {
-    if (Array.isArray(v)) return v.join(", ");
+    if (Array.isArray(v)) {
+        if (v.length && typeof v[0] === "object") {
+            return v.map(formatProgrammeRow).join(" · ");
+        }
+        return v.join(", ");
+    }
     if (typeof v === "boolean") return v ? "Oui" : "Non";
     if (v === "1") return "Oui";
     if (v === "0") return "Non";
+    if (v === "OUVERT") return "Ouvert";
+    if (v === "CLOS") return "Clôturé";
     if (typeof v === "string" && v.startsWith("CEREMONIE_")) {
         return ceremonyDecisionLabel(v);
     }
@@ -3363,6 +3609,13 @@ const DETAIL_LABELS = {
     nom_defunt: "Nom du défunt",
     date_deces: "Date du décès",
     lien_familial: "Lien familial",
+    programme_obseques: "Programme d'obsèques fourni",
+    programme_statut: "Statut du programme d'obsèques",
+    programme_maj_at: "Programme mis à jour le",
+    programme_clos_at: "Programme clôturé le",
+    programme_clos_par_nom: "Programme clôturé par",
+    programme_reouvert_at: "Programme ré-ouvert le",
+    programme_commentaire_conducteur: "Commentaire du conducteur (programme)",
     nom_enfant: "Nom de l'enfant",
     date_naissance: "Date de naissance",
     lieu_naissance: "Lieu de naissance",

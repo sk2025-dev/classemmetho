@@ -10,6 +10,7 @@ use App\Models\ActeLiturgiquePieceJointe;
 use App\Models\Classe;
 use App\Models\User;
 use App\Services\ActeLiturgiqueService;
+use App\Services\ProgrammeObsequesService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -19,7 +20,10 @@ use Inertia\Inertia;
 
 class LiturgieController extends Controller
 {
-    public function __construct(private ActeLiturgiqueService $service) {}
+    public function __construct(
+        private ActeLiturgiqueService $service,
+        private ProgrammeObsequesService $programme,
+    ) {}
 
     public function index(Request $request)
     {
@@ -491,6 +495,64 @@ class LiturgieController extends Controller
         ]);
     }
 
+    /**
+     * Enregistre / met à jour le programme d'obsèques structuré d'une annonce
+     * de décès. Possible tant que le conducteur ne l'a pas clôturé.
+     */
+    public function updateProgramme(Request $request, int $id)
+    {
+        $user = Auth::user();
+        $acte = ActeLiturgique::with(['membre', 'classe', 'historiques.acteur'])->findOrFail($id);
+
+        $isOwner = (int) $acte->created_by === (int) $user->id;
+        $isFamilyMember = $acte->membre_id
+            && User::where('id', $acte->membre_id)
+                ->where('family_id', $user->family_id)
+                ->exists();
+
+        if (!$isOwner && !$isFamilyMember) {
+            abort(403, 'Acces non autorise a cette demande.');
+        }
+
+        if (strtolower((string) $acte->type_acte) !== 'deces') {
+            return response()->json([
+                'success' => false,
+                'message' => "Le programme d'obsèques concerne uniquement les déclarations de décès.",
+            ], 422);
+        }
+
+        if ($acte->programmeEstClos()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le programme a été clôturé par le conducteur et ne peut plus être modifié.',
+            ], 422);
+        }
+
+        if (in_array($acte->statut, ProgrammeObsequesService::STATUTS_ACTE_BLOQUANTS, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cette demande ne peut plus être modifiée.',
+            ], 422);
+        }
+
+        $validated = $request->validate(
+            array_merge(
+                ['programme_evenements' => ['present', 'array']],
+                $this->programme->rules('programme_evenements'),
+            ),
+            $this->programme->messages('programme_evenements'),
+        );
+
+        $acte = $this->programme->apply($acte, $validated['programme_evenements'] ?? []);
+        $acte->programme_est_clos = $acte->programmeEstClos();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Programme d'obsèques enregistré.",
+            'acte' => $acte,
+        ]);
+    }
+
     public function fiche(int $id)
     {
         $user = Auth::user();
@@ -669,6 +731,9 @@ class LiturgieController extends Controller
                     $type === 'mariage'
                     && in_array($acte->statut, ['VALIDEE', 'PUBLIEE'], true)
                     && !in_array($ceremonyStatut, $blockedStatuses, true);
+
+                $acte->programme_est_clos =
+                    strtoupper((string) ($details['programme_statut'] ?? 'OUVERT')) === 'CLOS';
 
                 return $acte;
             });

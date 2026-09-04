@@ -8,6 +8,7 @@ use App\Http\Requests\ActesLiturgiques\TransitionActeLiturgiqueRequest;
 use App\Models\ActeLiturgique;
 use App\Models\User;
 use App\Services\ActeLiturgiqueService;
+use App\Services\ProgrammeObsequesService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -20,7 +21,10 @@ use Inertia\Inertia;
 
 class LiturgieController extends Controller
 {
-    public function __construct(private ActeLiturgiqueService $service) {}
+    public function __construct(
+        private ActeLiturgiqueService $service,
+        private ProgrammeObsequesService $programme,
+    ) {}
 
     public function index(Request $request)
     {
@@ -40,6 +44,7 @@ class LiturgieController extends Controller
         $conducteurId = $user->id;
         $actes = $query->get()->map(function (ActeLiturgique $acte) use ($conducteurId) {
             $acte->demandeur_is_conducteur = $acte->created_by === $conducteurId;
+            $acte->programme_est_clos = strtoupper((string) (($acte->details['programme_statut'] ?? 'OUVERT'))) === 'CLOS';
             return $acte;
         });
 
@@ -185,6 +190,101 @@ class LiturgieController extends Controller
             'message' => 'Statut mis à jour.',
             'acte' => $updated,
         ]);
+    }
+
+    /**
+     * Le conducteur (ou le président des conducteurs via son propre contrôleur)
+     * corrige / complète le programme d'obsèques d'une annonce de décès.
+     */
+    public function updateProgramme(Request $request, int $id)
+    {
+        $user = Auth::user();
+        $acte = $this->findDecesActeForConducteur($user, $id);
+
+        if ($acte->programmeEstClos()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le programme est clôturé. Ré-ouvrez-le pour le modifier.',
+            ], 422);
+        }
+
+        if (in_array($acte->statut, ProgrammeObsequesService::STATUTS_ACTE_BLOQUANTS, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cette demande ne peut plus être modifiée.',
+            ], 422);
+        }
+
+        $validated = $request->validate(
+            array_merge(
+                ['programme_evenements' => ['present', 'array']],
+                $this->programme->rules('programme_evenements'),
+            ),
+            $this->programme->messages('programme_evenements'),
+        );
+
+        $acte = $this->programme->apply($acte, $validated['programme_evenements'] ?? []);
+        $acte->programme_est_clos = $acte->programmeEstClos();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Programme d'obsèques enregistré.",
+            'acte' => $acte,
+        ]);
+    }
+
+    /**
+     * Clôture ou ré-ouvre le programme d'obsèques d'une annonce de décès.
+     */
+    public function clotureProgramme(Request $request, int $id)
+    {
+        $user = Auth::user();
+
+        $payload = Validator::make($request->all(), [
+            'action' => ['required', 'in:CLOTURER,REOUVRIR'],
+            'commentaire' => ['nullable', 'string', 'max:1000'],
+        ])->validate();
+
+        $acte = $this->findDecesActeForConducteur($user, $id);
+
+        $dejaClos = $acte->programmeEstClos();
+        if ($payload['action'] === 'CLOTURER' && $dejaClos) {
+            return response()->json(['success' => false, 'message' => 'Le programme est déjà clôturé.'], 422);
+        }
+        if ($payload['action'] === 'REOUVRIR' && !$dejaClos) {
+            return response()->json(['success' => false, 'message' => "Le programme n'est pas clôturé."], 422);
+        }
+
+        $acte = $this->programme->cloture($acte, $user, $payload['action'], $payload['commentaire'] ?? null);
+        $acte->programme_est_clos = $acte->programmeEstClos();
+
+        return response()->json([
+            'success' => true,
+            'message' => $payload['action'] === 'CLOTURER'
+                ? "Programme d'obsèques clôturé."
+                : "Programme d'obsèques ré-ouvert.",
+            'acte' => $acte,
+        ]);
+    }
+
+    private function findDecesActeForConducteur(User $user, int $id): ActeLiturgique
+    {
+        $classIds = $user->getManagedClasses()->pluck('id')->toArray();
+
+        $acte = ActeLiturgique::with(['membre', 'classe', 'historiques.acteur'])
+            ->where(function ($q) use ($classIds) {
+                $q->whereIn('classe_id', $classIds)->orWhereNull('classe_id');
+            })
+            ->findOrFail($id);
+
+        if (strtolower((string) $acte->type_acte) !== 'deces') {
+            abort(response()->json([
+                'success' => false,
+                'message' => "Le programme d'obsèques concerne uniquement les déclarations de décès.",
+            ], 422));
+        }
+
+        return $acte;
     }
 
     public function decisionCeremonie(Request $request, int $id)

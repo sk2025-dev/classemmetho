@@ -47,6 +47,8 @@ $dateAnnonceTexte = $_dateCarbon
     : '—';
 $lieuAnnonce  = $details['lieu'] ?? $details['lieu_deces'] ?? '—';
 $heureCulte   = $details['heure_culte'] ?? null;
+$programmeEvenements = (array) ($details['programme_evenements'] ?? []);
+$programmeClos = strtoupper((string) ($details['programme_statut'] ?? 'OUVERT')) === 'CLOS';
 
 $nomConcerne       = $details['nom_concerne'] ?? $details['nom_defunt'] ?? $details['conjoint_2'] ?? $nomComplet;
 $nomPartenaire     = trim((string) ($details['conjoint_1'] ?? $details['partenaire'] ?? '')) ?: '—';
@@ -487,7 +489,12 @@ $checkboxesIntercession = [
         @if($heureCulte) à {{ $heureCulte }} @endif
         @if($lieuAnnonce !== '—') — {{ $lieuAnnonce }} @endif
     </div>
-    
+
+    @include('pdf.partials._programme-obseques', [
+        'programmeEvenements' => $programmeEvenements,
+        'programmeClos' => $programmeClos,
+    ])
+
     {{-- ══ VERSETS D'OUVERTURE ══ --}}
     <div class="verset-block">
         « O toi qui écoutes la prière !<br>

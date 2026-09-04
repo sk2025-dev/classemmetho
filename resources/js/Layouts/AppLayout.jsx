@@ -11,6 +11,7 @@ export default function AppLayout({ children }) {
             <WelcomeLoader
                 userName={window.welcomeUserName}
                 redirectUrl={window.welcomeRedirectUrl || '/dashboard'}
+                photoUrl={window.welcomePhotoUrl || null}
             />
         )
     }

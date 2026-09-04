@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { router } from "@inertiajs/react";
 import axios from "axios";
+import {
+    formatProgrammeRow,
+    programmeStatutLabel,
+} from "../../Liturgie/forms/programmeObseques";
 import { withBasePath } from "../../../Utils/urlHelper";
 import TabHistoriqueActes from "./TabHistoriqueActes";
 import {
@@ -78,6 +82,30 @@ function ActeCard({ acte, onValidate, onRefuse, isProcessing, selected, onToggle
     const [showRefuseForm, setShowRefuseForm] = useState(false);
     const [commentaireValidation, setCommentaireValidation] = useState("");
     const [showValidateForm, setShowValidateForm] = useState(false);
+    const [programmeBusy, setProgrammeBusy] = useState(false);
+
+    const toggleProgrammeCloture = async () => {
+        const clos =
+            String(acte.details?.programme_statut || "OUVERT").toUpperCase() === "CLOS";
+        try {
+            setProgrammeBusy(true);
+            await axios.post(
+                withBasePath(
+                    "",
+                    `/president-conducteurs/liturgie/${acte.id}/programme/cloture`,
+                ),
+                { action: clos ? "REOUVRIR" : "CLOTURER" },
+            );
+            router.reload({ only: ["actes"] });
+        } catch (e) {
+            alert(
+                e?.response?.data?.message ||
+                    "Échec de l'opération sur le programme d'obsèques.",
+            );
+        } finally {
+            setProgrammeBusy(false);
+        }
+    };
 
     const type = (acte.type_acte || "").toLowerCase();
     const col = typeColor(type);
@@ -175,7 +203,12 @@ function ActeCard({ acte, onValidate, onRefuse, isProcessing, selected, onToggle
                     </div>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                         {Object.entries(acte.details)
-                            .filter(([k]) => !["fiche_conducteur_envoye", "fiche_pasteur_envoyee"].includes(k))
+                            .filter(([k]) => ![
+                                "fiche_conducteur_envoye",
+                                "fiche_pasteur_envoyee",
+                                "programme_evenements",
+                                "programme_clos_par_id",
+                            ].includes(k))
                             .slice(0, 10)
                             .map(([k, v]) => (
                                 <div key={k} className="flex gap-1">
@@ -186,6 +219,39 @@ function ActeCard({ acte, onValidate, onRefuse, isProcessing, selected, onToggle
                                 </div>
                             ))}
                     </div>
+
+                    {type === "deces" &&
+                        Array.isArray(acte.details.programme_evenements) &&
+                        acte.details.programme_evenements.length > 0 && (
+                            <div className="mt-3 border-t border-gray-200 pt-2">
+                                <div className="mb-1 flex items-center justify-between">
+                                    <span className="font-semibold text-gray-700">
+                                        Programme d'obsèques —{" "}
+                                        {programmeStatutLabel(acte.details.programme_statut)}
+                                        {acte.details.programme_clos_par_nom
+                                            ? ` (par ${acte.details.programme_clos_par_nom})`
+                                            : ""}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        disabled={programmeBusy}
+                                        onClick={toggleProgrammeCloture}
+                                        className="rounded-lg border border-purple-300 px-2 py-1 text-[11px] font-semibold text-purple-700 hover:bg-purple-50 disabled:opacity-50"
+                                    >
+                                        {String(acte.details.programme_statut || "OUVERT").toUpperCase() === "CLOS"
+                                            ? "Ré-ouvrir"
+                                            : "Clôturer"}
+                                    </button>
+                                </div>
+                                <ul className="list-disc pl-4">
+                                    {acte.details.programme_evenements.map((ev, i) => (
+                                        <li key={i} className="text-gray-700">
+                                            {formatProgrammeRow(ev)}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                 </div>
             )}
 

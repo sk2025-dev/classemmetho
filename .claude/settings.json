@@ -31,7 +31,12 @@
       "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root metho1_jubile -e \"SELECT id, code_membre, nom, photo_path FROM users WHERE photo_path LIKE 'photos/users/legacy_%';\")",
       "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root metho1_jubile -e \"UPDATE users SET photo_path = NULL WHERE photo_path LIKE 'photos/users/legacy_%';\")",
       "Bash(rm -f storage/app/public/photos/users/legacy_*.jpg storage/app/private/legacy-photos-review.csv)",
-      "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root metho1_jubile -e \"SELECT COUNT\\(*\\) restant FROM users WHERE photo_path LIKE 'photos/users/legacy_%';\")"
+      "Bash(/Applications/XAMPP/xamppfiles/bin/mysql -u root metho1_jubile -e \"SELECT COUNT\\(*\\) restant FROM users WHERE photo_path LIKE 'photos/users/legacy_%';\")",
+      "Bash(php -l app/Http/Controllers/Auth/LoginController.php)",
+      "Bash(php -l app/Http/Requests/ActesLiturgiques/StoreActeLiturgiqueRequest.php)",
+      "Bash(php -l app/Services/ProgrammeObsequesService.php)",
+      "Bash(php -l app/Models/ActeLiturgique.php)",
+      "Bash(grep -n \"modal === \\\\\"ceremony\\\\\" && selected\\\\|{modal === \\\\\"detail\\\\\"\\\\|<FichesMariageModal\\\\|closeModal}\\\\s*$\\\\|^            {modal\" resources/js/Pages/Conducteur/Liturgie/Index.jsx)"
     ]
   }
 }

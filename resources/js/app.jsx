@@ -95,6 +95,9 @@ if (!window.welcomeUserName) {
 if (!window.welcomeRedirectUrl) {
     window.welcomeRedirectUrl = "/dashboard";
 }
+if (!window.welcomePhotoUrl) {
+    window.welcomePhotoUrl = null;
+}
 if (!window.isWelcomeLoaderActive) {
     window.isWelcomeLoaderActive = false;
 }

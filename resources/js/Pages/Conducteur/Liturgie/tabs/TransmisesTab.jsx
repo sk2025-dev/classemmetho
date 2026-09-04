@@ -1,5 +1,9 @@
 ﻿import React, { useState } from "react";
 import { withBasePath } from "../../../../Utils/urlHelper";
+import {
+    formatProgrammeRow,
+    programmeStatutLabel,
+} from "../../../Liturgie/forms/programmeObseques";
 
 const BADGE_CONFIG = {
     grace:  { label: 'Action de grâce',       emoji: '🙌', bg: '#fef3c7', color: '#d97706' },
@@ -115,6 +119,23 @@ function MiniDetail({ item, isAnn, onClose, ANNONCE_TYPES }) {
                             <Row label="Église du conjoint" value={item.details.epoux_eglise} />
                         )}
                     </>)}
+
+                    {/* ── DÉCÈS : programme d'obsèques ── */}
+                    {!isAnn && item.type_acte === 'deces' &&
+                        Array.isArray(item.details?.programme_evenements) &&
+                        item.details.programme_evenements.length > 0 && (
+                        <div style={{ marginTop:4 }}>
+                            <div style={{ fontSize:11, color:'#64748b', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.06em' }}>
+                                Programme d'obsèques — {programmeStatutLabel(item.details?.programme_statut)}
+                                {item.details?.programme_clos_par_nom ? ` (par ${item.details.programme_clos_par_nom})` : ''}
+                            </div>
+                            {item.details.programme_evenements.map((ev, i) => (
+                                <div key={i} style={{ fontSize:13, color:'#334155', padding:'2px 0' }}>
+                                    • {formatProgrammeRow(ev)}
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {/* ── BAPTÊME ── */}
                     {!isAnn && item.type_acte === 'bapteme' && (<>
