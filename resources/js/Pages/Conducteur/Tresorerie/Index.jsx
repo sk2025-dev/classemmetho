@@ -1317,7 +1317,17 @@ export default function ConducteurTresorerie({
         router.get(
             withBasePath("", "/conducteur/tresorerie"),
             { fimeco_annee: annee },
-            { preserveState: true, preserveScroll: true, only: ["fimecoSuivi", "fimecoAnnee", "fimecoAnneesDisponibles"] },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                only: [
+                    "fimecoSuivi",
+                    "fimecoAnnee",
+                    "fimecoAnneesDisponibles",
+                    "fimecoKpi",
+                    "fimecoClassement",
+                ],
+            },
         );
     };
 
