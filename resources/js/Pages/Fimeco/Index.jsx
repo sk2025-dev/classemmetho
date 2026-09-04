@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import axios from "axios";
 import {
@@ -198,7 +198,7 @@ export default function FimecoIndex({
     stats = {},
     familles = [],
     classes = [],
-    versements = [],
+    versements = { data: [], current_page: 1, last_page: 1, total: 0, per_page: 20 },
     optionsFamilles = [],
     cotisationsFimeco = [],
     importLogs = [],
@@ -228,9 +228,8 @@ export default function FimecoIndex({
     const [classesView, setClassesView] = useState("cards");
     const [classesSort, setClassesSort] = useState("classe");
     const [versementSearch, setVersementSearch] = useState("");
-    const [versementClasse, setVersementClasse] = useState("");
+    const [versementClasseId, setVersementClasseId] = useState("");
     const [versementMode, setVersementMode] = useState("");
-    const [versementPage, setVersementPage] = useState(1);
     const [subscriptionForm, setSubscriptionForm] = useState({
         family_id: "",
         montant_souscrit: "",
@@ -337,52 +336,58 @@ export default function FimecoIndex({
     const totalPages = Math.max(1, Math.ceil(filteredFamilies.length / perPage));
     const visibleFamilies = filteredFamilies.slice((page - 1) * perPage, page * perPage);
 
-    const versementClasseOptions = useMemo(() => {
-        const set = new Set(
-            versements.map((payment) => payment.classe).filter(Boolean),
+    const versementRows = versements.data || [];
+    const isFirstVersementRender = useRef(true);
+
+    const reloadVersements = (overrides = {}) => {
+        router.get(
+            withBasePath("", "/fimeco"),
+            {
+                annee,
+                versement_q: versementSearch,
+                versement_classe_id: versementClasseId,
+                versement_mode: versementMode,
+                ...overrides,
+            },
+            { preserveState: true, preserveScroll: true, only: ["versements"] },
         );
-        return [...set]
-            .sort((a, b) => a.localeCompare(b, "fr"))
-            .map((label) => ({ value: label, label }));
-    }, [versements]);
+    };
 
-    const filteredVersements = useMemo(() => {
-        const query = versementSearch.trim().toLowerCase();
-        return versements.filter((payment) => {
-            const matchesSearch =
-                !query ||
-                [
-                    payment.famille,
-                    payment.code_famille,
-                    payment.classe,
-                    payment.reference,
-                    payment.note,
-                    payment.date,
-                    String(payment.mode || "").replace(/_/g, " "),
-                ]
-                    .some((field) => String(field || "").toLowerCase().includes(query));
-            const matchesClasse = !versementClasse || payment.classe === versementClasse;
-            const matchesMode = !versementMode || payment.mode === versementMode;
-            return matchesSearch && matchesClasse && matchesMode;
-        });
-    }, [versements, versementSearch, versementClasse, versementMode]);
+    // Recherche texte : requête différée (debounce) pour éviter une requête par frappe.
+    useEffect(() => {
+        if (isFirstVersementRender.current) {
+            isFirstVersementRender.current = false;
+            return;
+        }
+        const handle = window.setTimeout(() => {
+            reloadVersements({ versement_page: 1 });
+        }, 350);
+        return () => window.clearTimeout(handle);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [versementSearch]);
 
-    const versementPerPage = 20;
-    const versementTotalPages = Math.max(
-        1,
-        Math.ceil(filteredVersements.length / versementPerPage),
-    );
-    const versementSafePage = Math.min(versementPage, versementTotalPages);
-    const visibleVersements = filteredVersements.slice(
-        (versementSafePage - 1) * versementPerPage,
-        versementSafePage * versementPerPage,
-    );
-    const versementFilterChange = (setter) => (event) => {
-        setter(event.target.value);
-        setVersementPage(1);
+    const handleVersementSearchChange = (event) => setVersementSearch(event.target.value);
+
+    const handleVersementClasseChange = (event) => {
+        const value = event.target.value;
+        setVersementClasseId(value);
+        reloadVersements({ versement_classe_id: value, versement_page: 1 });
+    };
+
+    const handleVersementModeChange = (event) => {
+        const value = event.target.value;
+        setVersementMode(value);
+        reloadVersements({ versement_mode: value, versement_page: 1 });
+    };
+
+    const goToVersementPage = (nextPage) => {
+        reloadVersements({ versement_page: nextPage });
     };
 
     const changeYear = (value) => {
+        setVersementSearch("");
+        setVersementClasseId("");
+        setVersementMode("");
         router.get(
             withBasePath("", "/fimeco"),
             { annee: value },
@@ -454,20 +459,35 @@ export default function FimecoIndex({
         }
     };
 
-    const viewFamilyDetails = async (family) => {
-        setFamilyDetails({ ...family, versements: null });
+    const loadFamilyVersements = async (familyId, page = 1) => {
         setFamilyDetailsLoading(true);
         try {
             const response = await axios.get(
-                withBasePath("", `/fimeco/familles/${family.family_id}/versements`),
-                { params: { annee } },
+                withBasePath("", `/fimeco/familles/${familyId}/versements`),
+                { params: { annee, page } },
             );
             setFamilyDetails(response.data);
         } catch (error) {
-            setFamilyDetails((current) => (current ? { ...current, versements: [], loadError: true } : current));
+            setFamilyDetails((current) =>
+                current
+                    ? {
+                          ...current,
+                          versements: { data: [], current_page: 1, last_page: 1, total: 0 },
+                          loadError: true,
+                      }
+                    : current,
+            );
         } finally {
             setFamilyDetailsLoading(false);
         }
+    };
+    const viewFamilyDetails = (family) => {
+        setFamilyDetails({ ...family, versements: null });
+        loadFamilyVersements(family.family_id, 1);
+    };
+    const goToFamilyVersementsPage = (nextPage) => {
+        if (!familyDetails) return;
+        loadFamilyVersements(familyDetails.family_id, nextPage);
     };
     const closeFamilyDetails = () => setFamilyDetails(null);
 
@@ -1063,30 +1083,31 @@ export default function FimecoIndex({
                         <div className="border-b border-slate-200 p-5">
                             <h2 className="font-black text-slate-900">Versements de {annee}</h2>
                             <p className="text-xs text-slate-500">
-                                {filteredVersements.length} résultat(s) sur {versements.length} versement(s) confirmé(s) (150 plus récents).
+                                {versements.total || 0} versement(s) confirmé(s)
+                                {(versementSearch || versementClasseId || versementMode) ? " correspondant aux filtres." : "."}
                             </p>
                             <div className="mt-4 grid gap-3 md:grid-cols-3">
                                 <div className="relative">
                                     <Search className="absolute left-3 top-3 text-slate-400" size={17} />
                                     <input
                                         value={versementSearch}
-                                        onChange={versementFilterChange(setVersementSearch)}
+                                        onChange={handleVersementSearchChange}
                                         className={`${inputClass} pl-10`}
                                         placeholder="Famille, code, référence, note…"
                                     />
                                 </div>
                                 <Select2Single
                                     name="versement_classe_filter"
-                                    value={versementClasse}
-                                    onChange={versementFilterChange(setVersementClasse)}
-                                    options={versementClasseOptions}
+                                    value={versementClasseId}
+                                    onChange={handleVersementClasseChange}
+                                    options={classeFilterOptions}
                                     placeholder="Toutes les classes"
                                     noOptionsMessage="Aucune classe"
                                 />
                                 <Select2Single
                                     name="versement_mode_filter"
                                     value={versementMode}
-                                    onChange={versementFilterChange(setVersementMode)}
+                                    onChange={handleVersementModeChange}
                                     options={MODE_OPTIONS}
                                     placeholder="Tous les modes"
                                 />
@@ -1096,17 +1117,17 @@ export default function FimecoIndex({
                             <table className="min-w-full divide-y divide-slate-200 text-sm">
                                 <thead className="bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3">Date</th><th className="px-5 py-3">Famille</th><th className="px-5 py-3">Classe</th><th className="px-5 py-3">Mode</th><th className="px-5 py-3 text-right">Montant</th><th className="px-5 py-3">Référence</th></tr></thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {visibleVersements.map((payment) => <tr key={payment.id}><td className="px-5 py-3">{payment.date || "-"}</td><td className="px-5 py-3"><div className="font-bold text-slate-900">{payment.famille}</div><div className="text-xs text-slate-500">{payment.code_famille || ""}</div></td><td className="px-5 py-3 text-slate-600">{payment.classe}</td><td className="px-5 py-3 text-slate-600">{String(payment.mode || "-").replaceAll("_", " ")}</td><td className="px-5 py-3 text-right font-black text-emerald-700">{formatAmount(payment.montant)}</td><td className="px-5 py-3 font-mono text-xs text-slate-500">{payment.reference || "-"}</td></tr>)}
-                                    {visibleVersements.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-500">{versements.length === 0 ? "Aucun versement confirmé pour cet exercice." : "Aucun versement ne correspond aux filtres."}</td></tr>}
+                                    {versementRows.map((payment) => <tr key={payment.id}><td className="px-5 py-3">{payment.date || "-"}</td><td className="px-5 py-3"><div className="font-bold text-slate-900">{payment.famille}</div><div className="text-xs text-slate-500">{payment.code_famille || ""}</div></td><td className="px-5 py-3 text-slate-600">{payment.classe}</td><td className="px-5 py-3 text-slate-600">{String(payment.mode || "-").replaceAll("_", " ")}</td><td className="px-5 py-3 text-right font-black text-emerald-700">{formatAmount(payment.montant)}</td><td className="px-5 py-3 font-mono text-xs text-slate-500">{payment.reference || "-"}</td></tr>)}
+                                    {versementRows.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-500">{(versementSearch || versementClasseId || versementMode) ? "Aucun versement ne correspond aux filtres." : "Aucun versement confirmé pour cet exercice."}</td></tr>}
                                 </tbody>
                             </table>
                         </div>
-                        {versementTotalPages > 1 && (
+                        {versements.last_page > 1 && (
                             <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 text-sm">
-                                <span className="text-slate-500">Page {versementSafePage} sur {versementTotalPages}</span>
+                                <span className="text-slate-500">Page {versements.current_page} sur {versements.last_page}</span>
                                 <div className="flex gap-2">
-                                    <button type="button" disabled={versementSafePage === 1} onClick={() => setVersementPage(Math.max(1, versementSafePage - 1))} className="rounded-lg border border-slate-300 px-3 py-1.5 font-semibold disabled:opacity-40">Précédent</button>
-                                    <button type="button" disabled={versementSafePage === versementTotalPages} onClick={() => setVersementPage(Math.min(versementTotalPages, versementSafePage + 1))} className="rounded-lg border border-slate-300 px-3 py-1.5 font-semibold disabled:opacity-40">Suivant</button>
+                                    <button type="button" disabled={versements.current_page <= 1} onClick={() => goToVersementPage(versements.current_page - 1)} className="rounded-lg border border-slate-300 px-3 py-1.5 font-semibold disabled:opacity-40">Précédent</button>
+                                    <button type="button" disabled={versements.current_page >= versements.last_page} onClick={() => goToVersementPage(versements.current_page + 1)} className="rounded-lg border border-slate-300 px-3 py-1.5 font-semibold disabled:opacity-40">Suivant</button>
                                 </div>
                             </div>
                         )}
@@ -1158,27 +1179,55 @@ export default function FimecoIndex({
                             {!familyDetailsLoading && familyDetails.loadError && (
                                 <p className="py-4 text-sm text-red-600">Impossible de charger les versements de cette famille.</p>
                             )}
-                            {!familyDetailsLoading && !familyDetails.loadError && Array.isArray(familyDetails.versements) && (
-                                <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-100">
-                                    {familyDetails.versements.length === 0 && (
-                                        <p className="p-4 text-center text-sm text-slate-400">
-                                            Aucun versement enregistré pour cet exercice.
-                                        </p>
-                                    )}
-                                    {familyDetails.versements.map((v) => (
-                                        <div key={v.id} className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-2.5 text-sm last:border-0">
-                                            <div>
-                                                <p className="font-semibold text-slate-800">{v.date || "-"}</p>
-                                                <p className="text-xs text-slate-500">
-                                                    {String(v.mode || "-").replaceAll("_", " ")}
-                                                    {v.reference ? ` · ${v.reference}` : ""}
-                                                </p>
-                                                {v.note && <p className="text-xs italic text-slate-400">{v.note}</p>}
+                            {!familyDetailsLoading && !familyDetails.loadError && familyDetails.versements && (
+                                <>
+                                    <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-100">
+                                        {familyDetails.versements.data.length === 0 && (
+                                            <p className="p-4 text-center text-sm text-slate-400">
+                                                Aucun versement enregistré pour cet exercice.
+                                            </p>
+                                        )}
+                                        {familyDetails.versements.data.map((v) => (
+                                            <div key={v.id} className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-2.5 text-sm last:border-0">
+                                                <div>
+                                                    <p className="font-semibold text-slate-800">{v.date || "-"}</p>
+                                                    <p className="text-xs text-slate-500">
+                                                        {String(v.mode || "-").replaceAll("_", " ")}
+                                                        {v.reference ? ` · ${v.reference}` : ""}
+                                                    </p>
+                                                    {v.note && <p className="text-xs italic text-slate-400">{v.note}</p>}
+                                                </div>
+                                                <span className="shrink-0 font-black text-emerald-700">{formatAmount(v.montant)}</span>
                                             </div>
-                                            <span className="shrink-0 font-black text-emerald-700">{formatAmount(v.montant)}</span>
+                                        ))}
+                                    </div>
+                                    {familyDetails.versements.last_page > 1 && (
+                                        <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                                            <span>
+                                                Page {familyDetails.versements.current_page} sur {familyDetails.versements.last_page}
+                                                {" "}({familyDetails.versements.total} versement(s))
+                                            </span>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    disabled={familyDetails.versements.current_page <= 1}
+                                                    onClick={() => goToFamilyVersementsPage(familyDetails.versements.current_page - 1)}
+                                                    className="rounded-lg border border-slate-300 px-2.5 py-1 font-semibold disabled:opacity-40"
+                                                >
+                                                    Précédent
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={familyDetails.versements.current_page >= familyDetails.versements.last_page}
+                                                    onClick={() => goToFamilyVersementsPage(familyDetails.versements.current_page + 1)}
+                                                    className="rounded-lg border border-slate-300 px-2.5 py-1 font-semibold disabled:opacity-40"
+                                                >
+                                                    Suivant
+                                                </button>
+                                            </div>
                                         </div>
-                                    ))}
-                                </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>

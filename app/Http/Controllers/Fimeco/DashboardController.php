@@ -22,6 +22,9 @@ class DashboardController extends Controller
 {
     private const MIN_ANNEE = 1900;
     private const MAX_ANNEE = 2100;
+    private const VERSEMENTS_PER_PAGE = 20;
+    private const FAMILY_VERSEMENTS_PER_PAGE = 10;
+    private const MODES_PAIEMENT = ['MOBILE_MONEY', 'ESPECES', 'VIREMENT', 'CHEQUE'];
 
     public function index(Request $request): Response
     {
@@ -65,16 +68,12 @@ class DashboardController extends Controller
             ->get(['family_id', 'montant_souscrit', 'created_by', 'updated_at'])
             ->keyBy('family_id');
 
-        $payments = $this->countedPaymentsQuery($fimecoCotisationIds->all())
+        $paidByFamily = $this->countedPaymentsQuery($fimecoCotisationIds->all())
             ->where('year', $year)
-            ->with(['family:id,nom,code_famille,classe_id', 'family.classe:id,nom', 'cotisation:id,nom'])
-            ->orderByDesc('date_paiement')
-            ->orderByDesc('id')
-            ->get();
-
-        $paidByFamily = $payments
+            ->selectRaw('family_id, SUM(montant) as total')
             ->groupBy('family_id')
-            ->map(fn ($rows) => (int) $rows->sum('montant'));
+            ->pluck('total', 'family_id')
+            ->map(fn ($value) => (int) $value);
 
         $rows = $families->map(function (Family $family) use ($subscriptions, $paidByFamily) {
             $subscription = $subscriptions->get($family->id);
@@ -132,6 +131,50 @@ class DashboardController extends Controller
             ->whereNull('year')
             ->count();
 
+        $versementSearch = trim((string) $request->string('versement_q'));
+        $versementClasseRaw = $request->string('versement_classe_id')->toString();
+        $versementMode = $request->string('versement_mode')->toString();
+        $versementMode = in_array($versementMode, self::MODES_PAIEMENT, true) ? $versementMode : null;
+
+        $versementsPaginator = $this->countedPaymentsQuery($fimecoCotisationIds->all())
+            ->where('year', $year)
+            ->with(['family:id,nom,code_famille,classe_id', 'family.classe:id,nom', 'cotisation:id,nom'])
+            ->when($versementSearch !== '', function (Builder $query) use ($versementSearch) {
+                $query->where(function (Builder $inner) use ($versementSearch) {
+                    $inner->where('reference_recu', 'like', "%{$versementSearch}%")
+                        ->orWhere('note', 'like', "%{$versementSearch}%")
+                        ->orWhereHas('family', function (Builder $familyQuery) use ($versementSearch) {
+                            $familyQuery->where('nom', 'like', "%{$versementSearch}%")
+                                ->orWhere('code_famille', 'like', "%{$versementSearch}%");
+                        });
+                });
+            })
+            ->when($versementClasseRaw !== '', function (Builder $query) use ($versementClasseRaw) {
+                $query->whereHas('family', function (Builder $familyQuery) use ($versementClasseRaw) {
+                    if ($versementClasseRaw === 'none') {
+                        $familyQuery->whereNull('classe_id');
+                    } else {
+                        $familyQuery->where('classe_id', (int) $versementClasseRaw);
+                    }
+                });
+            })
+            ->when($versementMode, fn (Builder $query) => $query->where('mode_paiement', $versementMode))
+            ->orderByDesc('date_paiement')
+            ->orderByDesc('id')
+            ->paginate(self::VERSEMENTS_PER_PAGE, ['*'], 'versement_page')
+            ->through(fn (Paiement $payment) => [
+                'id' => $payment->id,
+                'date' => optional($payment->date_paiement)->format('d/m/Y'),
+                'famille' => $payment->family?->nom ?? 'Famille supprimée',
+                'code_famille' => $payment->family?->code_famille,
+                'classe' => $payment->family?->classe?->nom ?? 'Sans classe',
+                'cotisation' => $payment->cotisation?->nom ?? 'FIMECO',
+                'montant' => (int) $payment->montant,
+                'mode' => $payment->mode_paiement,
+                'reference' => $payment->reference_recu,
+                'note' => $payment->note,
+            ]);
+
         return Inertia::render('Fimeco/Index', [
             'importLogs' => $this->importLogs(),
             'available' => true,
@@ -151,18 +194,13 @@ class DashboardController extends Controller
             ],
             'familles' => $rows,
             'classes' => $classes,
-            'versements' => $payments->take(150)->map(fn (Paiement $payment) => [
-                'id' => $payment->id,
-                'date' => optional($payment->date_paiement)->format('d/m/Y'),
-                'famille' => $payment->family?->nom ?? 'Famille supprimée',
-                'code_famille' => $payment->family?->code_famille,
-                'classe' => $payment->family?->classe?->nom ?? 'Sans classe',
-                'cotisation' => $payment->cotisation?->nom ?? 'FIMECO',
-                'montant' => (int) $payment->montant,
-                'mode' => $payment->mode_paiement,
-                'reference' => $payment->reference_recu,
-                'note' => $payment->note,
-            ])->values(),
+            'versements' => [
+                'data' => $versementsPaginator->items(),
+                'current_page' => $versementsPaginator->currentPage(),
+                'last_page' => $versementsPaginator->lastPage(),
+                'total' => $versementsPaginator->total(),
+                'per_page' => $versementsPaginator->perPage(),
+            ],
             'optionsFamilles' => $families->map(fn (Family $family) => [
                 'id' => $family->id,
                 'label' => trim(($family->code_famille ? $family->code_famille . ' · ' : '') . ($family->nom ?: 'Famille sans nom')),
@@ -291,14 +329,19 @@ class DashboardController extends Controller
             ->where('annee', $annee)
             ->value('montant_souscrit');
 
-        $versements = $this->countedPaymentsQuery($fimecoCotisationIds)
+        $montantPaye = (int) $this->countedPaymentsQuery($fimecoCotisationIds)
+            ->where('family_id', $family->id)
+            ->where('year', $annee)
+            ->sum('montant');
+
+        $versementsPaginator = $this->countedPaymentsQuery($fimecoCotisationIds)
             ->where('family_id', $family->id)
             ->where('year', $annee)
             ->with('cotisation:id,nom')
             ->orderByDesc('date_paiement')
             ->orderByDesc('id')
-            ->get()
-            ->map(fn (Paiement $payment) => [
+            ->paginate(self::FAMILY_VERSEMENTS_PER_PAGE, ['*'], 'page')
+            ->through(fn (Paiement $payment) => [
                 'id' => $payment->id,
                 'date' => optional($payment->date_paiement)->format('d/m/Y'),
                 'montant' => (int) $payment->montant,
@@ -306,11 +349,9 @@ class DashboardController extends Controller
                 'reference' => $payment->reference_recu,
                 'note' => $payment->note,
                 'cotisation' => $payment->cotisation?->nom ?? 'FIMECO',
-            ])
-            ->values();
+            ]);
 
         $montantSouscrit = (int) ($souscription ?? 0);
-        $montantPaye = (int) $versements->sum('montant');
 
         return response()->json([
             'family_id' => $family->id,
@@ -321,7 +362,13 @@ class DashboardController extends Controller
             'montant_souscrit' => $montantSouscrit,
             'montant_paye' => $montantPaye,
             'montant_restant' => max(0, $montantSouscrit - $montantPaye),
-            'versements' => $versements,
+            'versements' => [
+                'data' => $versementsPaginator->items(),
+                'current_page' => $versementsPaginator->currentPage(),
+                'last_page' => $versementsPaginator->lastPage(),
+                'total' => $versementsPaginator->total(),
+                'per_page' => $versementsPaginator->perPage(),
+            ],
         ]);
     }
 
@@ -430,7 +477,13 @@ class DashboardController extends Controller
             ],
             'familles' => [],
             'classes' => [],
-            'versements' => [],
+            'versements' => [
+                'data' => [],
+                'current_page' => 1,
+                'last_page' => 1,
+                'total' => 0,
+                'per_page' => self::VERSEMENTS_PER_PAGE,
+            ],
             'optionsFamilles' => [],
             'cotisationsFimeco' => [],
             'importLogs' => [],
