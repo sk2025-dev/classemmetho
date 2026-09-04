@@ -738,7 +738,10 @@ const MemberDetailsModal = ({
               <strong>Fonction:</strong> {member.fonction || "-"}
             </p>
             <p>
-              <strong>Relation:</strong> {member.relation || "-"}
+              <strong>Relation:</strong>{" "}
+              <span className={consentBlurClass(member)}>
+                {member.relation || "-"}
+              </span>
             </p>
           </div>
         </div>
@@ -1961,7 +1964,11 @@ const Annuaire = ({
                       <td className="text-center">
                         {member.baptise ? "Oui" : "Non"}
                       </td>
-                      <td className="text-center">{member.relation || "-"}</td>
+                      <td className="text-center">
+                        <span className={consentBlurClass(member)}>
+                          {member.relation || "-"}
+                        </span>
+                      </td>
                       <td className="text-center">
                         {member.premiereCommunion ? "Oui" : "Non"}
                       </td>

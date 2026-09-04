@@ -693,6 +693,7 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                             <InfoItem
                                 label="Relation"
                                 value={displayValue(member.relation)}
+                                blur={!!member.consentement_requis}
                             />
                             <InfoItem
                                 label="Code famille actuel"
@@ -3072,9 +3073,17 @@ const TabUtilisateurs = ({
                                                 </span>
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap">
-                                                {m.relation ||
-                                                    m.lien_parente ||
-                                                    "Non renseigné"}
+                                                <span
+                                                    className={
+                                                        m.consentement_requis
+                                                            ? "blur-sm select-none"
+                                                            : ""
+                                                    }
+                                                >
+                                                    {m.relation ||
+                                                        m.lien_parente ||
+                                                        "Non renseigné"}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
                                                 <span
