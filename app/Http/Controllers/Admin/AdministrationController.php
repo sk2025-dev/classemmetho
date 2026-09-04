@@ -236,12 +236,13 @@ class AdministrationController extends Controller
                 else if ($sacrements->dot_effectue) $statut_marital = 'Dote';
             }
 
-            // Consentement RGPD : mêmes règles que l'Annuaire — la liste reste
-            // entièrement visible (nom, codes, statut inclus), le flag
-            // `consentement_requis` indique au front quelles colonnes flouter
-            // visuellement (contact, naissance, CNI, adresse, photo) tant que
-            // ce n'est pas validé.
-            $consentementRequis = \App\Support\DataConsent::isEnabled() && !$m->aValideConsentement();
+            // Consentement RGPD : cette page est exclusive à l'administrateur
+            // (middleware role:admin) — il garde un accès complet, sans flou,
+            // quel que soit le consentement des familles. Le statut affiché
+            // (badge) reste néanmoins le vrai statut de chaque famille, pour
+            // savoir qui relancer.
+            $consentementNonValide = \App\Support\DataConsent::isEnabled() && !$m->aValideConsentement();
+            $consentementRequis = false;
             $photoUrl = $m->profile_photo_url ?: PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom);
 
             return [
@@ -262,10 +263,10 @@ class AdministrationController extends Controller
                 'consentement_requis' => $consentementRequis,
                 'consentement_statut' => !\App\Support\DataConsent::isEnabled()
                     ? null
-                    : ($consentementRequis ? 'en_attente' : 'valide'),
+                    : ($consentementNonValide ? 'en_attente' : 'valide'),
                 'consentement_statut_label' => !\App\Support\DataConsent::isEnabled()
                     ? null
-                    : ($consentementRequis ? 'Consentement en attente' : 'Consentement validé'),
+                    : ($consentementNonValide ? 'Consentement en attente' : 'Consentement validé'),
                 'role' => $m->role ?? 'utilisateur',
                 'is_secretariat' => (bool) $m->is_secretariat,
                 'statut' => $m->statut ?? ($m->status ?? null),
