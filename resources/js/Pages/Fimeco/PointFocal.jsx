@@ -310,7 +310,7 @@ export default function FimecoPointFocal({
                                 return (
                                     <div className="flex items-center gap-4 rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-4">
                                         <span
-                                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-black ${rangBadgeStyle(rang)}`}
+                                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-black ${rankBadgeStyle(rang)}`}
                                         >
                                             {rang ?? "–"}
                                         </span>
