@@ -138,6 +138,7 @@ class HandleInertiaRequests extends Middleware
                     'role' => $request->user()->role,
                     'is_secretariat' => (bool) $request->user()->is_secretariat,
                     'can_manage_fimeco' => FimecoAccess::canManage($request->user()),
+                    'can_manage_fimeco_classe' => FimecoAccess::isPointFocal($request->user()),
                     'identifier' => $request->user()->identifier,
                     'code_membre' => $request->user()->code_membre,
                     'classe' => $request->user()->classe ? [

@@ -5,6 +5,7 @@ use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\EnsureUtf8Encoding;
 use App\Http\Middleware\ApiUtf8Encoding;
 use App\Http\Middleware\EnsureFimecoResponsable;
+use App\Http\Middleware\EnsureFimecoPointFocal;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -39,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => CheckRole::class,
             'fimeco' => EnsureFimecoResponsable::class,
+            'fimeco.classe' => EnsureFimecoPointFocal::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

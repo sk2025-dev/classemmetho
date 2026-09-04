@@ -12,6 +12,7 @@ use App\Models\Fonction;
 use App\Models\NotificationFinanciere;
 use App\Models\Paiement;
 use App\Models\User;
+use App\Services\FimecoClasseSuiviService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,10 @@ use Inertia\Inertia;
 
 class TresorerieController extends Controller
 {
+    public function __construct(private FimecoClasseSuiviService $fimecoService)
+    {
+    }
+
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -374,85 +379,11 @@ class TresorerieController extends Controller
         // FIMECO : chaque famille souscrit un montant annuel (indépendant du montant fixe
         // d'une cotisation classique) ; les paiements restent enregistrés via la cotisation
         // "FIMECO" existante, mais la cible de suivi vient désormais de cette souscription.
+        // Calcul délégué à FimecoClasseSuiviService, partagé avec le Point Focal FIMECO.
         $fimecoAnnee = (int) ($request->integer('fimeco_annee') ?: now()->year);
-
-        $fimecoAnneesDisponibles = FimecoSouscription::query()
-            ->where(function ($query) use ($classeId) {
-                $query->whereNull('classe_id')
-                    ->orWhere('classe_id', $classeId);
-            })
-            ->distinct()
-            ->pluck('annee')
-            ->push(now()->year)
-            ->unique()
-            ->sortDesc()
-            ->values();
-
-        $fimecoSouscriptions = FimecoSouscription::query()
-            ->where('annee', $fimecoAnnee)
-            ->where(function ($query) use ($classeId) {
-                $query->whereNull('classe_id')
-                    ->orWhere('classe_id', $classeId);
-            })
-            ->pluck('montant_souscrit', 'family_id');
-
-        $fimeco = Cotisation::query()
-            ->whereRaw('LOWER(nom) LIKE ?', ['%fimeco%'])
-            ->where(function ($query) use ($classeId) {
-                $query->whereNull('classe_id')
-                    ->orWhere('classe_id', $classeId);
-            })
-            ->orderByDesc('id')
-            ->first();
-
-        $famillesClasse = Family::query()
-            ->where('classe_id', $classeId)
-            ->get(['id', 'nom', 'code_famille']);
-
-        $paiementsParFamilleFimeco = $fimeco
-            ? Paiement::query()
-                ->select('family_id', DB::raw('SUM(montant) as total_paye'))
-                ->whereIn('family_id', $famillesClasse->pluck('id'))
-                ->where('cotisation_id', $fimeco->id)
-                ->where('year', $fimecoAnnee)
-                ->groupBy('family_id')
-                ->pluck('total_paye', 'family_id')
-            : collect();
-
-        $fimecoSuivi = $famillesClasse->map(function (Family $famille) use ($paiementsParFamilleFimeco, $fimecoSouscriptions) {
-            $paid = (int) ($paiementsParFamilleFimeco[$famille->id] ?? 0);
-            $target = (int) ($fimecoSouscriptions[$famille->id] ?? 0);
-            $due = max(0, $target - $paid);
-            $statut = $target === 0 ? 'NON SOUSCRIT' : ($due === 0 ? 'A JOUR' : 'EN RETARD');
-
-            return [
-                'family_id' => $famille->id,
-                'code_famille' => $famille->code_famille,
-                'famille' => $famille->nom ?? 'Sans famille',
-                'montant_souscrit' => $target,
-                'montant_cible' => $target,
-                'montant_paye' => $paid,
-                'montant_restant' => $due,
-                'statut' => $statut,
-            ];
-        })->sortBy('famille')->values();
-
-        $fimecoCibleClasse = (int) $fimecoSuivi->sum('montant_cible');
-        $fimecoPayeClasse = (int) $fimecoSuivi->sum('montant_paye');
-        $fimecoKpi = [
-            'montant_cible' => $fimecoCibleClasse,
-            'montant_paye' => $fimecoPayeClasse,
-            'montant_restant' => (int) $fimecoSuivi->sum('montant_restant'),
-            'taux_recouvrement' => $fimecoCibleClasse > 0
-                ? min(100, round(($fimecoPayeClasse / $fimecoCibleClasse) * 100, 1))
-                : 0,
-            'familles_total' => $fimecoSuivi->count(),
-            'familles_a_jour' => $fimecoSuivi->where('statut', 'A JOUR')->count(),
-            'familles_en_retard' => $fimecoSuivi->where('statut', 'EN RETARD')->count(),
-            'familles_non_souscrit' => $fimecoSuivi->where('statut', 'NON SOUSCRIT')->count(),
-        ];
-
-        $fimecoClassement = $this->fimecoClassementClasses($fimecoAnnee, $classeId);
+        $fimecoAnneesDisponibles = $this->fimecoService->anneesDisponibles($classeId);
+        ['suivi' => $fimecoSuivi, 'kpi' => $fimecoKpi] = $this->fimecoService->suiviPourClasse($classeId, $fimecoAnnee);
+        $fimecoClassement = $this->fimecoService->classementClasses($fimecoAnnee, $classeId);
 
         $notificationsFinancieres = NotificationFinanciere::query()
             ->where('user_id', $user->id)
@@ -526,75 +457,6 @@ class TresorerieController extends Controller
             'fimecoClassement' => $fimecoClassement,
             'notificationsFinancieres' => $notificationsFinancieres,
         ]);
-    }
-
-    /**
-     * Classement de la classe pilotée par le conducteur parmi toutes les classes,
-     * pour la cotisation FIMECO d'une année donnée (souscriptions vs. paiements enregistrés).
-     */
-    private function fimecoClassementClasses(int $annee, ?int $classeId): array
-    {
-        $fimecoCotisationIds = Cotisation::query()
-            ->whereRaw('LOWER(nom) LIKE ?', ['%fimeco%'])
-            ->pluck('id');
-
-        $souscriptionsParClasse = FimecoSouscription::query()
-            ->where('fimeco_souscriptions.annee', $annee)
-            ->whereNotNull('fimeco_souscriptions.family_id')
-            ->join('families', 'families.id', '=', 'fimeco_souscriptions.family_id')
-            ->whereNotNull('families.classe_id')
-            ->selectRaw('families.classe_id as classe_id, SUM(fimeco_souscriptions.montant_souscrit) as total')
-            ->groupBy('families.classe_id')
-            ->pluck('total', 'classe_id');
-
-        $paiementsParClasse = Paiement::query()
-            ->whereIn('paiements.cotisation_id', $fimecoCotisationIds)
-            ->where('paiements.year', $annee)
-            ->whereNotNull('paiements.family_id')
-            ->join('families', 'families.id', '=', 'paiements.family_id')
-            ->whereNotNull('families.classe_id')
-            ->selectRaw('families.classe_id as classe_id, SUM(paiements.montant) as total')
-            ->groupBy('families.classe_id')
-            ->pluck('total', 'classe_id');
-
-        $classeIds = collect($souscriptionsParClasse->keys())
-            ->merge($paiementsParClasse->keys())
-            ->unique()
-            ->values();
-
-        if ($classeIds->isEmpty()) {
-            return ['rang' => null, 'total_classes' => 0, 'classes' => []];
-        }
-
-        $classesNoms = \App\Models\Classe::query()->whereIn('id', $classeIds)->pluck('nom', 'id');
-
-        $rows = $classeIds->map(function ($id) use ($souscriptionsParClasse, $paiementsParClasse, $classesNoms) {
-            $cible = (int) ($souscriptionsParClasse[$id] ?? 0);
-            $paye = (int) ($paiementsParClasse[$id] ?? 0);
-
-            return [
-                'classe_id' => (int) $id,
-                'classe' => $classesNoms[$id] ?? 'Classe supprimée',
-                'montant_cible' => $cible,
-                'montant_paye' => $paye,
-                'taux_recouvrement' => $cible > 0 ? min(100, round(($paye / $cible) * 100, 1)) : 0,
-            ];
-        })
-            ->sortByDesc('taux_recouvrement')
-            ->values()
-            ->map(function (array $row, int $index) {
-                $row['rang'] = $index + 1;
-
-                return $row;
-            });
-
-        $courante = $rows->firstWhere('classe_id', $classeId);
-
-        return [
-            'rang' => $courante['rang'] ?? null,
-            'total_classes' => $rows->count(),
-            'classes' => $rows->values(),
-        ];
     }
 
     public function indexTresorier()

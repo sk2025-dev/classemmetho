@@ -139,6 +139,13 @@ Route::middleware(['auth', 'fimeco'])->prefix('fimeco')->name('fimeco.')->group(
     Route::post('/import/versements', [\App\Http\Controllers\Fimeco\ImportController::class, 'importVersements'])->name('import.versements');
 });
 
+// Point Focal FIMECO — fonction assignable à tout compte, portée limitée à la FIMECO
+// des familles de sa propre classe (mêmes informations que le conducteur au niveau FIMECO).
+Route::middleware(['auth', 'fimeco.classe'])->prefix('fimeco/classe')->name('fimeco.classe.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Fimeco\PointFocalController::class, 'index'])->name('index');
+    Route::post('/souscription', [\App\Http\Controllers\Fimeco\PointFocalController::class, 'setSouscription'])->name('souscription.store');
+});
+
 // Pointage de sa propre présence via scan caméra intégré (membre connecté)
 Route::middleware(['auth'])->group(function () {
     Route::post('/presence/scan-self', [\App\Http\Controllers\Api\PresenceController::class, 'scanSelf'])->name('presence.scan-self');

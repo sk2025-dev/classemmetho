@@ -223,6 +223,18 @@ export default function Dashboard({
                   },
               ]
             : []),
+        ...(auth?.user?.can_manage_fimeco_classe
+            ? [
+                  {
+                      title: "Point Focal FIMECO",
+                      desc: "Suivi FIMECO de ma classe",
+                      icon: "fimeco",
+                      href: "/fimeco/classe",
+                      color: "text-purple-600",
+                      bg: "bg-purple-100",
+                  },
+              ]
+            : []),
     ];
 
     const isPresidentConducteurs =
