@@ -692,6 +692,17 @@ export default function ConducteurTresorerie({
     fimecoSuivi = [],
     fimecoAnnee = new Date().getFullYear(),
     fimecoAnneesDisponibles = [new Date().getFullYear()],
+    fimecoKpi = {
+        montant_cible: 0,
+        montant_paye: 0,
+        montant_restant: 0,
+        taux_recouvrement: 0,
+        familles_total: 0,
+        familles_a_jour: 0,
+        familles_en_retard: 0,
+        familles_non_souscrit: 0,
+    },
+    fimecoClassement = { rang: null, total_classes: 0, classes: [] },
     membresClasse = [],
     membresClasseAssignables = [],
     tresorierClasse = null,
@@ -716,6 +727,8 @@ export default function ConducteurTresorerie({
     const [fimecoMontantInput, setFimecoMontantInput] = useState("");
     const [fimecoSaving, setFimecoSaving] = useState(false);
     const [fimecoSearch, setFimecoSearch] = useState("");
+    const [fimecoStatutFilter, setFimecoStatutFilter] = useState("TOUS");
+    const [fimecoTauxFilter, setFimecoTauxFilter] = useState("TOUS");
     const [newCotisation, setNewCotisation] = useState({
         nom: "",
         periodicite: "MENSUEL",
@@ -1355,15 +1368,32 @@ export default function ConducteurTresorerie({
         1,
         Math.ceil(paiementsRecents.length / 10),
     );
+    const fimecoPct = (item) =>
+        item.montant_cible > 0
+            ? Math.round((item.montant_paye / item.montant_cible) * 100)
+            : 0;
     const fimecoSuiviFiltre = useMemo(() => {
         const q = fimecoSearch.trim().toLowerCase();
-        if (!q) return fimecoSuivi;
-        return fimecoSuivi.filter(
-            (item) =>
-                (item.famille || "").toLowerCase().includes(q) ||
-                (item.code_famille || "").toLowerCase().includes(q),
-        );
-    }, [fimecoSuivi, fimecoSearch]);
+        return fimecoSuivi.filter((item) => {
+            if (q) {
+                const matchQ =
+                    (item.famille || "").toLowerCase().includes(q) ||
+                    (item.code_famille || "").toLowerCase().includes(q);
+                if (!matchQ) return false;
+            }
+            if (fimecoStatutFilter !== "TOUS" && item.statut !== fimecoStatutFilter) {
+                return false;
+            }
+            if (fimecoTauxFilter !== "TOUS") {
+                const pct = fimecoPct(item);
+                if (fimecoTauxFilter === "0" && pct !== 0) return false;
+                if (fimecoTauxFilter === "1-49" && (pct < 1 || pct > 49)) return false;
+                if (fimecoTauxFilter === "50-99" && (pct < 50 || pct > 99)) return false;
+                if (fimecoTauxFilter === "100" && pct < 100) return false;
+            }
+            return true;
+        });
+    }, [fimecoSuivi, fimecoSearch, fimecoStatutFilter, fimecoTauxFilter]);
     const fimecoTotalPages = Math.max(1, Math.ceil(fimecoSuiviFiltre.length / 20));
     const famillesTotalPages = Math.max(
         1,
@@ -2752,6 +2782,141 @@ export default function ConducteurTresorerie({
                             gap: 20,
                         }}
                     >
+                        <div
+                            style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(4,minmax(0,1fr))",
+                                gap: 14,
+                            }}
+                        >
+                            <KpiCard
+                                icon={Target}
+                                color="blue"
+                                label="Cible FIMECO"
+                                value={fmt(fimecoKpi.montant_cible)}
+                                sub={`${fimecoKpi.familles_total} famille(s) de la classe`}
+                            />
+                            <KpiCard
+                                icon={Wallet}
+                                color="teal"
+                                label="Montant versé"
+                                value={fmt(fimecoKpi.montant_paye)}
+                                sub={`Reste ${fmt(fimecoKpi.montant_restant)}`}
+                            />
+                            <KpiCard
+                                icon={TrendingUp}
+                                color={
+                                    fimecoKpi.taux_recouvrement >= 100
+                                        ? "teal"
+                                        : fimecoKpi.taux_recouvrement >= 50
+                                          ? "amber"
+                                          : "red"
+                                }
+                                label="Taux de recouvrement"
+                                value={`${fimecoKpi.taux_recouvrement}%`}
+                                sub={`${fimecoKpi.familles_a_jour} à jour · ${fimecoKpi.familles_en_retard} en retard · ${fimecoKpi.familles_non_souscrit} non souscrit(es)`}
+                            />
+                            <KpiCard
+                                icon={Award}
+                                color="purple"
+                                label="Classement inter-classes"
+                                value={
+                                    fimecoClassement.rang
+                                        ? `${fimecoClassement.rang}${fimecoClassement.rang === 1 ? "ère" : "ème"} / ${fimecoClassement.total_classes}`
+                                        : "Non classée"
+                                }
+                                sub={
+                                    fimecoClassement.rang
+                                        ? "sur le taux de recouvrement"
+                                        : "aucune souscription/versement enregistré"
+                                }
+                            />
+                        </div>
+                        {fimecoClassement.classes.length > 0 && (
+                            <Card>
+                                <SecTitle accent="purple">
+                                    Classement des classes · FIMECO {fimecoAnnee}
+                                </SecTitle>
+                                <div style={{ padding: "0 20px 20px" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                        {fimecoClassement.classes.map((c) => {
+                                            const isMine = c.classe_id === (classInfo?.classe_id ?? null) || c.classe === classInfo?.nom;
+                                            return (
+                                                <div
+                                                    key={c.classe_id}
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 12,
+                                                        padding: "10px 14px",
+                                                        borderRadius: 10,
+                                                        background: isMine
+                                                            ? "rgba(99,102,241,0.10)"
+                                                            : "#F9FAFB",
+                                                        border: isMine
+                                                            ? "1px solid rgba(99,102,241,0.35)"
+                                                            : "1px solid #F1F1EF",
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            width: 26,
+                                                            height: 26,
+                                                            borderRadius: "50%",
+                                                            background:
+                                                                c.rang === 1
+                                                                    ? "#F5C244"
+                                                                    : c.rang === 2
+                                                                      ? "#C7CBD1"
+                                                                      : c.rang === 3
+                                                                        ? "#D8985A"
+                                                                        : "#E5E7EB",
+                                                            color: c.rang <= 3 ? "#fff" : "#6B7280",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            fontSize: 12,
+                                                            fontWeight: 800,
+                                                            flexShrink: 0,
+                                                        }}
+                                                    >
+                                                        {c.rang}
+                                                    </span>
+                                                    <span
+                                                        style={{
+                                                            fontWeight: isMine ? 800 : 600,
+                                                            fontSize: 13,
+                                                            color: "#1F2937",
+                                                            flex: "0 0 160px",
+                                                        }}
+                                                    >
+                                                        {c.classe}
+                                                        {isMine && (
+                                                            <span style={{ color: "#6366F1" }}> (ma classe)</span>
+                                                        )}
+                                                    </span>
+                                                    <div style={{ flex: 1 }}>
+                                                        <ProgressBar
+                                                            value={c.taux_recouvrement}
+                                                            color={
+                                                                c.taux_recouvrement >= 100
+                                                                    ? "teal"
+                                                                    : c.taux_recouvrement >= 50
+                                                                      ? "amber"
+                                                                      : "red"
+                                                            }
+                                                        />
+                                                    </div>
+                                                    <span style={{ fontSize: 12, color: "#6B7280", flex: "0 0 150px", textAlign: "right" }}>
+                                                        {fmt(c.montant_paye)} / {fmt(c.montant_cible)}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
                         <Card>
                             <SecTitle
                                 accent="blue"
@@ -2798,6 +2963,33 @@ export default function ConducteurTresorerie({
                                     placeholder="Rechercher par code famille ou par nom..."
                                     style={{ ...inputStyle, maxWidth: 320 }}
                                 />
+                                <select
+                                    value={fimecoStatutFilter}
+                                    onChange={(e) => {
+                                        setFimecoStatutFilter(e.target.value);
+                                        setFimecoPage(1);
+                                    }}
+                                    style={{ ...inputStyle, maxWidth: 170 }}
+                                >
+                                    <option value="TOUS">Tous les statuts</option>
+                                    <option value="A JOUR">À jour</option>
+                                    <option value="EN RETARD">En retard</option>
+                                    <option value="NON SOUSCRIT">Non souscrit</option>
+                                </select>
+                                <select
+                                    value={fimecoTauxFilter}
+                                    onChange={(e) => {
+                                        setFimecoTauxFilter(e.target.value);
+                                        setFimecoPage(1);
+                                    }}
+                                    style={{ ...inputStyle, maxWidth: 200 }}
+                                >
+                                    <option value="TOUS">Tous les taux de recouvrement</option>
+                                    <option value="0">0% versé</option>
+                                    <option value="1-49">1 à 49% versé</option>
+                                    <option value="50-99">50 à 99% versé</option>
+                                    <option value="100">100% versé (soldé)</option>
+                                </select>
                                 <select
                                     value={fimecoAnnee}
                                     onChange={(e) =>
