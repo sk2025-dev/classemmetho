@@ -75,12 +75,20 @@ export default function ConsentementShow({
                         backgroundSize: "22px 22px",
                     }}
                 />
-                {/* Filigrane : logo du Jubilé en fond de page */}
+                {/* Filigrane : logo du Jubilé en fond de page — décalé dans un coin
+                    (et non centré) pour ne pas se retrouver caché derrière la carte
+                    blanche opaque, qui occupe tout le centre de l'écran. */}
                 <img
                     src={withBasePath("", "/images/image.png")}
                     alt=""
                     aria-hidden="true"
-                    className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[46rem] max-w-none opacity-20 brightness-[1.4] drop-shadow-[0_0_40px_rgba(99,102,241,0.35)]"
+                    className="pointer-events-none select-none absolute -bottom-24 -right-24 w-[34rem] max-w-none opacity-30 brightness-[1.5] drop-shadow-[0_0_50px_rgba(99,102,241,0.45)]"
+                />
+                <img
+                    src={withBasePath("", "/images/image.png")}
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none select-none absolute -top-20 -left-20 w-64 max-w-none opacity-20 brightness-[1.5]"
                 />
 
                 <div className="relative w-full max-w-2xl">
