@@ -293,6 +293,7 @@ createInertiaApp({
             "Auth/ResetPassword",
             "Welcome",
             "login", // Page de login - IMPORTANT: en minuscule
+            "Consentement/Show", // Écran de blocage : pas de nav vers des modules inaccessibles
         ];
 
         // Si la page n'a pas déjà un layout défini et qu'elle n'est pas une page d'authentification

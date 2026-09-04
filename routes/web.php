@@ -147,6 +147,17 @@ Route::middleware(['auth', 'fimeco.classe'])->prefix('fimeco/classe')->name('fim
     Route::post('/souscription', [\App\Http\Controllers\Fimeco\PointFocalController::class, 'setSouscription'])->name('souscription.store');
 });
 
+// Consentement aux conditions d'utilisation des données personnelles — activable
+// depuis Admin > Administration > Paramètres (voir App\Support\DataConsent).
+// Toujours accessible une fois connecté, même quand le reste de la plateforme
+// est bloqué par EnsureDataConsentValidated.
+Route::middleware(['auth'])->group(function () {
+    Route::get('/consentement', [\App\Http\Controllers\ConsentementController::class, 'show'])
+        ->name('consentement.show');
+    Route::post('/consentement/valider', [\App\Http\Controllers\ConsentementController::class, 'valider'])
+        ->name('consentement.valider');
+});
+
 // Pointage de sa propre présence via scan caméra intégré (membre connecté)
 Route::middleware(['auth'])->group(function () {
     Route::post('/presence/scan-self', [\App\Http\Controllers\Api\PresenceController::class, 'scanSelf'])->name('presence.scan-self');
@@ -190,6 +201,7 @@ Route::middleware(['auth'])->group(function () {
         // Paramètres du site
         Route::post('/admin/parametres/carte-theme', [\App\Http\Controllers\Admin\SiteSettingController::class, 'updateCarteTheme'])->name('admin.parametres.carte-theme');
         Route::post('/admin/parametres/pasteur-principal', [\App\Http\Controllers\Admin\SiteSettingController::class, 'updatePasteurPrincipal'])->name('admin.parametres.pasteur-principal');
+        Route::post('/admin/parametres/consentement', [\App\Http\Controllers\Admin\SiteSettingController::class, 'updateConsentement'])->name('admin.parametres.consentement');
 
         // Routes pour les fonctions
         Route::resource('/admin/fonctions', \App\Http\Controllers\Admin\FonctionController::class);

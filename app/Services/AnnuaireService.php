@@ -587,37 +587,44 @@ class AnnuaireService
             elseif ($sacrements->est_veuf)    $statut_marital = 'Veuf(ve)';
         }
 
+        // Consentement RGPD : tant que ce membre (ou le responsable de sa
+        // famille) n'a pas validé les conditions d'utilisation des données
+        // personnelles, ses infos identifiantes restent masquées dans
+        // l'annuaire, quel que soit le rôle qui consulte.
+        $consentementRequis = \App\Support\DataConsent::isEnabled() && !$user->aValideConsentement();
+
         return [
             // ── Identité ──
             'id'              => $user->id,
-            'prenoms'         => $user->prenom,
-            'nom'             => $user->nom,
+            'prenoms'         => $consentementRequis ? '••••' : $user->prenom,
+            'nom'             => $consentementRequis ? '••••••' : $user->nom,
             'sexe'            => $user->genre ?? 'M',
             'famille'         => $user->family?->nom ?? $user->family?->code_famille ?? '-',
             'code_famille'    => $user->family?->code_famille ?? null,
             'classeMethodiste' => $user->classe?->nom ?? '-',
-            'telephone'       => $user->telephone ?? '-',
-            'email'           => $user->email ?? '-',
+            'telephone'       => $consentementRequis ? '••• •• •• ••' : ($user->telephone ?? '-'),
+            'email'           => $consentementRequis ? '(masqué)' : ($user->email ?? '-'),
             'numMembre'       => $user->code_membre ?? null,
             'code_membre'     => $user->code_membre ?? null,
             'relation'        => $user->relation ?? null,
-            'profession'      => $user->profession ?? null,
-            'niveau_etude'    => $user->niveau_etude ?? null,
+            'profession'      => $consentementRequis ? null : ($user->profession ?? null),
+            'niveau_etude'    => $consentementRequis ? null : ($user->niveau_etude ?? null),
             'fonction'        => $user->fonction?->nom ?? null,
             'fonctions'       => $user->relationLoaded('fonctions')
                 ? $user->fonctions->pluck('nom')->filter()->values()->all()
                 : [],
-            'dateNaissance'   => $user->date_naissance ? $user->date_naissance->format('Y-m-d') : null,
-            'lieu_naissance'  => $user->lieu_naissance ?? null,
-            'numero_cni'      => $user->numero_cni ?? null,
-            'adresse'         => $user->family?->adresse ?? $user->adresse ?? null,
-            'quartier'        => $user->family?->quartier ?? $user->quartier ?? null,
-            'photo'           => PhotoHelper::getPhotoUrl($user->photo_path, $user->prenom, $user->nom),
+            'dateNaissance'   => $consentementRequis ? null : ($user->date_naissance ? $user->date_naissance->format('Y-m-d') : null),
+            'lieu_naissance'  => $consentementRequis ? null : ($user->lieu_naissance ?? null),
+            'numero_cni'      => $consentementRequis ? null : ($user->numero_cni ?? null),
+            'adresse'         => $consentementRequis ? null : ($user->family?->adresse ?? $user->adresse ?? null),
+            'quartier'        => $consentementRequis ? null : ($user->family?->quartier ?? $user->quartier ?? null),
+            'photo'           => $consentementRequis ? null : PhotoHelper::getPhotoUrl($user->photo_path, $user->prenom, $user->nom),
             'statut_marital'  => $statut_marital,
             'hors_communaute' => (bool) ($user->hors_communaute ?? false),
             'retrait'         => (bool) ($user->retrait ?? false),
             'date_retrait'    => $user->date_retrait ? $user->date_retrait->format('Y-m-d') : null,
             'statutVie'       => $user->statut_vie ?? null,
+            'consentement_requis' => $consentementRequis,
 
             // ── Sacrements (objet imbriqué pour normalizeMember BureauConducteur/Pasteur) ──
             'sacrements' => $sacrements ? [

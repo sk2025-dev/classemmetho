@@ -89,6 +89,9 @@ class User extends Authenticatable
         'retrait',
         'date_retrait',
         'commentaire_retrait',
+
+        // === CONSENTEMENT DONNÉES PERSONNELLES (comptes sans famille) ===
+        'consentement_donnees_valide_at',
     ];
 
     /**
@@ -111,6 +114,7 @@ class User extends Authenticatable
         'date_naissance' => 'date',
         'deceased_at' => 'date',
         'last_login_at' => 'datetime',
+        'consentement_donnees_valide_at' => 'datetime',
     ];
 
     /**
@@ -322,6 +326,33 @@ class User extends Authenticatable
         }
 
         return $this->fonctions->contains(fn ($f) => mb_strtolower(trim($f->nom)) === $target);
+    }
+
+    /**
+     * Le consentement aux conditions d'utilisation des données personnelles
+     * a-t-il été validé pour ce compte ? Toujours vrai si la fonctionnalité
+     * est désactivée globalement, ou si l'utilisateur est administrateur
+     * (l'admin ne doit jamais pouvoir se verrouiller lui-même hors de
+     * l'interface qui sert justement à activer/désactiver le mode).
+     * Pour un compte rattaché à une famille, la validation est portée par
+     * le responsable de famille (voir Family::aValideConsentement()).
+     */
+    public function aValideConsentement(): bool
+    {
+        if (!\App\Support\DataConsent::isEnabled() || $this->role === 'admin') {
+            return true;
+        }
+
+        if ($this->family_id) {
+            return $this->family?->aValideConsentement() ?? false;
+        }
+
+        return $this->consentement_donnees_valide_at !== null;
+    }
+
+    public function validerConsentementIndividuel(): void
+    {
+        $this->forceFill(['consentement_donnees_valide_at' => now()])->save();
     }
 
     /**

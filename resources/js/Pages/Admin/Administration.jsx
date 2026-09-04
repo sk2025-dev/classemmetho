@@ -25,6 +25,8 @@ export default function AdminPage({
     total_users_count = 0, // ✅ Total global des personnes
     carteVirtuelleTheme = "",
     pasteurPrincipalNom = "",
+    consentementActif = false,
+    consentementTexte = "",
 }) {
     // Lire le query param 'tab' depuis l'URL pour conserver l'onglet actif après un reload
     const urlParams = new URLSearchParams(window.location.search);
@@ -528,6 +530,8 @@ export default function AdminPage({
                     <TabCarteVirtuelle
                         theme={carteVirtuelleTheme}
                         pasteurPrincipalNom={pasteurPrincipalNom}
+                        consentementActif={consentementActif}
+                        consentementTexte={consentementTexte}
                         onSuccess={toast.success}
                     />
                 )}

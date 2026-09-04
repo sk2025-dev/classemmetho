@@ -490,6 +490,8 @@ class AdministrationController extends Controller
                 \App\Http\Controllers\Admin\SiteSettingController::PASTEUR_PRINCIPAL_KEY,
                 \App\Http\Controllers\Admin\SiteSettingController::PASTEUR_PRINCIPAL_DEFAULT,
             ),
+            'consentementActif' => \App\Support\DataConsent::isEnabled(),
+            'consentementTexte' => \App\Support\DataConsent::texte(),
         ]);
     }
 

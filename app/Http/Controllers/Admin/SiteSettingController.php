@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\SiteSetting;
+use App\Support\DataConsent;
 use Illuminate\Http\Request;
 
 class SiteSettingController extends Controller
@@ -47,5 +48,26 @@ class SiteSettingController extends Controller
         );
 
         return back()->with('success', 'Thème de la carte virtuelle mis à jour avec succès.');
+    }
+
+    /**
+     * Active/désactive le blocage de la plateforme tant que les conditions
+     * d'utilisation des données personnelles n'ont pas été validées, et met
+     * à jour le texte de ces conditions.
+     */
+    public function updateConsentement(Request $request)
+    {
+        $validated = $request->validate([
+            'consentement_actif' => ['required', 'boolean'],
+            'consentement_texte' => ['nullable', 'string', 'max:8000'],
+        ]);
+
+        DataConsent::setEnabled((bool) $validated['consentement_actif']);
+
+        if (array_key_exists('consentement_texte', $validated) && trim((string) $validated['consentement_texte']) !== '') {
+            DataConsent::setTexte($validated['consentement_texte']);
+        }
+
+        return back()->with('success', 'Paramètres de consentement mis à jour avec succès.');
     }
 }

@@ -48,7 +48,33 @@ class Family extends Model
         'email_hash',
         'merged_into_id',
         'merged_at',
+
+        // === CONSENTEMENT DONNÉES PERSONNELLES ===
+        'consentement_donnees_valide_at',
+        'consentement_donnees_valide_par',
     ];
+
+    protected $casts = [
+        'consentement_donnees_valide_at' => 'datetime',
+    ];
+
+    /**
+     * Le responsable a-t-il validé les conditions d'utilisation des données
+     * personnelles pour toute la famille ? Toujours vrai si la fonctionnalité
+     * est désactivée globalement (voir DataConsent::isEnabled()).
+     */
+    public function aValideConsentement(): bool
+    {
+        return !\App\Support\DataConsent::isEnabled() || $this->consentement_donnees_valide_at !== null;
+    }
+
+    public function validerConsentement(User $par): void
+    {
+        $this->forceFill([
+            'consentement_donnees_valide_at' => now(),
+            'consentement_donnees_valide_par' => $par->id,
+        ])->save();
+    }
 
     /**
      * L'inscription source qui a généré cette famille

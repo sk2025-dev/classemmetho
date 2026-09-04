@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureUtf8Encoding;
 use App\Http\Middleware\ApiUtf8Encoding;
 use App\Http\Middleware\EnsureFimecoResponsable;
 use App\Http\Middleware\EnsureFimecoPointFocal;
+use App\Http\Middleware\EnsureDataConsentValidated;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -29,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             EnsureUtf8Encoding::class,
         ], append: [
             HandleInertiaRequests::class,
+            EnsureDataConsentValidated::class,
         ]);
 
         $middleware->api(prepend: [
