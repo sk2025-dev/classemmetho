@@ -75,6 +75,13 @@ export default function ConsentementShow({
                         backgroundSize: "22px 22px",
                     }}
                 />
+                {/* Filigrane : logo du Jubilé, très discret, en fond de page */}
+                <img
+                    src={withBasePath("", "/images/image.png")}
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[42rem] max-w-none opacity-[0.06] grayscale contrast-125"
+                />
 
                 <div className="relative w-full max-w-2xl">
                     <div className="flex items-center justify-between mb-4 px-1">
