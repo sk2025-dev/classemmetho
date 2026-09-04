@@ -29,6 +29,15 @@ class AdministrationController extends Controller
 {
     public function index()
     {
+        // Cette page charge et formate tous les comptes de la plateforme
+        // (~1700+, avec relations famille/classe/sacrements) : ça dépasse
+        // régulièrement le memory_limit CLI par défaut (128M — vu en
+        // pratique jusqu'à ~240M de pic), ce qui provoquait une 500
+        // "Allowed memory size exhausted" indépendamment de toute erreur de
+        // code. On relève la limite pour cette requête si elle est trop
+        // basse, sans jamais la réduire si elle est déjà plus haute.
+        $this->ensureAdequateMemoryLimit();
+
         // ═══════════════════════════════════════════════════════════════
         // ÉTAPE 1: CHARGER TOUTES LES DONNÉES DE BASE
         // ═══════════════════════════════════════════════════════════════
@@ -508,6 +517,29 @@ class AdministrationController extends Controller
             'consentementActif' => \App\Support\DataConsent::isEnabled(),
             'consentementTexte' => \App\Support\DataConsent::texte(),
         ]);
+    }
+
+    /**
+     * Relève memory_limit à 512M pour la requête courante si la limite active
+     * est plus basse (ne redescend jamais une limite déjà supérieure, et ne
+     * touche pas à une limite illimitée `-1`). Évite les 500 "Allowed memory
+     * size exhausted" sur cette page volumineuse selon l'environnement PHP.
+     */
+    private function ensureAdequateMemoryLimit(int $minimumBytes = 512 * 1024 * 1024): void
+    {
+        $limit = ini_get('memory_limit');
+
+        if ($limit === false || $limit === '-1') {
+            return;
+        }
+
+        $currentBytes = function_exists('ini_parse_quantity')
+            ? ini_parse_quantity($limit)
+            : (int) $limit;
+
+        if ($currentBytes > 0 && $currentBytes < $minimumBytes) {
+            ini_set('memory_limit', (string) $minimumBytes);
+        }
     }
 
     /**
