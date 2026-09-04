@@ -535,6 +535,22 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                                 >
                                     {member.is_active ? "● Actif" : "● Inactif"}
                                 </span>
+                                {member.consentement_statut && (
+                                    <span
+                                        className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                                            member.consentement_statut ===
+                                            "valide"
+                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                : "bg-amber-50 text-amber-700 border-amber-200"
+                                        }`}
+                                    >
+                                        {member.consentement_statut ===
+                                        "valide"
+                                            ? "✓ "
+                                            : "🔒 "}
+                                        {member.consentement_statut_label}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
