@@ -170,22 +170,6 @@ export default function Dashboard({
             bg: "bg-green-100",
         },
         {
-            title: "Trésorerie",
-            desc: "FIMECO, Autres cotisations",
-            icon: "tresorerie",
-            href: "/membre-famille/tresorerie",
-            color: "text-yellow-600",
-            bg: "bg-yellow-100",
-        },
-        {
-            title: "Actes Liturgiques",
-            desc: "Mariage, Baptême, etc.",
-            icon: "liturgique",
-            href: "/membre-famille/liturgie",
-            color: "text-purple-600",
-            bg: "bg-purple-100",
-        },
-        {
             title: "Sondage",
             desc: "Participez aux sondages",
             icon: "sondage",
