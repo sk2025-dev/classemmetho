@@ -589,12 +589,11 @@ class AnnuaireService
 
         // Consentement RGPD : tant que ce membre (ou le responsable de sa
         // famille) n'a pas validé les conditions d'utilisation des données
-        // personnelles, ses infos ne restent PAS toutes masquées dans
-        // l'annuaire — nom, code famille, code membre et le statut du
-        // consentement lui-même restent visibles (pour permettre de
-        // repérer et relancer la bonne personne) ; le reste (contact,
-        // date/lieu de naissance, CNI, adresse, photo...) reste masqué,
-        // quel que soit le rôle qui consulte.
+        // personnelles, la liste reste entièrement visible (nom, codes,
+        // statut du consentement...), mais les colonnes sensibles (contact,
+        // date/lieu de naissance, CNI, adresse, photo) sont renvoyées avec
+        // le flag `consentement_requis` : c'est le flou visuel (CSS), côté
+        // front, qui les rend illisibles sans vider la liste.
         $consentementRequis = \App\Support\DataConsent::isEnabled() && !$user->aValideConsentement();
 
         return [
@@ -606,23 +605,23 @@ class AnnuaireService
             'famille'         => $user->family?->nom ?? $user->family?->code_famille ?? '-',
             'code_famille'    => $user->family?->code_famille ?? null,
             'classeMethodiste' => $user->classe?->nom ?? '-',
-            'telephone'       => $consentementRequis ? '••• •• •• ••' : ($user->telephone ?? '-'),
-            'email'           => $consentementRequis ? '(masqué)' : ($user->email ?? '-'),
+            'telephone'       => $user->telephone ?? '-',
+            'email'           => $user->email ?? '-',
             'numMembre'       => $user->code_membre ?? null,
             'code_membre'     => $user->code_membre ?? null,
             'relation'        => $user->relation ?? null,
-            'profession'      => $consentementRequis ? null : ($user->profession ?? null),
-            'niveau_etude'    => $consentementRequis ? null : ($user->niveau_etude ?? null),
+            'profession'      => $user->profession ?? null,
+            'niveau_etude'    => $user->niveau_etude ?? null,
             'fonction'        => $user->fonction?->nom ?? null,
             'fonctions'       => $user->relationLoaded('fonctions')
                 ? $user->fonctions->pluck('nom')->filter()->values()->all()
                 : [],
-            'dateNaissance'   => $consentementRequis ? null : ($user->date_naissance ? $user->date_naissance->format('Y-m-d') : null),
-            'lieu_naissance'  => $consentementRequis ? null : ($user->lieu_naissance ?? null),
-            'numero_cni'      => $consentementRequis ? null : ($user->numero_cni ?? null),
-            'adresse'         => $consentementRequis ? null : ($user->family?->adresse ?? $user->adresse ?? null),
-            'quartier'        => $consentementRequis ? null : ($user->family?->quartier ?? $user->quartier ?? null),
-            'photo'           => $consentementRequis ? null : PhotoHelper::getPhotoUrl($user->photo_path, $user->prenom, $user->nom),
+            'dateNaissance'   => $user->date_naissance ? $user->date_naissance->format('Y-m-d') : null,
+            'lieu_naissance'  => $user->lieu_naissance ?? null,
+            'numero_cni'      => $user->numero_cni ?? null,
+            'adresse'         => $user->family?->adresse ?? $user->adresse ?? null,
+            'quartier'        => $user->family?->quartier ?? $user->quartier ?? null,
+            'photo'           => PhotoHelper::getPhotoUrl($user->photo_path, $user->prenom, $user->nom),
             'statut_marital'  => $statut_marital,
             'hors_communaute' => (bool) ($user->hors_communaute ?? false),
             'retrait'         => (bool) ($user->retrait ?? false),

@@ -331,7 +331,7 @@ const StatusBadge = ({ isActive }) => (
     </span>
 );
 
-const InfoItem = ({ label, value, icon, className = "" }) => {
+const InfoItem = ({ label, value, icon, className = "", blur = false }) => {
     const hasValue =
         value && value !== "-" && value !== null && value !== undefined;
 
@@ -344,7 +344,7 @@ const InfoItem = ({ label, value, icon, className = "" }) => {
                 </p>
             </div>
             <p
-                className={`text-sm font-medium ${hasValue ? "text-gray-900" : "text-gray-400 italic"}`}
+                className={`text-sm font-medium ${hasValue ? "text-gray-900" : "text-gray-400 italic"} ${blur ? "blur-sm select-none" : ""}`}
             >
                 {value && value !== "-" ? value : "-"}
             </p>
@@ -506,7 +506,7 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                             <ProfilePhoto
                                 user={member}
                                 size="3xl"
-                                className="w-36 h-36 border-4 border-white shadow-lg ring-2 ring-blue-100"
+                                className={`w-36 h-36 border-4 border-white shadow-lg ring-2 ring-blue-100 ${member.consentement_requis ? "blur-md" : ""}`}
                             />
                             <div
                                 className={`absolute -bottom-1 -right-1 w-7 h-7 rounded-full border-3 border-white flex items-center justify-center ${
@@ -567,6 +567,7 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                                 icon={
                                     <Mail className="w-4 h-4 text-blue-500" />
                                 }
+                                blur={!!member.consentement_requis}
                             />
                             <InfoItem
                                 label="Téléphone"
@@ -574,6 +575,7 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                                 icon={
                                     <Phone className="w-4 h-4 text-blue-500" />
                                 }
+                                blur={!!member.consentement_requis}
                             />
                             <InfoItem
                                 label="Code membre"
@@ -588,6 +590,7 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                                 icon={
                                     <Phone className="w-4 h-4 text-blue-500" />
                                 }
+                                blur={!!member.consentement_requis}
                             />
                             <InfoItem
                                 label="Adresse"
@@ -596,6 +599,7 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                                     <MapPin className="w-4 h-4 text-blue-500" />
                                 }
                                 className="md:col-span-2"
+                                blur={!!member.consentement_requis}
                             />
                         </div>
                     </DetailCard>
@@ -626,6 +630,7 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                                 icon={
                                     <Calendar className="w-4 h-4 text-blue-500" />
                                 }
+                                blur={!!member.consentement_requis}
                             />
                             <InfoItem
                                 label="Ville"
@@ -637,14 +642,17 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                             <InfoItem
                                 label="Quartier"
                                 value={displayValue(member.quartier)}
+                                blur={!!member.consentement_requis}
                             />
                             <InfoItem
                                 label="Lieu de naissance"
                                 value={displayValue(member.lieu_naissance)}
+                                blur={!!member.consentement_requis}
                             />
                             <InfoItem
                                 label="N° CNI"
                                 value={displayValue(member.numero_cni)}
+                                blur={!!member.consentement_requis}
                             />
                             <InfoItem
                                 label="Hors communauté"

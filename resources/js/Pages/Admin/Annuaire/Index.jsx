@@ -11,6 +11,13 @@ import { withBasePath } from "../../../Utils/urlHelper";
 // ==================== STYLES GLOBAUX ====================
 const ANNUAIRE_STATE_STORAGE_KEY = "admin-annuaire-state";
 
+// Consentement RGPD : la liste reste visible, ces colonnes sont simplement
+// floutées (CSS) tant que le membre concerné n'a pas validé.
+const consentBlurClass = (member) =>
+  member?.consentement_requis ? "consent-blur" : "";
+const consentBlurImgClass = (member) =>
+  member?.consentement_requis ? "consent-blur-img" : "";
+
 const GLOBAL_STYLES = `
     :root {
         --primary: #2563eb; --primary-hover: #1d4ed8;
@@ -557,6 +564,13 @@ const GLOBAL_STYLES = `
     }
     .consent-badge--en_attente { background: #fef3c7; color: #92400e; }
     .consent-badge--valide { background: #d1fae5; color: #065f46; }
+    .consent-blur {
+        filter: blur(4px);
+        user-select: none;
+        -webkit-user-select: none;
+        cursor: not-allowed;
+    }
+    .consent-blur-img { filter: blur(10px); }
     .grid-card-contact {
         font-size: 0.9rem;
         color: #4b5563;
@@ -672,6 +686,7 @@ const MemberDetailsModal = ({
             <img
               src={photoSrc}
               alt={`${member.prenoms} ${member.nom}`}
+              className={consentBlurImgClass(member)}
               onError={(e) => {
                 e.target.onerror = null;
                 e.target.src = fallbackAvatar;
@@ -700,9 +715,11 @@ const MemberDetailsModal = ({
             </p>
             <p>
               <strong>Date de naissance:</strong>{" "}
-              {member.dateNaissance
-                ? new Date(member.dateNaissance).toLocaleDateString()
-                : "-"}
+              <span className={consentBlurClass(member)}>
+                {member.dateNaissance
+                  ? new Date(member.dateNaissance).toLocaleDateString()
+                  : "-"}
+              </span>
             </p>
             <p>
               <strong>Numéro membre:</strong> {member.numMembre || "-"}
@@ -791,13 +808,22 @@ const MemberDetailsModal = ({
         <h3>🧾 Contact</h3>
         <div className="contact-info">
           <p>
-            <strong>Téléphone:</strong> {member.telephone || "-"}
+            <strong>Téléphone:</strong>{" "}
+            <span className={consentBlurClass(member)}>
+              {member.telephone || "-"}
+            </span>
           </p>
           <p>
-            <strong>Email:</strong> {member.email || "-"}
+            <strong>Email:</strong>{" "}
+            <span className={consentBlurClass(member)}>
+              {member.email || "-"}
+            </span>
           </p>
           <p>
-            <strong>Adresse:</strong> {member.adresse || "-"}
+            <strong>Adresse:</strong>{" "}
+            <span className={consentBlurClass(member)}>
+              {member.adresse || "-"}
+            </span>
           </p>
           {member.quartier && (
             <p>
@@ -1890,7 +1916,7 @@ const Annuaire = ({
                       <td className="text-center">
                         <img
                           src={member.photo || getFallbackImage(member)}
-                          className="member-photo-small mx-auto"
+                          className={`member-photo-small mx-auto ${consentBlurImgClass(member)}`}
                           onClick={(e) =>
                             openPhotoPopup(
                               member.photo || getFallbackImage(member),
@@ -1905,6 +1931,9 @@ const Annuaire = ({
                       </td>
                       <td className="text-center font-medium">
                         {member.prenoms} {member.nom}
+                        {member.consentement_statut === "en_attente" && (
+                          <span title="Consentement en attente"> 🔒</span>
+                        )}
                       </td>
                       <td className="text-center">
                         {member.sexe === "M" ? "Masculin" : "Féminin"}
@@ -1916,8 +1945,16 @@ const Annuaire = ({
                       <td className="text-center">
                         {member.classeMethodiste || "-"}
                       </td>
-                      <td className="text-center">{member.telephone || "-"}</td>
-                      <td className="text-center">{member.email || "-"}</td>
+                      <td className="text-center">
+                        <span className={consentBlurClass(member)}>
+                          {member.telephone || "-"}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <span className={consentBlurClass(member)}>
+                          {member.email || "-"}
+                        </span>
+                      </td>
                       <td className="text-center">
                         {member.baptise ? "Oui" : "Non"}
                       </td>
@@ -1938,11 +1975,13 @@ const Annuaire = ({
                         {member.veuf ? "Oui" : "Non"}
                       </td>
                       <td className="text-center">
-                        {member.dateNaissance
-                          ? new Date(member.dateNaissance).toLocaleDateString(
-                              "fr-FR",
-                            )
-                          : "-"}
+                        <span className={consentBlurClass(member)}>
+                          {member.dateNaissance
+                            ? new Date(
+                                member.dateNaissance,
+                              ).toLocaleDateString("fr-FR")
+                            : "-"}
+                        </span>
                       </td>
                       <td className="text-center">{member.fonction || "-"}</td>
                       <td className="text-center">
@@ -2033,6 +2072,7 @@ const Annuaire = ({
                   >
                     <img
                       src={member.photo || getFallbackImage(member)}
+                      className={consentBlurImgClass(member)}
                       onError={(e) => {
                         e.target.src = getFallbackImage(member);
                       }}
@@ -2067,7 +2107,9 @@ const Annuaire = ({
                         d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                       />
                     </svg>
-                    {member.telephone || "-"}
+                    <span className={consentBlurClass(member)}>
+                      {member.telephone || "-"}
+                    </span>
                   </div>
                   <div className="grid-card-contact">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2078,7 +2120,9 @@ const Annuaire = ({
                         d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                       />
                     </svg>
-                    {member.email || "-"}
+                    <span className={consentBlurClass(member)}>
+                      {member.email || "-"}
+                    </span>
                   </div>
                   {member.profession && member.profession !== "-" && (
                     <div className="grid-card-profession">
@@ -2163,6 +2207,7 @@ const Annuaire = ({
                 <div key={member.id} className="family-member-item">
                   <img
                     src={member.photo || getFallbackImage(member)}
+                    className={consentBlurImgClass(member)}
                     onClick={(e) =>
                       openPhotoPopup(
                         member.photo || getFallbackImage(member),
@@ -2180,9 +2225,14 @@ const Annuaire = ({
                   >
                     <strong>
                       {member.prenoms} {member.nom}
+                      {member.consentement_statut === "en_attente" && (
+                        <span title="Consentement en attente"> 🔒</span>
+                      )}
                     </strong>
                     <p>{member.classeMethodiste || "-"}</p>
-                    <p className="text-sm text-gray-600">
+                    <p
+                      className={`text-sm text-gray-600 ${consentBlurClass(member)}`}
+                    >
                       {member.telephone || "-"}
                     </p>
                   </div>
@@ -2243,6 +2293,7 @@ const Annuaire = ({
                   <div key={member.id} className="class-member-item">
                     <img
                       src={member.photo || getFallbackImage(member)}
+                      className={consentBlurImgClass(member)}
                       onClick={(e) =>
                         openPhotoPopup(
                           member.photo || getFallbackImage(member),
@@ -2260,9 +2311,14 @@ const Annuaire = ({
                     >
                       <strong>
                         {member.prenoms} {member.nom}
+                        {member.consentement_statut === "en_attente" && (
+                          <span title="Consentement en attente"> 🔒</span>
+                        )}
                       </strong>
                       <p>{member.famille || "-"}</p>
-                      <p className="text-sm text-gray-600">
+                      <p
+                        className={`text-sm text-gray-600 ${consentBlurClass(member)}`}
+                      >
                         {member.telephone || "-"}
                       </p>
                     </div>

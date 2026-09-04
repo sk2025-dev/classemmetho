@@ -227,22 +227,22 @@ class AdministrationController extends Controller
                 else if ($sacrements->dot_effectue) $statut_marital = 'Dote';
             }
 
-            // Consentement RGPD : mêmes règles que l'Annuaire — nom, codes et
-            // statut restent visibles, le reste (contact, naissance, CNI,
-            // adresse, photo) reste masqué tant que ce n'est pas validé.
+            // Consentement RGPD : mêmes règles que l'Annuaire — la liste reste
+            // entièrement visible (nom, codes, statut inclus), le flag
+            // `consentement_requis` indique au front quelles colonnes flouter
+            // visuellement (contact, naissance, CNI, adresse, photo) tant que
+            // ce n'est pas validé.
             $consentementRequis = \App\Support\DataConsent::isEnabled() && !$m->aValideConsentement();
-            $photoUrl = $consentementRequis
-                ? null
-                : ($m->profile_photo_url ?: PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom));
+            $photoUrl = $m->profile_photo_url ?: PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom);
 
             return [
                 'id' => $m->id,
                 'nom' => $m->nom,
                 'prenom' => $m->prenom,
-                'telephone' => $consentementRequis ? '••• •• •• ••' : $m->telephone,
-                'telephone2' => $consentementRequis ? null : $m->telephone2,
-                'date_naissance' => $consentementRequis ? null : ($m->date_naissance ? $m->date_naissance->format('Y-m-d') : null),
-                'email' => $consentementRequis ? '(masqué)' : $m->email,
+                'telephone' => $m->telephone,
+                'telephone2' => $m->telephone2,
+                'date_naissance' => $m->date_naissance ? $m->date_naissance->format('Y-m-d') : null,
+                'email' => $m->email,
                 'genre' => $m->genre,
                 'identifiant' => $m->identifier,
                 'classe_id' => $m->classe_id,
@@ -312,10 +312,10 @@ class AdministrationController extends Controller
                 'lieu_mariage_religieux' => $sacrements?->mariage_religieux_lieu,
 
                 'dot_effectue' => (bool) $sacrements?->dot_effectue,
-                'adresse'              => $consentementRequis ? null : $m->family?->adresse,
-                'quartier'             => $consentementRequis ? null : $m->family?->quartier,
-                'lieu_naissance'       => $consentementRequis ? null : $m->lieu_naissance,
-                'numero_cni'           => $consentementRequis ? null : $m->numero_cni,
+                'adresse'              => $m->family?->adresse,
+                'quartier'             => $m->family?->quartier,
+                'lieu_naissance'       => $m->lieu_naissance,
+                'numero_cni'           => $m->numero_cni,
                 'hors_communaute'      => (bool) $m->hors_communaute,
                 'retrait'              => (bool) $m->retrait,
                 'date_retrait'         => $m->date_retrait?->format('Y-m-d'),
