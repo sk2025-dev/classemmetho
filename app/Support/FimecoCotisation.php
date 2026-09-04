@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\Cotisation;
+use App\Models\Paiement;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Le module FIMECO est global, mais un versement reste un Paiement : la seule
@@ -41,6 +43,39 @@ final class FimecoCotisation
             return $existing;
         }
 
+        return self::create($userId);
+    }
+
+    /**
+     * Requête de base des versements FIMECO « confirmés » : mêmes règles de
+     * statut/mode que le module global (DashboardController) — partagée pour
+     * que la liste des versements du Point Focal (portée classe) affiche
+     * exactement les mêmes paiements que le module global affiche pour ces
+     * mêmes familles.
+     */
+    public static function countedPaymentsQuery(array $cotisationIds): Builder
+    {
+        return Paiement::query()
+            ->whereIn('cotisation_id', $cotisationIds)
+            ->where('statut', '!=', Paiement::STATUT_ANNULE)
+            ->where(function (Builder $query) {
+                $query->where('payment_status', Paiement::PAYMENT_STATUS_PAYE)
+                    ->orWhere(function (Builder $legacy) {
+                        $legacy->whereIn('mode_paiement', [
+                            Paiement::MODE_ESPECES,
+                            Paiement::MODE_VIREMENT,
+                            Paiement::MODE_CHEQUE,
+                        ])->where('statut', '!=', Paiement::STATUT_ANNULE);
+                    })
+                    ->orWhere(function (Builder $imported) {
+                        $imported->where('reference_recu', 'like', 'FIMECO-%')
+                            ->where('statut', Paiement::STATUT_PAYE);
+                    });
+            });
+    }
+
+    private static function create(?int $userId = null): Cotisation
+    {
         return Cotisation::query()->create([
             'nom' => 'FIMECO',
             'montant' => 0,

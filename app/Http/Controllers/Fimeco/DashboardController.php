@@ -397,23 +397,7 @@ class DashboardController extends Controller
 
     private function countedPaymentsQuery(array $cotisationIds): Builder
     {
-        return Paiement::query()
-            ->whereIn('cotisation_id', $cotisationIds)
-            ->where('statut', '!=', Paiement::STATUT_ANNULE)
-            ->where(function (Builder $query) {
-                $query->where('payment_status', Paiement::PAYMENT_STATUS_PAYE)
-                    ->orWhere(function (Builder $legacy) {
-                        $legacy->whereIn('mode_paiement', [
-                            Paiement::MODE_ESPECES,
-                            Paiement::MODE_VIREMENT,
-                            Paiement::MODE_CHEQUE,
-                        ])->where('statut', '!=', Paiement::STATUT_ANNULE);
-                    })
-                    ->orWhere(function (Builder $imported) {
-                        $imported->where('reference_recu', 'like', 'FIMECO-%')
-                            ->where('statut', Paiement::STATUT_PAYE);
-                    });
-            });
+        return FimecoCotisation::countedPaymentsQuery($cotisationIds);
     }
 
     private function tablesAreReady(): bool

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import axios from "axios";
 import {
@@ -6,11 +6,13 @@ import {
     Banknote,
     CheckCircle2,
     Edit3,
+    Eye,
     Landmark,
     Loader2,
     Search,
     Trophy,
     Users,
+    X,
     XCircle,
 } from "lucide-react";
 import { withBasePath } from "../../Utils/urlHelper";
@@ -36,6 +38,13 @@ const progressTone = (pct) => {
     if (value >= 50) return "bg-amber-500";
     return "bg-red-500";
 };
+
+const MODE_OPTIONS = [
+    { value: "ESPECES", label: "Espèces" },
+    { value: "VIREMENT", label: "Virement" },
+    { value: "CHEQUE", label: "Chèque" },
+    { value: "MOBILE_MONEY", label: "Mobile Money" },
+];
 
 const rankOrdinal = (rank) => (rank === 1 ? "1er" : `${rank}e`);
 const rankBadgeStyle = (rank) =>
@@ -121,6 +130,7 @@ export default function FimecoPointFocal({
         rang_taux_recouvrement: null,
         rang_nombre_souscripteurs: null,
     },
+    fimecoVersements = { data: [], current_page: 1, last_page: 1, total: 0, per_page: 20 },
 }) {
     const [search, setSearch] = useState("");
     const [statutFilter, setStatutFilter] = useState("TOUS");
@@ -130,14 +140,93 @@ export default function FimecoPointFocal({
     const [montantInput, setMontantInput] = useState("");
     const [saving, setSaving] = useState(false);
     const [feedback, setFeedback] = useState(null);
+    const [versementSearch, setVersementSearch] = useState("");
+    const [versementMode, setVersementMode] = useState("");
+    const [familyDetails, setFamilyDetails] = useState(null);
+    const [familyDetailsLoading, setFamilyDetailsLoading] = useState(false);
+    const isFirstVersementRender = useRef(true);
 
     const changeYear = (value) => {
+        setVersementSearch("");
+        setVersementMode("");
         router.get(
             withBasePath("", "/fimeco/classe"),
             { fimeco_annee: value },
-            { preserveState: true, preserveScroll: true, only: ["fimecoSuivi", "fimecoAnnee", "fimecoAnneesDisponibles", "fimecoKpi", "fimecoRang"] },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                only: ["fimecoSuivi", "fimecoAnnee", "fimecoAnneesDisponibles", "fimecoKpi", "fimecoRang", "fimecoVersements"],
+            },
         );
     };
+
+    const reloadVersements = (overrides = {}) => {
+        router.get(
+            withBasePath("", "/fimeco/classe"),
+            {
+                fimeco_annee: fimecoAnnee,
+                versement_q: versementSearch,
+                versement_mode: versementMode,
+                ...overrides,
+            },
+            { preserveState: true, preserveScroll: true, only: ["fimecoVersements"] },
+        );
+    };
+
+    // Recherche texte : requête différée (debounce) pour éviter une requête par frappe.
+    useEffect(() => {
+        if (isFirstVersementRender.current) {
+            isFirstVersementRender.current = false;
+            return;
+        }
+        const handle = window.setTimeout(() => {
+            reloadVersements({ versement_page: 1 });
+        }, 350);
+        return () => window.clearTimeout(handle);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [versementSearch]);
+
+    const handleVersementModeChange = (event) => {
+        const value = event.target.value;
+        setVersementMode(value);
+        reloadVersements({ versement_mode: value, versement_page: 1 });
+    };
+
+    const goToVersementPage = (nextPage) => {
+        reloadVersements({ versement_page: nextPage });
+    };
+
+    const loadFamilyVersements = async (familyId, page = 1) => {
+        setFamilyDetailsLoading(true);
+        try {
+            const response = await axios.get(
+                withBasePath("", `/fimeco/classe/familles/${familyId}/versements`),
+                { params: { annee: fimecoAnnee, page } },
+            );
+            setFamilyDetails(response.data);
+        } catch (error) {
+            setFamilyDetails((current) =>
+                current
+                    ? {
+                          ...current,
+                          versements: { data: [], current_page: 1, last_page: 1, total: 0 },
+                          loadError: true,
+                      }
+                    : current,
+            );
+        } finally {
+            setFamilyDetailsLoading(false);
+        }
+    };
+    const viewFamilyDetails = (item) => {
+        setFamilyDetails({ family_id: item.family_id, famille: item.famille, code_famille: item.code_famille, versements: null });
+        loadFamilyVersements(item.family_id, 1);
+    };
+    const goToFamilyVersementsPage = (nextPage) => {
+        if (!familyDetails) return;
+        loadFamilyVersements(familyDetails.family_id, nextPage);
+    };
+    const closeFamilyDetails = () => setFamilyDetails(null);
 
     const pctOf = (item) =>
         item.montant_cible > 0 ? Math.round((item.montant_paye / item.montant_cible) * 100) : 0;
@@ -377,12 +466,13 @@ export default function FimecoPointFocal({
                                         <th className="px-5 py-3 text-right">Reste</th>
                                         <th className="px-5 py-3 text-center">Progression</th>
                                         <th className="px-5 py-3 text-center">Statut</th>
+                                        <th className="px-5 py-3 text-center">Versements</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filtered.length === 0 && (
                                         <tr>
-                                            <td colSpan={7} className="px-5 py-8 text-center text-sm text-slate-400">
+                                            <td colSpan={8} className="px-5 py-8 text-center text-sm text-slate-400">
                                                 Aucun suivi FIMECO disponible.
                                             </td>
                                         </tr>
@@ -428,6 +518,16 @@ export default function FimecoPointFocal({
                                                         {statusLabels[item.statut] || item.statut}
                                                     </span>
                                                 </td>
+                                                <td className="px-5 py-3 text-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => viewFamilyDetails(item)}
+                                                        className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50"
+                                                        title="Voir le détail des versements"
+                                                    >
+                                                        <Eye size={14} /> Détails
+                                                    </button>
+                                                </td>
                                             </tr>
                                         );
                                     })}
@@ -435,8 +535,196 @@ export default function FimecoPointFocal({
                             </table>
                         </div>
                     </div>
+
+                    <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="border-b border-slate-200 p-5">
+                            <h2 className="font-black text-slate-900">Versements de {fimecoAnnee}</h2>
+                            <p className="text-xs text-slate-500">
+                                {fimecoVersements.total || 0} versement(s) confirmé(s)
+                                {(versementSearch || versementMode) ? " correspondant aux filtres." : "."}
+                            </p>
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                <div className="relative">
+                                    <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        value={versementSearch}
+                                        onChange={(e) => setVersementSearch(e.target.value)}
+                                        placeholder="Famille, code, référence, note…"
+                                        className={`${inputClass} pl-9`}
+                                    />
+                                </div>
+                                <select value={versementMode} onChange={handleVersementModeChange} className={inputClass}>
+                                    <option value="">Tous les modes</option>
+                                    {MODE_OPTIONS.map((o) => (
+                                        <option key={o.value} value={o.value}>
+                                            {o.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-slate-200 text-sm">
+                                <thead className="bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                                    <tr>
+                                        <th className="px-5 py-3">Date</th>
+                                        <th className="px-5 py-3">Famille</th>
+                                        <th className="px-5 py-3">Mode</th>
+                                        <th className="px-5 py-3 text-right">Montant</th>
+                                        <th className="px-5 py-3">Référence</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {(fimecoVersements.data || []).map((payment) => (
+                                        <tr key={payment.id}>
+                                            <td className="px-5 py-3">{payment.date || "-"}</td>
+                                            <td className="px-5 py-3">
+                                                <div className="font-bold text-slate-900">{payment.famille}</div>
+                                                <div className="text-xs text-slate-500">{payment.code_famille || ""}</div>
+                                            </td>
+                                            <td className="px-5 py-3 text-slate-600">{String(payment.mode || "-").replaceAll("_", " ")}</td>
+                                            <td className="px-5 py-3 text-right font-black text-emerald-700">{formatAmount(payment.montant)}</td>
+                                            <td className="px-5 py-3 font-mono text-xs text-slate-500">{payment.reference || "-"}</td>
+                                        </tr>
+                                    ))}
+                                    {(fimecoVersements.data || []).length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="px-5 py-10 text-center text-slate-500">
+                                                {(versementSearch || versementMode) ? "Aucun versement ne correspond aux filtres." : "Aucun versement confirmé pour cet exercice."}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        {fimecoVersements.last_page > 1 && (
+                            <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 text-sm">
+                                <span className="text-slate-500">
+                                    Page {fimecoVersements.current_page} sur {fimecoVersements.last_page}
+                                </span>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        disabled={fimecoVersements.current_page <= 1}
+                                        onClick={() => goToVersementPage(fimecoVersements.current_page - 1)}
+                                        className="rounded-lg border border-slate-300 px-3 py-1.5 font-semibold disabled:opacity-40"
+                                    >
+                                        Précédent
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={fimecoVersements.current_page >= fimecoVersements.last_page}
+                                        onClick={() => goToVersementPage(fimecoVersements.current_page + 1)}
+                                        className="rounded-lg border border-slate-300 px-3 py-1.5 font-semibold disabled:opacity-40"
+                                    >
+                                        Suivant
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
+
+            {familyDetails && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+                    <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
+                            <div>
+                                <h3 className="text-base font-black text-slate-900">{familyDetails.famille}</h3>
+                                <p className="mt-0.5 text-xs text-slate-500">
+                                    {familyDetails.code_famille || "Sans code"} · Exercice {familyDetails.annee || fimecoAnnee}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeFamilyDetails}
+                                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        {familyDetails.montant_souscrit !== undefined && (
+                            <div className="grid grid-cols-3 gap-3 p-5 pb-0 text-center">
+                                <div className="rounded-xl bg-indigo-50 p-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-500">Souscrit</p>
+                                    <p className="mt-1 text-sm font-black text-indigo-700">{formatAmount(familyDetails.montant_souscrit)}</p>
+                                </div>
+                                <div className="rounded-xl bg-emerald-50 p-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-500">Versé</p>
+                                    <p className="mt-1 text-sm font-black text-emerald-700">{formatAmount(familyDetails.montant_paye)}</p>
+                                </div>
+                                <div className="rounded-xl bg-amber-50 p-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-amber-500">Reste</p>
+                                    <p className="mt-1 text-sm font-black text-amber-700">{formatAmount(familyDetails.montant_restant)}</p>
+                                </div>
+                            </div>
+                        )}
+                        <div className="p-5">
+                            <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Détail des versements</h4>
+                            {familyDetailsLoading && (
+                                <div className="flex items-center gap-2 py-6 text-sm text-slate-500">
+                                    <Loader2 className="animate-spin" size={16} /> Chargement…
+                                </div>
+                            )}
+                            {!familyDetailsLoading && familyDetails.loadError && (
+                                <p className="py-4 text-sm text-red-600">Impossible de charger les versements de cette famille.</p>
+                            )}
+                            {!familyDetailsLoading && !familyDetails.loadError && familyDetails.versements && (
+                                <>
+                                    <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-100">
+                                        {familyDetails.versements.data.length === 0 && (
+                                            <p className="p-4 text-center text-sm text-slate-400">
+                                                Aucun versement enregistré pour cet exercice.
+                                            </p>
+                                        )}
+                                        {familyDetails.versements.data.map((v) => (
+                                            <div key={v.id} className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-2.5 text-sm last:border-0">
+                                                <div>
+                                                    <p className="font-semibold text-slate-800">{v.date || "-"}</p>
+                                                    <p className="text-xs text-slate-500">
+                                                        {String(v.mode || "-").replaceAll("_", " ")}
+                                                        {v.reference ? ` · ${v.reference}` : ""}
+                                                    </p>
+                                                    {v.note && <p className="text-xs italic text-slate-400">{v.note}</p>}
+                                                </div>
+                                                <span className="shrink-0 font-black text-emerald-700">{formatAmount(v.montant)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {familyDetails.versements.last_page > 1 && (
+                                        <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                                            <span>
+                                                Page {familyDetails.versements.current_page} sur {familyDetails.versements.last_page}
+                                                {" "}({familyDetails.versements.total} versement(s))
+                                            </span>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    disabled={familyDetails.versements.current_page <= 1}
+                                                    onClick={() => goToFamilyVersementsPage(familyDetails.versements.current_page - 1)}
+                                                    className="rounded-lg border border-slate-300 px-2.5 py-1 font-semibold disabled:opacity-40"
+                                                >
+                                                    Précédent
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={familyDetails.versements.current_page >= familyDetails.versements.last_page}
+                                                    onClick={() => goToFamilyVersementsPage(familyDetails.versements.current_page + 1)}
+                                                    className="rounded-lg border border-slate-300 px-2.5 py-1 font-semibold disabled:opacity-40"
+                                                >
+                                                    Suivant
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {editing && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
