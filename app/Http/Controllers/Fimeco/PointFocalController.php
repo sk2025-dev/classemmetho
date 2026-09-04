@@ -35,7 +35,9 @@ class PointFocalController extends Controller
 
         $anneesDisponibles = $this->fimecoService->anneesDisponibles($classeId);
         ['suivi' => $fimecoSuivi, 'kpi' => $fimecoKpi] = $this->fimecoService->suiviPourClasse($classeId, $annee);
-        $fimecoClassement = $this->fimecoService->classementClasses($annee, $classeId);
+        // Rang de SA classe uniquement (jamais le détail des autres classes) : le Point
+        // Focal FIMECO ne gère que sa classe, il ne doit pas voir les autres.
+        $fimecoRang = $this->fimecoService->rangPourClasse($annee, $classeId);
 
         return Inertia::render('Fimeco/PointFocal', [
             'classeNom' => $user->classe?->nom ?? 'Ma classe',
@@ -43,7 +45,7 @@ class PointFocalController extends Controller
             'fimecoAnnee' => $annee,
             'fimecoAnneesDisponibles' => $anneesDisponibles,
             'fimecoKpi' => $fimecoKpi,
-            'fimecoClassement' => $fimecoClassement,
+            'fimecoRang' => $fimecoRang,
         ]);
     }
 

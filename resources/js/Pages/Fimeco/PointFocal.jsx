@@ -44,12 +44,26 @@ const rankBadgeStyle = (rank) =>
         2: "bg-slate-300 text-slate-800",
         3: "bg-orange-300 text-orange-950",
     })[rank] || "bg-slate-100 text-slate-500";
-const rankCardStyle = (rank) =>
-    ({
-        1: "border-amber-300 bg-amber-50/40 ring-1 ring-amber-200",
-        2: "border-slate-300 bg-slate-50 ring-1 ring-slate-200",
-        3: "border-orange-300 bg-orange-50/40 ring-1 ring-orange-200",
-    })[rank] || "border-slate-200";
+const RANG_CRITERES = [
+    {
+        key: "taux_recouvrement",
+        field: "rang_taux_recouvrement",
+        label: "Taux de recouvrement",
+        detail: "Rang sur le pourcentage versé par rapport aux souscriptions.",
+    },
+    {
+        key: "montant_souscrit",
+        field: "rang_montant_souscrit",
+        label: "Montant souscrit",
+        detail: "Rang sur le montant total souscrit par les familles de la classe.",
+    },
+    {
+        key: "nombre_souscripteurs",
+        field: "rang_nombre_souscripteurs",
+        label: "Nombre de souscripteurs",
+        detail: "Rang sur le nombre de familles ayant souscrit.",
+    },
+];
 
 function StatCard({ label, value, detail, icon: Icon, color }) {
     const colors = {
@@ -101,11 +115,17 @@ export default function FimecoPointFocal({
         familles_en_retard: 0,
         familles_non_souscrit: 0,
     },
-    fimecoClassement = { rang: null, total_classes: 0, classes: [] },
+    fimecoRang = {
+        total_classes: 0,
+        rang_montant_souscrit: null,
+        rang_taux_recouvrement: null,
+        rang_nombre_souscripteurs: null,
+    },
 }) {
     const [search, setSearch] = useState("");
     const [statutFilter, setStatutFilter] = useState("TOUS");
     const [tauxFilter, setTauxFilter] = useState("TOUS");
+    const [rangCritere, setRangCritere] = useState("taux_recouvrement");
     const [editing, setEditing] = useState(null);
     const [montantInput, setMontantInput] = useState("");
     const [saving, setSaving] = useState(false);
@@ -115,7 +135,7 @@ export default function FimecoPointFocal({
         router.get(
             withBasePath("", "/fimeco/classe"),
             { fimeco_annee: value },
-            { preserveState: true, preserveScroll: true, only: ["fimecoSuivi", "fimecoAnnee", "fimecoAnneesDisponibles", "fimecoKpi", "fimecoClassement"] },
+            { preserveState: true, preserveScroll: true, only: ["fimecoSuivi", "fimecoAnnee", "fimecoAnneesDisponibles", "fimecoKpi", "fimecoRang"] },
         );
     };
 
@@ -163,7 +183,7 @@ export default function FimecoPointFocal({
                 montant_souscrit: montant,
             });
             setEditing(null);
-            router.reload({ only: ["fimecoSuivi", "fimecoKpi", "fimecoClassement"] });
+            router.reload({ only: ["fimecoSuivi", "fimecoKpi", "fimecoRang"] });
         } catch (e) {
             setFeedback({
                 type: "error",
@@ -249,53 +269,69 @@ export default function FimecoPointFocal({
                         <StatCard
                             label="Classement inter-classes"
                             value={
-                                fimecoClassement.rang
-                                    ? `${rankOrdinal(fimecoClassement.rang)} / ${fimecoClassement.total_classes}`
+                                fimecoRang.rang_taux_recouvrement
+                                    ? `${rankOrdinal(fimecoRang.rang_taux_recouvrement)} / ${fimecoRang.total_classes}`
                                     : "Non classée"
                             }
-                            detail={fimecoClassement.rang ? "sur le taux de recouvrement" : "aucune donnée enregistrée"}
+                            detail={fimecoRang.rang_taux_recouvrement ? "sur le taux de recouvrement" : "aucune donnée enregistrée"}
                             icon={Trophy}
                             color="amber"
                         />
                     </div>
 
-                    {fimecoClassement.classes.length > 0 && (
+                    {fimecoRang.total_classes > 0 && (
                         <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h2 className="mb-4 text-sm font-black text-slate-800">
-                                Classement des classes · FIMECO {fimecoAnnee}
-                            </h2>
-                            <div className="flex flex-col gap-2">
-                                {fimecoClassement.classes.map((c) => {
-                                    const isMine = c.classe === classeNom;
-                                    return (
-                                        <div
-                                            key={c.classe_id}
-                                            className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
-                                                isMine ? "border-indigo-300 bg-indigo-50/60 ring-1 ring-indigo-200" : rankCardStyle(c.rang)
-                                            }`}
-                                        >
-                                            <span
-                                                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${rankBadgeStyle(c.rang)}`}
-                                            >
-                                                {c.rang}
-                                            </span>
-                                            <span className={`w-40 shrink-0 truncate text-sm ${isMine ? "font-black text-indigo-700" : "font-semibold text-slate-800"}`}>
-                                                {c.classe}
-                                                {isMine && " (ma classe)"}
-                                            </span>
-                                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                                                <div
-                                                    className={`h-full rounded-full ${progressTone(c.taux_recouvrement)}`}
-                                                    style={{ width: `${Math.min(100, c.taux_recouvrement)}%` }}
-                                                />
-                                            </div>
-                                            <span className="w-40 shrink-0 text-right text-xs text-slate-500">
-                                                {formatAmount(c.montant_paye)} / {formatAmount(c.montant_cible)}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
+                            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                <h2 className="text-sm font-black text-slate-800">
+                                    Mon classement · FIMECO {fimecoAnnee}
+                                </h2>
+                                <p className="text-xs text-slate-400">
+                                    Position de votre classe uniquement — les autres classes ne sont pas affichées.
+                                </p>
                             </div>
+                            <div className="mb-4 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                                {RANG_CRITERES.map((c) => (
+                                    <button
+                                        key={c.key}
+                                        type="button"
+                                        onClick={() => setRangCritere(c.key)}
+                                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                                            rangCritere === c.key
+                                                ? "bg-white text-indigo-700 shadow-sm"
+                                                : "text-slate-500 hover:text-slate-700"
+                                        }`}
+                                    >
+                                        {c.label}
+                                    </button>
+                                ))}
+                            </div>
+                            {(() => {
+                                const rang = fimecoRang[RANG_CRITERES.find((c) => c.key === rangCritere)?.field];
+                                return (
+                                    <div className="flex items-center gap-4 rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-4">
+                                        <span
+                                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-black ${rangBadgeStyle(rang)}`}
+                                        >
+                                            {rang ?? "–"}
+                                        </span>
+                                        <div>
+                                            <p className="text-base font-black text-indigo-700">
+                                                Classe {classeNom}{" "}
+                                                {rang ? (
+                                                    <>
+                                                        · {rankOrdinal(rang)} / {fimecoRang.total_classes}
+                                                    </>
+                                                ) : (
+                                                    "· non classée"
+                                                )}
+                                            </p>
+                                            <p className="text-xs text-slate-500">
+                                                {RANG_CRITERES.find((c) => c.key === rangCritere)?.detail}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
 

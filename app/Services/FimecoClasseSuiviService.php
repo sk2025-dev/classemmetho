@@ -182,4 +182,83 @@ class FimecoClasseSuiviService
             'classes' => $rows->values(),
         ];
     }
+
+    /**
+     * Rang d'UNE classe parmi toutes les classes, sur 3 critères FIMECO, sans jamais
+     * exposer le nom ou les montants des autres classes (portée Point Focal FIMECO :
+     * il ne doit voir que sa propre position, pas le détail des autres classes).
+     */
+    public function rangPourClasse(int $annee, ?int $classeId): array
+    {
+        $empty = [
+            'total_classes' => 0,
+            'rang_montant_souscrit' => null,
+            'rang_taux_recouvrement' => null,
+            'rang_nombre_souscripteurs' => null,
+        ];
+
+        $fimecoCotisationIds = Cotisation::query()
+            ->whereRaw('LOWER(nom) LIKE ?', ['%fimeco%'])
+            ->pluck('id');
+
+        $souscriptionsParClasse = FimecoSouscription::query()
+            ->where('fimeco_souscriptions.annee', $annee)
+            ->whereNotNull('fimeco_souscriptions.family_id')
+            ->join('families', 'families.id', '=', 'fimeco_souscriptions.family_id')
+            ->whereNotNull('families.classe_id')
+            ->selectRaw(
+                'families.classe_id as classe_id,'
+                . ' SUM(fimeco_souscriptions.montant_souscrit) as total_souscrit,'
+                . ' SUM(CASE WHEN fimeco_souscriptions.montant_souscrit > 0 THEN 1 ELSE 0 END) as nb_souscripteurs'
+            )
+            ->groupBy('families.classe_id')
+            ->get()
+            ->keyBy('classe_id');
+
+        $paiementsParClasse = Paiement::query()
+            ->whereIn('paiements.cotisation_id', $fimecoCotisationIds)
+            ->where('paiements.year', $annee)
+            ->whereNotNull('paiements.family_id')
+            ->join('families', 'families.id', '=', 'paiements.family_id')
+            ->whereNotNull('families.classe_id')
+            ->selectRaw('families.classe_id as classe_id, SUM(paiements.montant) as total')
+            ->groupBy('families.classe_id')
+            ->pluck('total', 'classe_id');
+
+        $classeIds = collect($souscriptionsParClasse->keys())
+            ->merge($paiementsParClasse->keys())
+            ->unique()
+            ->values();
+
+        if ($classeIds->isEmpty()) {
+            return $empty;
+        }
+
+        $rows = $classeIds->map(function ($id) use ($souscriptionsParClasse, $paiementsParClasse) {
+            $s = $souscriptionsParClasse->get($id);
+            $cible = (int) ($s->total_souscrit ?? 0);
+            $paye = (int) ($paiementsParClasse[$id] ?? 0);
+
+            return [
+                'classe_id' => (int) $id,
+                'montant_souscrit' => $cible,
+                'nombre_souscripteurs' => (int) ($s->nb_souscripteurs ?? 0),
+                'taux_recouvrement' => $cible > 0 ? min(100, round(($paye / $cible) * 100, 1)) : 0,
+            ];
+        });
+
+        $rangSur = function (Collection $rows, string $field) use ($classeId) {
+            $sorted = $rows->sortByDesc($field)->values();
+            $index = $sorted->search(fn (array $row) => $row['classe_id'] === $classeId);
+
+            return $index === false ? null : $index + 1;
+        };
+
+        return [
+            'total_classes' => $rows->count(),
+            'rang_montant_souscrit' => $rangSur($rows, 'montant_souscrit'),
+            'rang_taux_recouvrement' => $rangSur($rows, 'taux_recouvrement'),
+            'rang_nombre_souscripteurs' => $rangSur($rows, 'nombre_souscripteurs'),
+        ];
+    }
 }
