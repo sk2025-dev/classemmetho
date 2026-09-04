@@ -135,6 +135,7 @@ export default function FimecoPointFocal({
     const [search, setSearch] = useState("");
     const [statutFilter, setStatutFilter] = useState("TOUS");
     const [tauxFilter, setTauxFilter] = useState("TOUS");
+    const [suiviPage, setSuiviPage] = useState(1);
     const [rangCritere, setRangCritere] = useState("taux_recouvrement");
     const [editing, setEditing] = useState(null);
     const [montantInput, setMontantInput] = useState("");
@@ -149,6 +150,7 @@ export default function FimecoPointFocal({
     const changeYear = (value) => {
         setVersementSearch("");
         setVersementMode("");
+        setSuiviPage(1);
         router.get(
             withBasePath("", "/fimeco/classe"),
             { fimeco_annee: value },
@@ -251,6 +253,24 @@ export default function FimecoPointFocal({
             return true;
         });
     }, [fimecoSuivi, search, statutFilter, tauxFilter]);
+
+    const suiviPerPage = 20;
+    const suiviTotalPages = Math.max(1, Math.ceil(filtered.length / suiviPerPage));
+    const suiviSafePage = Math.min(suiviPage, suiviTotalPages);
+    const visibleSuivi = filtered.slice((suiviSafePage - 1) * suiviPerPage, suiviSafePage * suiviPerPage);
+
+    const handleSearchChange = (e) => {
+        setSearch(e.target.value);
+        setSuiviPage(1);
+    };
+    const handleStatutFilterChange = (e) => {
+        setStatutFilter(e.target.value);
+        setSuiviPage(1);
+    };
+    const handleTauxFilterChange = (e) => {
+        setTauxFilter(e.target.value);
+        setSuiviPage(1);
+    };
 
     const openEdit = (item) => {
         setEditing(item);
@@ -436,18 +456,18 @@ export default function FimecoPointFocal({
                                 <input
                                     type="text"
                                     value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
+                                    onChange={handleSearchChange}
                                     placeholder="Rechercher par code famille ou par nom…"
                                     className={`${inputClass} pl-9`}
                                 />
                             </div>
-                            <select value={statutFilter} onChange={(e) => setStatutFilter(e.target.value)} className={`${inputClass} w-auto`}>
+                            <select value={statutFilter} onChange={handleStatutFilterChange} className={`${inputClass} w-auto`}>
                                 <option value="TOUS">Tous les statuts</option>
                                 <option value="A JOUR">À jour</option>
                                 <option value="EN RETARD">En retard</option>
                                 <option value="NON SOUSCRIT">Non souscrit</option>
                             </select>
-                            <select value={tauxFilter} onChange={(e) => setTauxFilter(e.target.value)} className={`${inputClass} w-auto`}>
+                            <select value={tauxFilter} onChange={handleTauxFilterChange} className={`${inputClass} w-auto`}>
                                 <option value="TOUS">Tous les taux de recouvrement</option>
                                 <option value="0">0% versé</option>
                                 <option value="1-49">1 à 49% versé</option>
@@ -477,7 +497,7 @@ export default function FimecoPointFocal({
                                             </td>
                                         </tr>
                                     )}
-                                    {filtered.map((item) => {
+                                    {visibleSuivi.map((item) => {
                                         const pct = pctOf(item);
                                         return (
                                             <tr key={item.family_id} className="border-b border-slate-50 last:border-0">
@@ -534,6 +554,31 @@ export default function FimecoPointFocal({
                                 </tbody>
                             </table>
                         </div>
+                        {suiviTotalPages > 1 && (
+                            <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 text-sm">
+                                <span className="text-slate-500">
+                                    Page {suiviSafePage} sur {suiviTotalPages} · {filtered.length} famille(s)
+                                </span>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        disabled={suiviSafePage === 1}
+                                        onClick={() => setSuiviPage(Math.max(1, suiviSafePage - 1))}
+                                        className="rounded-lg border border-slate-300 px-3 py-1.5 font-semibold disabled:opacity-40"
+                                    >
+                                        Précédent
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={suiviSafePage === suiviTotalPages}
+                                        onClick={() => setSuiviPage(Math.min(suiviTotalPages, suiviSafePage + 1))}
+                                        className="rounded-lg border border-slate-300 px-3 py-1.5 font-semibold disabled:opacity-40"
+                                    >
+                                        Suivant
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
