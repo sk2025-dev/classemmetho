@@ -13,6 +13,16 @@ export default function QrCodeScanner({ onScan, active = true }) {
     const scannerRef = useRef(null);
     const [error, setError] = useState(null);
 
+    // La dernière callback est lue via une ref plutôt que mise en dépendance
+    // de l'effet : si le composant parent passe une nouvelle fonction à
+    // chaque rendu (cas fréquent, ex. un handler défini inline), l'effet ne
+    // doit pas redémarrer la caméra pour autant — la relancer en pleine
+    // lecture est ce qui provoquait un plantage (page vierge).
+    const onScanRef = useRef(onScan);
+    useEffect(() => {
+        onScanRef.current = onScan;
+    }, [onScan]);
+
     useEffect(() => {
         if (!active) return;
 
@@ -25,7 +35,7 @@ export default function QrCodeScanner({ onScan, active = true }) {
                 { facingMode: "environment" },
                 { fps: 10, qrbox: 240 },
                 (decodedText) => {
-                    if (!cancelled) onScan(decodedText);
+                    if (!cancelled) onScanRef.current?.(decodedText);
                 },
                 () => {
                     // erreurs de décodage image par image, ignorées volontairement
@@ -41,14 +51,16 @@ export default function QrCodeScanner({ onScan, active = true }) {
 
         return () => {
             cancelled = true;
-            if (scannerRef.current) {
-                scannerRef.current
+            const scannerToStop = scannerRef.current;
+            scannerRef.current = null;
+            if (scannerToStop) {
+                scannerToStop
                     .stop()
-                    .then(() => scannerRef.current.clear())
+                    .then(() => scannerToStop.clear())
                     .catch(() => {});
             }
         };
-    }, [active, containerId, onScan]);
+    }, [active, containerId]);
 
     if (error) {
         return (

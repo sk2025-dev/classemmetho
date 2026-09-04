@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import axios from "axios";
 import QrCodeScanner from "@/Components/QrCodeScanner";
 import { withBasePath } from "../Utils/urlHelper";
@@ -15,6 +15,11 @@ export default function PresenceSelfScan({ label = "Scanner ma présence" }) {
     const [feedback, setFeedback] = useState(null);
     const [cameraActive, setCameraActive] = useState(true);
     const lastScanRef = useRef({ code: null, at: 0 });
+    // Garde de ré-entrance en ref (pas en state) : un state comme dépendance
+    // ferait changer l'identité de handleScan à chaque scan, ce qui forçait
+    // QrCodeScanner à arrêter/redémarrer la caméra en pleine lecture — source
+    // de plantages laissant la page vierge (aucun Error Boundary auparavant).
+    const loadingRef = useRef(false);
 
     const close = () => {
         setOpen(false);
@@ -23,9 +28,9 @@ export default function PresenceSelfScan({ label = "Scanner ma présence" }) {
         lastScanRef.current = { code: null, at: 0 };
     };
 
-    const handleScan = async (decodedText) => {
+    const handleScan = useCallback(async (decodedText) => {
         const content = String(decodedText || "").trim();
-        if (!content || loading) return;
+        if (!content || loadingRef.current) return;
 
         const now = Date.now();
         if (
@@ -36,6 +41,7 @@ export default function PresenceSelfScan({ label = "Scanner ma présence" }) {
         }
         lastScanRef.current = { code: content, at: now };
 
+        loadingRef.current = true;
         setLoading(true);
         setFeedback(null);
 
@@ -57,9 +63,10 @@ export default function PresenceSelfScan({ label = "Scanner ma présence" }) {
                     "Impossible d'enregistrer votre présence.",
             });
         } finally {
+            loadingRef.current = false;
             setLoading(false);
         }
-    };
+    }, []);
 
     return (
         <>

@@ -9,6 +9,7 @@ import { router } from "@inertiajs/react";
 import AppLayout from "./Layouts/AppLayout";
 import MainLayout from "./Layouts/MainLayout";
 import GlobalFormErrorHandler from "./Components/GlobalFormErrorHandler";
+import ErrorBoundary from "./Components/ErrorBoundary";
 import { loadingScreenHTML } from "./Utils/loadingScreenTemplate.jsx";
 
 // Migrer les données localStorage corrompues au démarrage
@@ -332,9 +333,11 @@ createInertiaApp({
             props?.initialPage?.props?.app?.basePath || "";
 
         createRoot(el).render(
-            <AppLayout>
-                <App {...props} />
-            </AppLayout>,
+            <ErrorBoundary>
+                <AppLayout>
+                    <App {...props} />
+                </AppLayout>
+            </ErrorBoundary>,
         );
 
         // Masquer le loading screen après que React ait rendu le contenu
