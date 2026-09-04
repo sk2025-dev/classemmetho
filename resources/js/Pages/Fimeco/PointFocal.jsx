@@ -5,7 +5,6 @@ import {
     ArrowLeft,
     Banknote,
     CheckCircle2,
-    Edit3,
     Eye,
     Landmark,
     Loader2,
@@ -13,7 +12,6 @@ import {
     Trophy,
     Users,
     X,
-    XCircle,
 } from "lucide-react";
 import { withBasePath } from "../../Utils/urlHelper";
 
@@ -137,10 +135,6 @@ export default function FimecoPointFocal({
     const [tauxFilter, setTauxFilter] = useState("TOUS");
     const [suiviPage, setSuiviPage] = useState(1);
     const [rangCritere, setRangCritere] = useState("taux_recouvrement");
-    const [editing, setEditing] = useState(null);
-    const [montantInput, setMontantInput] = useState("");
-    const [saving, setSaving] = useState(false);
-    const [feedback, setFeedback] = useState(null);
     const [versementSearch, setVersementSearch] = useState("");
     const [versementMode, setVersementMode] = useState("");
     const [familyDetails, setFamilyDetails] = useState(null);
@@ -272,36 +266,6 @@ export default function FimecoPointFocal({
         setSuiviPage(1);
     };
 
-    const openEdit = (item) => {
-        setEditing(item);
-        setMontantInput(String(item.montant_souscrit || ""));
-        setFeedback(null);
-    };
-
-    const submitSouscription = async () => {
-        if (!editing) return;
-        const montant = parseInt(montantInput, 10);
-        if (Number.isNaN(montant) || montant < 0) {
-            setFeedback({ type: "error", message: "Montant invalide." });
-            return;
-        }
-        try {
-            setSaving(true);
-            await axios.post(withBasePath("", "/fimeco/classe/souscription"), {
-                family_id: editing.family_id,
-                montant_souscrit: montant,
-            });
-            setEditing(null);
-            router.reload({ only: ["fimecoSuivi", "fimecoKpi", "fimecoRang"] });
-        } catch (e) {
-            setFeedback({
-                type: "error",
-                message: e?.response?.data?.message || "Échec de l'enregistrement.",
-            });
-        } finally {
-            setSaving(false);
-        }
-    };
 
     const anneeOptions = (fimecoAnneesDisponibles || []).map((a) => ({ value: String(a), label: String(a) }));
 
@@ -503,19 +467,7 @@ export default function FimecoPointFocal({
                                             <tr key={item.family_id} className="border-b border-slate-50 last:border-0">
                                                 <td className="px-5 py-3 text-slate-500">{item.code_famille || "-"}</td>
                                                 <td className="px-5 py-3 font-semibold text-slate-800">{item.famille}</td>
-                                                <td className="px-5 py-3 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        {formatAmount(item.montant_cible)}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openEdit(item)}
-                                                            title="Définir la souscription de la famille"
-                                                            className="text-amber-500 hover:text-amber-600"
-                                                        >
-                                                            <Edit3 size={13} />
-                                                        </button>
-                                                    </div>
-                                                </td>
+                                                <td className="px-5 py-3 text-right">{formatAmount(item.montant_cible)}</td>
                                                 <td className="px-5 py-3 text-right font-semibold text-emerald-700">
                                                     {formatAmount(item.montant_paye)}
                                                 </td>
@@ -771,48 +723,6 @@ export default function FimecoPointFocal({
                 </div>
             )}
 
-            {editing && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-                    <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-                        <h3 className="text-base font-black text-slate-900">Souscription FIMECO</h3>
-                        <p className="mt-1 text-sm text-slate-500">
-                            Montant que <strong>{editing.famille}</strong> s'engage à verser pour la FIMECO {fimecoAnnee}.
-                        </p>
-                        <input
-                            type="number"
-                            min="0"
-                            value={montantInput}
-                            onChange={(e) => setMontantInput(e.target.value)}
-                            className={`${inputClass} mt-4`}
-                            placeholder="Montant en F CFA"
-                            autoFocus
-                        />
-                        {feedback?.type === "error" && (
-                            <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-red-600">
-                                <XCircle size={13} /> {feedback.message}
-                            </p>
-                        )}
-                        <div className="mt-5 flex justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setEditing(null)}
-                                className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100"
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                type="button"
-                                onClick={submitSouscription}
-                                disabled={saving}
-                                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {saving && <Loader2 className="animate-spin" size={15} />}
-                                Enregistrer
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </>
     );
 }

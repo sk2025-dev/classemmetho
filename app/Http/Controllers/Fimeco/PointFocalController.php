@@ -191,41 +191,4 @@ class PointFocalController extends Controller
         ]);
     }
 
-    public function setSouscription(Request $request): JsonResponse
-    {
-        $user = Auth::user();
-        $classeId = FimecoAccess::pointFocalClasseId($user);
-        abort_unless($classeId !== null, 403);
-
-        $validated = $request->validate([
-            'family_id' => ['required', 'exists:families,id'],
-            'montant_souscrit' => ['required', 'integer', 'min:0'],
-        ]);
-
-        $family = Family::query()->findOrFail($validated['family_id']);
-
-        if ((int) $family->classe_id !== $classeId) {
-            return response()->json(['message' => "Cette famille n'est pas dans votre classe."], 403);
-        }
-
-        $annee = now()->year;
-
-        $souscription = FimecoSouscription::query()->updateOrCreate(
-            ['family_id' => $family->id, 'annee' => $annee],
-            [
-                'classe_id' => $classeId,
-                'montant_souscrit' => $validated['montant_souscrit'],
-                'created_by' => $user->id,
-            ]
-        );
-
-        return response()->json([
-            'message' => 'Souscription FIMECO enregistrée avec succès.',
-            'data' => [
-                'family_id' => $souscription->family_id,
-                'annee' => $souscription->annee,
-                'montant_souscrit' => $souscription->montant_souscrit,
-            ],
-        ]);
-    }
 }

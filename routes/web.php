@@ -144,7 +144,6 @@ Route::middleware(['auth', 'fimeco'])->prefix('fimeco')->name('fimeco.')->group(
 // des familles de sa propre classe (mêmes informations que le conducteur au niveau FIMECO).
 Route::middleware(['auth', 'fimeco.classe'])->prefix('fimeco/classe')->name('fimeco.classe.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Fimeco\PointFocalController::class, 'index'])->name('index');
-    Route::post('/souscription', [\App\Http\Controllers\Fimeco\PointFocalController::class, 'setSouscription'])->name('souscription.store');
     Route::get('/familles/{family}/versements', [\App\Http\Controllers\Fimeco\PointFocalController::class, 'familyVersements'])->name('familles.versements');
 });
 
