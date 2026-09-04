@@ -589,15 +589,19 @@ class AnnuaireService
 
         // Consentement RGPD : tant que ce membre (ou le responsable de sa
         // famille) n'a pas validé les conditions d'utilisation des données
-        // personnelles, ses infos identifiantes restent masquées dans
-        // l'annuaire, quel que soit le rôle qui consulte.
+        // personnelles, ses infos ne restent PAS toutes masquées dans
+        // l'annuaire — nom, code famille, code membre et le statut du
+        // consentement lui-même restent visibles (pour permettre de
+        // repérer et relancer la bonne personne) ; le reste (contact,
+        // date/lieu de naissance, CNI, adresse, photo...) reste masqué,
+        // quel que soit le rôle qui consulte.
         $consentementRequis = \App\Support\DataConsent::isEnabled() && !$user->aValideConsentement();
 
         return [
             // ── Identité ──
             'id'              => $user->id,
-            'prenoms'         => $consentementRequis ? '••••' : $user->prenom,
-            'nom'             => $consentementRequis ? '••••••' : $user->nom,
+            'prenoms'         => $user->prenom,
+            'nom'             => $user->nom,
             'sexe'            => $user->genre ?? 'M',
             'famille'         => $user->family?->nom ?? $user->family?->code_famille ?? '-',
             'code_famille'    => $user->family?->code_famille ?? null,
@@ -625,6 +629,12 @@ class AnnuaireService
             'date_retrait'    => $user->date_retrait ? $user->date_retrait->format('Y-m-d') : null,
             'statutVie'       => $user->statut_vie ?? null,
             'consentement_requis' => $consentementRequis,
+            'consentement_statut' => !\App\Support\DataConsent::isEnabled()
+                ? null
+                : ($consentementRequis ? 'en_attente' : 'valide'),
+            'consentement_statut_label' => !\App\Support\DataConsent::isEnabled()
+                ? null
+                : ($consentementRequis ? 'Consentement en attente' : 'Consentement validé'),
 
             // ── Sacrements (objet imbriqué pour normalizeMember BureauConducteur/Pasteur) ──
             'sacrements' => $sacrements ? [

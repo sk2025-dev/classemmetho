@@ -545,6 +545,18 @@ const GLOBAL_STYLES = `
         display: inline-block;
         margin: 0.5rem 0;
     }
+    .consent-badge {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 0.2rem 0.65rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        margin: 0.15rem 0 0.4rem;
+    }
+    .consent-badge--en_attente { background: #fef3c7; color: #92400e; }
+    .consent-badge--valide { background: #d1fae5; color: #065f46; }
     .grid-card-contact {
         font-size: 0.9rem;
         color: #4b5563;
@@ -669,6 +681,15 @@ const MemberDetailsModal = ({
           <div className="member-identity-info">
             <p>
               <strong>Nom & Prénoms:</strong> {member.prenoms} {member.nom}
+              {member.consentement_statut && (
+                <span
+                  className={`consent-badge consent-badge--${member.consentement_statut}`}
+                  style={{ marginLeft: "0.5rem" }}
+                >
+                  {member.consentement_statut === "en_attente" ? "🔒" : "✓"}{" "}
+                  {member.consentement_statut_label}
+                </span>
+              )}
             </p>
             <p>
               <strong>Famille:</strong> {member.famille || "-"}
@@ -2023,6 +2044,14 @@ const Annuaire = ({
                   <h4>
                     {member.prenoms} {member.nom}
                   </h4>
+                  {member.consentement_statut && (
+                    <span
+                      className={`consent-badge consent-badge--${member.consentement_statut}`}
+                    >
+                      {member.consentement_statut === "en_attente" ? "🔒" : "✓"}{" "}
+                      {member.consentement_statut_label}
+                    </span>
+                  )}
                   <div className="grid-card-famille">
                     {member.famille || "-"}
                   </div>
