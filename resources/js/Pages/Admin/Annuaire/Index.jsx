@@ -729,7 +729,10 @@ const MemberDetailsModal = ({
               {member.classeMethodiste || "-"}
             </p>
             <p>
-              <strong>Profession:</strong> {member.profession || "-"}
+              <strong>Profession:</strong>{" "}
+              <span className={consentBlurClass(member)}>
+                {member.profession || "-"}
+              </span>
             </p>
             <p>
               <strong>Fonction:</strong> {member.fonction || "-"}
@@ -1985,7 +1988,9 @@ const Annuaire = ({
                       </td>
                       <td className="text-center">{member.fonction || "-"}</td>
                       <td className="text-center">
-                        {member.profession || "-"}
+                        <span className={consentBlurClass(member)}>
+                          {member.profession || "-"}
+                        </span>
                       </td>
                       <td className="text-center">
                         <button
@@ -2125,7 +2130,9 @@ const Annuaire = ({
                     </span>
                   </div>
                   {member.profession && member.profession !== "-" && (
-                    <div className="grid-card-profession">
+                    <div
+                      className={`grid-card-profession ${consentBlurClass(member)}`}
+                    >
                       💼 {member.profession}
                     </div>
                   )}

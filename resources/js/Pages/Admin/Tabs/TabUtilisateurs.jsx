@@ -613,6 +613,7 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                             <InfoItem
                                 label="Profession"
                                 value={displayValue(member.profession)}
+                                blur={!!member.consentement_requis}
                             />
                             <InfoItem
                                 label="Genre"
@@ -687,6 +688,7 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                             <InfoItem
                                 label="Statut marital"
                                 value={displayValue(member.statut_marital)}
+                                blur={!!member.consentement_requis}
                             />
                             <InfoItem
                                 label="Relation"
@@ -3009,19 +3011,27 @@ const TabUtilisateurs = ({
                                                 )}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
-                                                {m.statut_marital ? (
-                                                    <span className={`px-2 py-1 text-xs font-bold rounded-full border ${
-                                                        m.statut_marital === "Marié(e)" ? "bg-green-100 text-green-700 border-green-200" :
-                                                        m.statut_marital === "Célibataire" ? "bg-blue-100 text-blue-700 border-blue-200" :
-                                                        m.statut_marital === "Veuf(ve)" ? "bg-gray-100 text-gray-600 border-gray-200" :
-                                                        m.statut_marital === "Divorcé(e)" ? "bg-orange-100 text-orange-700 border-orange-200" :
-                                                        "bg-purple-100 text-purple-700 border-purple-200"
-                                                    }`}>
-                                                        {m.statut_marital}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-gray-400">-</span>
-                                                )}
+                                                <span
+                                                    className={
+                                                        m.consentement_requis
+                                                            ? "blur-sm select-none"
+                                                            : ""
+                                                    }
+                                                >
+                                                    {m.statut_marital ? (
+                                                        <span className={`px-2 py-1 text-xs font-bold rounded-full border ${
+                                                            m.statut_marital === "Marié(e)" ? "bg-green-100 text-green-700 border-green-200" :
+                                                            m.statut_marital === "Célibataire" ? "bg-blue-100 text-blue-700 border-blue-200" :
+                                                            m.statut_marital === "Veuf(ve)" ? "bg-gray-100 text-gray-600 border-gray-200" :
+                                                            m.statut_marital === "Divorcé(e)" ? "bg-orange-100 text-orange-700 border-orange-200" :
+                                                            "bg-purple-100 text-purple-700 border-purple-200"
+                                                        }`}>
+                                                            {m.statut_marital}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-gray-400">-</span>
+                                                    )}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
                                                 {m.created_at || "-"}
@@ -3067,14 +3077,30 @@ const TabUtilisateurs = ({
                                                     "Non renseigné"}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
-                                                {m.profession || "-"}
+                                                <span
+                                                    className={
+                                                        m.consentement_requis
+                                                            ? "blur-sm select-none"
+                                                            : ""
+                                                    }
+                                                >
+                                                    {m.profession || "-"}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
-                                                {m.employment_status === "TRAVAILLEUR" && <span className="px-2 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-700 border border-blue-200">Travailleur</span>}
-                                                {m.employment_status === "ETUDIANT" && <span className="px-2 py-1 text-xs font-bold rounded-full bg-purple-100 text-purple-700 border border-purple-200">Étudiant</span>}
-                                                {m.employment_status === "RETRAITE" && <span className="px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-700 border border-orange-200">Retraité</span>}
-                                                {m.employment_status === "SANS_EMPLOI" && <span className="px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-600 border border-gray-200">Sans emploi</span>}
-                                                {!m.employment_status && <span className="text-gray-400">-</span>}
+                                                <span
+                                                    className={
+                                                        m.consentement_requis
+                                                            ? "blur-sm select-none"
+                                                            : ""
+                                                    }
+                                                >
+                                                    {m.employment_status === "TRAVAILLEUR" && <span className="px-2 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-700 border border-blue-200">Travailleur</span>}
+                                                    {m.employment_status === "ETUDIANT" && <span className="px-2 py-1 text-xs font-bold rounded-full bg-purple-100 text-purple-700 border border-purple-200">Étudiant</span>}
+                                                    {m.employment_status === "RETRAITE" && <span className="px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-700 border border-orange-200">Retraité</span>}
+                                                    {m.employment_status === "SANS_EMPLOI" && <span className="px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-600 border border-gray-200">Sans emploi</span>}
+                                                    {!m.employment_status && <span className="text-gray-400">-</span>}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
                                                 <span
