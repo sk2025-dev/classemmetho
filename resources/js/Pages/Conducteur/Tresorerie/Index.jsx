@@ -625,6 +625,26 @@ const KpiCard = ({ icon: Icon, label, value, sub, color, trend }) => {
 };
 
 const fmt = (v) => Number(v || 0).toLocaleString("fr-FR") + " F";
+const FIMECO_RANG_CRITERES = [
+    {
+        key: "taux_recouvrement",
+        field: "rang_taux_recouvrement",
+        label: "Taux de recouvrement",
+        detail: "Rang sur le pourcentage versé par rapport aux souscriptions.",
+    },
+    {
+        key: "montant_souscrit",
+        field: "rang_montant_souscrit",
+        label: "Montant souscrit",
+        detail: "Rang sur le montant total souscrit par les familles de la classe.",
+    },
+    {
+        key: "nombre_souscripteurs",
+        field: "rang_nombre_souscripteurs",
+        label: "Nombre de souscripteurs",
+        detail: "Rang sur le nombre de familles ayant souscrit.",
+    },
+];
 const modePill = (mode) => {
     const map = {
         MOBILE_MONEY: { color: "purple", label: "Mobile Money" },
@@ -702,7 +722,12 @@ export default function ConducteurTresorerie({
         familles_en_retard: 0,
         familles_non_souscrit: 0,
     },
-    fimecoClassement = { rang: null, total_classes: 0, classes: [] },
+    fimecoRang = {
+        total_classes: 0,
+        rang_montant_souscrit: null,
+        rang_taux_recouvrement: null,
+        rang_nombre_souscripteurs: null,
+    },
     membresClasse = [],
     membresClasseAssignables = [],
     tresorierClasse = null,
@@ -729,6 +754,7 @@ export default function ConducteurTresorerie({
     const [fimecoSearch, setFimecoSearch] = useState("");
     const [fimecoStatutFilter, setFimecoStatutFilter] = useState("TOUS");
     const [fimecoTauxFilter, setFimecoTauxFilter] = useState("TOUS");
+    const [fimecoRangCritere, setFimecoRangCritere] = useState("taux_recouvrement");
     const [newCotisation, setNewCotisation] = useState({
         nom: "",
         periodicite: "MENSUEL",
@@ -1325,7 +1351,7 @@ export default function ConducteurTresorerie({
                     "fimecoAnnee",
                     "fimecoAnneesDisponibles",
                     "fimecoKpi",
-                    "fimecoClassement",
+                    "fimecoRang",
                 ],
             },
         );
@@ -2831,99 +2857,130 @@ export default function ConducteurTresorerie({
                                 color="purple"
                                 label="Classement inter-classes"
                                 value={
-                                    fimecoClassement.rang
-                                        ? `${fimecoClassement.rang}${fimecoClassement.rang === 1 ? "ère" : "ème"} / ${fimecoClassement.total_classes}`
+                                    fimecoRang.rang_taux_recouvrement
+                                        ? `${fimecoRang.rang_taux_recouvrement}${fimecoRang.rang_taux_recouvrement === 1 ? "ère" : "ème"} / ${fimecoRang.total_classes}`
                                         : "Non classée"
                                 }
                                 sub={
-                                    fimecoClassement.rang
+                                    fimecoRang.rang_taux_recouvrement
                                         ? "sur le taux de recouvrement"
                                         : "aucune souscription/versement enregistré"
                                 }
                             />
                         </div>
-                        {fimecoClassement.classes.length > 0 && (
+                        {fimecoRang.total_classes > 0 && (
                             <Card>
-                                <SecTitle accent="purple">
-                                    Classement des classes · FIMECO {fimecoAnnee}
-                                </SecTitle>
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        flexWrap: "wrap",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: 8,
+                                        marginBottom: 16,
+                                    }}
+                                >
+                                    <SecTitle accent="purple">
+                                        Mon classement · FIMECO {fimecoAnnee}
+                                    </SecTitle>
+                                    <span style={{ fontSize: 11, color: "#9CA3AF" }}>
+                                        Position de votre classe uniquement — les autres classes ne sont pas affichées.
+                                    </span>
+                                </div>
                                 <div style={{ padding: "0 20px 20px" }}>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                                        {fimecoClassement.classes.map((c) => {
-                                            const isMine = c.classe_id === (classInfo?.classe_id ?? null) || c.classe === classInfo?.nom;
-                                            return (
-                                                <div
-                                                    key={c.classe_id}
+                                    <div
+                                        style={{
+                                            display: "inline-flex",
+                                            border: "1px solid #E5E7EB",
+                                            background: "#F9FAFB",
+                                            borderRadius: 10,
+                                            padding: 4,
+                                            marginBottom: 16,
+                                        }}
+                                    >
+                                        {FIMECO_RANG_CRITERES.map((c) => (
+                                            <button
+                                                key={c.key}
+                                                type="button"
+                                                onClick={() => setFimecoRangCritere(c.key)}
+                                                style={{
+                                                    border: "none",
+                                                    borderRadius: 8,
+                                                    padding: "6px 12px",
+                                                    fontSize: 12,
+                                                    fontWeight: 700,
+                                                    cursor: "pointer",
+                                                    background:
+                                                        fimecoRangCritere === c.key
+                                                            ? "#fff"
+                                                            : "transparent",
+                                                    color:
+                                                        fimecoRangCritere === c.key
+                                                            ? "#6366F1"
+                                                            : "#6B7280",
+                                                    boxShadow:
+                                                        fimecoRangCritere === c.key
+                                                            ? "0 1px 2px rgba(15,23,42,0.12)"
+                                                            : "none",
+                                                }}
+                                            >
+                                                {c.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {(() => {
+                                        const critere = FIMECO_RANG_CRITERES.find(
+                                            (c) => c.key === fimecoRangCritere,
+                                        );
+                                        const rang = fimecoRang[critere?.field];
+                                        return (
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 16,
+                                                    padding: 16,
+                                                    borderRadius: 10,
+                                                    background: "rgba(99,102,241,0.08)",
+                                                    border: "1px solid rgba(99,102,241,0.3)",
+                                                }}
+                                            >
+                                                <span
                                                     style={{
+                                                        width: 44,
+                                                        height: 44,
+                                                        borderRadius: "50%",
+                                                        background:
+                                                            rang === 1
+                                                                ? "#F5C244"
+                                                                : rang === 2
+                                                                  ? "#C7CBD1"
+                                                                  : rang === 3
+                                                                    ? "#D8985A"
+                                                                    : "#E5E7EB",
+                                                        color: rang && rang <= 3 ? "#fff" : "#6B7280",
                                                         display: "flex",
                                                         alignItems: "center",
-                                                        gap: 12,
-                                                        padding: "10px 14px",
-                                                        borderRadius: 10,
-                                                        background: isMine
-                                                            ? "rgba(99,102,241,0.10)"
-                                                            : "#F9FAFB",
-                                                        border: isMine
-                                                            ? "1px solid rgba(99,102,241,0.35)"
-                                                            : "1px solid #F1F1EF",
+                                                        justifyContent: "center",
+                                                        fontSize: 14,
+                                                        fontWeight: 800,
+                                                        flexShrink: 0,
                                                     }}
                                                 >
-                                                    <span
-                                                        style={{
-                                                            width: 26,
-                                                            height: 26,
-                                                            borderRadius: "50%",
-                                                            background:
-                                                                c.rang === 1
-                                                                    ? "#F5C244"
-                                                                    : c.rang === 2
-                                                                      ? "#C7CBD1"
-                                                                      : c.rang === 3
-                                                                        ? "#D8985A"
-                                                                        : "#E5E7EB",
-                                                            color: c.rang <= 3 ? "#fff" : "#6B7280",
-                                                            display: "flex",
-                                                            alignItems: "center",
-                                                            justifyContent: "center",
-                                                            fontSize: 12,
-                                                            fontWeight: 800,
-                                                            flexShrink: 0,
-                                                        }}
-                                                    >
-                                                        {c.rang}
-                                                    </span>
-                                                    <span
-                                                        style={{
-                                                            fontWeight: isMine ? 800 : 600,
-                                                            fontSize: 13,
-                                                            color: "#1F2937",
-                                                            flex: "0 0 160px",
-                                                        }}
-                                                    >
-                                                        {c.classe}
-                                                        {isMine && (
-                                                            <span style={{ color: "#6366F1" }}> (ma classe)</span>
-                                                        )}
-                                                    </span>
-                                                    <div style={{ flex: 1 }}>
-                                                        <ProgressBar
-                                                            value={c.taux_recouvrement}
-                                                            color={
-                                                                c.taux_recouvrement >= 100
-                                                                    ? "teal"
-                                                                    : c.taux_recouvrement >= 50
-                                                                      ? "amber"
-                                                                      : "red"
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <span style={{ fontSize: 12, color: "#6B7280", flex: "0 0 150px", textAlign: "right" }}>
-                                                        {fmt(c.montant_paye)} / {fmt(c.montant_cible)}
-                                                    </span>
+                                                    {rang ?? "–"}
+                                                </span>
+                                                <div>
+                                                    <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#6366F1" }}>
+                                                        Classe {classInfo?.nom}
+                                                        {rang ? ` · ${rang}${rang === 1 ? "ère" : "ème"} / ${fimecoRang.total_classes}` : " · non classée"}
+                                                    </p>
+                                                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6B7280" }}>
+                                                        {critere?.detail}
+                                                    </p>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </Card>
                         )}

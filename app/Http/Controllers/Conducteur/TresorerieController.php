@@ -73,10 +73,11 @@ class TresorerieController extends Controller
                     'familles_en_retard' => 0,
                     'familles_non_souscrit' => 0,
                 ],
-                'fimecoClassement' => [
-                    'rang' => null,
+                'fimecoRang' => [
                     'total_classes' => 0,
-                    'classes' => [],
+                    'rang_montant_souscrit' => null,
+                    'rang_taux_recouvrement' => null,
+                    'rang_nombre_souscripteurs' => null,
                 ],
                 'membresClasse' => [],
                 'membresClasseAssignables' => [],
@@ -383,7 +384,9 @@ class TresorerieController extends Controller
         $fimecoAnnee = (int) ($request->integer('fimeco_annee') ?: now()->year);
         $fimecoAnneesDisponibles = $this->fimecoService->anneesDisponibles($classeId);
         ['suivi' => $fimecoSuivi, 'kpi' => $fimecoKpi] = $this->fimecoService->suiviPourClasse($classeId, $fimecoAnnee);
-        $fimecoClassement = $this->fimecoService->classementClasses($fimecoAnnee, $classeId);
+        // Rang de SA classe uniquement (le conducteur ne gère que sa classe, il ne
+        // doit pas voir le nom ni les montants des autres classes).
+        $fimecoRang = $this->fimecoService->rangPourClasse($fimecoAnnee, $classeId);
 
         $notificationsFinancieres = NotificationFinanciere::query()
             ->where('user_id', $user->id)
@@ -454,7 +457,7 @@ class TresorerieController extends Controller
             'fimecoAnnee' => $fimecoAnnee,
             'fimecoAnneesDisponibles' => $fimecoAnneesDisponibles,
             'fimecoKpi' => $fimecoKpi,
-            'fimecoClassement' => $fimecoClassement,
+            'fimecoRang' => $fimecoRang,
             'notificationsFinancieres' => $notificationsFinancieres,
         ]);
     }
