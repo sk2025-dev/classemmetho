@@ -290,6 +290,7 @@ class TresorerieController extends Controller
                     'date' => optional($don->date_don)->format('d/m/Y'),
                     'montant' => (int) $don->montant,
                     'campagne' => $don->campagne?->titre ?? 'Don libre',
+                    'affectation' => $don->campagne_id ? 'Campagne' : 'Don libre',
                     'contributeur' => trim(($don->user?->prenom ?? '') . ' ' . ($don->user?->nom ?? '')) ?: 'Famille',
                     'recu' => $don->reference_recu ?? '-',
                 ];

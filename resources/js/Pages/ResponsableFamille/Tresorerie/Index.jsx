@@ -2134,8 +2134,8 @@ function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
                                     <td style={{ padding: "10px 10px", fontWeight: 600, color: "#1e2070" }}>{d.contributeur ?? "—"}</td>
                                     <td style={{ padding: "10px 10px", color: "#555" }}>{d.campagne ?? "Don libre"}</td>
                                     <td style={{ padding: "10px 10px" }}>
-                                        <Badge color={d.affectation === "Classe" ? "green" : d.affectation === "Campagne" ? "orange" : "blue"}>
-                                            {d.affectation ?? "GLOBAL"}
+                                        <Badge color={d.affectation === "Campagne" ? "amber" : "blue"}>
+                                            {d.affectation ?? "Don libre"}
                                         </Badge>
                                     </td>
                                     <td style={{ padding: "10px 10px", fontWeight: 700, color: "#1d9e75" }}>
