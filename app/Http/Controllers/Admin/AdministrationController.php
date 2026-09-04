@@ -236,13 +236,11 @@ class AdministrationController extends Controller
                 else if ($sacrements->dot_effectue) $statut_marital = 'Dote';
             }
 
-            // Consentement RGPD : cette page est exclusive à l'administrateur
-            // (middleware role:admin) — il garde un accès complet, sans flou,
-            // quel que soit le consentement des familles. Le statut affiché
-            // (badge) reste néanmoins le vrai statut de chaque famille, pour
-            // savoir qui relancer.
+            // Consentement RGPD : s'applique aussi à l'administrateur sur cette
+            // page — aucun rôle n'est exempté du flou tant que la famille n'a
+            // pas validé.
             $consentementNonValide = \App\Support\DataConsent::isEnabled() && !$m->aValideConsentement();
-            $consentementRequis = false;
+            $consentementRequis = $consentementNonValide;
             $photoUrl = $m->profile_photo_url ?: PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom);
 
             return [

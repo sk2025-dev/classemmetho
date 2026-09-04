@@ -594,11 +594,10 @@ class AnnuaireService
         // date/lieu de naissance, CNI, adresse, photo) sont renvoyées avec
         // le flag `consentement_requis` : c'est le flou visuel (CSS), côté
         // front, qui les rend illisibles sans vider la liste.
+        // S'applique à tout le monde, admin compris : aucun rôle n'est
+        // exempté du flou tant que la famille n'a pas validé.
         $consentementNonValide = \App\Support\DataConsent::isEnabled() && !$user->aValideConsentement();
-        // L'administrateur garde un accès complet, sans flou, quel que soit
-        // le consentement — mais le statut affiché (badge) reste le vrai
-        // statut de la famille, pas "validé" par défaut.
-        $consentementRequis = $consentementNonValide && Auth::user()?->role !== 'admin';
+        $consentementRequis = $consentementNonValide;
 
         return [
             // ── Identité ──
