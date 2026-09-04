@@ -2905,7 +2905,7 @@ const TabUtilisateurs = ({
                                                 <ProfilePhoto
                                                     user={m}
                                                     size="md"
-                                                    className="mx-auto border-2 border-white shadow-sm"
+                                                    className={`mx-auto border-2 border-white shadow-sm ${m.consentement_requis ? "blur-sm" : ""}`}
                                                 />
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center font-semibold">
@@ -2953,10 +2953,26 @@ const TabUtilisateurs = ({
                                                 {m.prenom}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
-                                                {m.email || "-"}
+                                                <span
+                                                    className={
+                                                        m.consentement_requis
+                                                            ? "blur-sm select-none"
+                                                            : ""
+                                                    }
+                                                >
+                                                    {m.email || "-"}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
-                                                {m.telephone || "-"}
+                                                <span
+                                                    className={
+                                                        m.consentement_requis
+                                                            ? "blur-sm select-none"
+                                                            : ""
+                                                    }
+                                                >
+                                                    {m.telephone || "-"}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap">
                                                 {m.genre === "M"
@@ -3035,7 +3051,15 @@ const TabUtilisateurs = ({
                                                 {m.famille || "-"}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
-                                                {m.date_naissance || "-"}
+                                                <span
+                                                    className={
+                                                        m.consentement_requis
+                                                            ? "blur-sm select-none"
+                                                            : ""
+                                                    }
+                                                >
+                                                    {m.date_naissance || "-"}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap">
                                                 {m.relation ||
@@ -3053,10 +3077,26 @@ const TabUtilisateurs = ({
                                                 {!m.employment_status && <span className="text-gray-400">-</span>}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
-                                                {m.lieu_naissance || "-"}
+                                                <span
+                                                    className={
+                                                        m.consentement_requis
+                                                            ? "blur-sm select-none"
+                                                            : ""
+                                                    }
+                                                >
+                                                    {m.lieu_naissance || "-"}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
-                                                {m.numero_cni || "-"}
+                                                <span
+                                                    className={
+                                                        m.consentement_requis
+                                                            ? "blur-sm select-none"
+                                                            : ""
+                                                    }
+                                                >
+                                                    {m.numero_cni || "-"}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
                                                 {m.hors_communaute ? (
