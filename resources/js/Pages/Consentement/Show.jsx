@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Head, router } from "@inertiajs/react";
-import { ShieldCheck, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { ShieldCheck, Clock, CheckCircle2, Loader2, LogOut } from "lucide-react";
 import { withBasePath } from "../../Utils/urlHelper";
 
 export default function ConsentementShow({
@@ -29,12 +29,23 @@ export default function ConsentementShow({
     };
 
     const goDashboard = () => router.get(withBasePath("", "/dashboard"));
+    const deconnexion = () => router.post(withBasePath("", "/logout"));
 
     return (
         <>
             <Head title="Conditions d'utilisation des données personnelles" />
             <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-10">
-                <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl border border-slate-100 overflow-hidden">
+                <div className="w-full max-w-2xl">
+                    <div className="flex justify-end mb-3">
+                        <button
+                            type="button"
+                            onClick={deconnexion}
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800"
+                        >
+                            <LogOut size={14} /> Se déconnecter
+                        </button>
+                    </div>
+                    <div className="rounded-2xl bg-white shadow-xl border border-slate-100 overflow-hidden">
                     <div className="bg-gradient-to-r from-indigo-700 to-indigo-500 px-8 py-7 text-white">
                         <div className="flex items-center gap-3">
                             <div className="rounded-xl bg-white/15 p-2.5">
@@ -152,6 +163,7 @@ export default function ConsentementShow({
                                 )}
                             </>
                         )}
+                    </div>
                     </div>
                 </div>
             </div>
