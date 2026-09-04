@@ -14,6 +14,19 @@ import {
 import ProfilePhoto from "@/Components/ProfilePhoto";
 import { withBasePath } from "../../Utils/urlHelper";
 
+// Formate une date (ISO ou "YYYY-MM-DD") en "jj/mm/aaaa" ; renvoie "—" si absente/invalide.
+const formatDate = (value) => {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+    return date.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        timeZone: "UTC",
+    });
+};
+
 // Composant Badge pour le Rôle
 const StatusBadge = ({ role }) => {
     const isResp = role === "responsable";
@@ -493,7 +506,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         Date de naissance
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.date_naissance || "—"}
+                                        {formatDate(selectedMember.date_naissance)}
                                     </p>
                                 </div>
                             </div>
