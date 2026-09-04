@@ -13,6 +13,7 @@ use App\Models\NotificationFinanciere;
 use App\Models\Paiement;
 use App\Models\User;
 use App\Services\FimecoClasseSuiviService;
+use App\Services\TresorerieReportService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,11 +21,51 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TresorerieController extends Controller
 {
-    public function __construct(private FimecoClasseSuiviService $fimecoService)
+    public function __construct(
+        private FimecoClasseSuiviService $fimecoService,
+        private TresorerieReportService $reportService,
+    ) {
+    }
+
+    /**
+     * Export Excel (Rapports > Exporter) : synthèse + détail des paiements et dons
+     * de la classe pilotée, sur l'exercice demandé (annuel par défaut, ou un mois
+     * précis via ?scope=monthly&month=YYYY-MM).
+     */
+    public function export(Request $request): StreamedResponse
     {
+        $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            abort(403, 'Accès non autorisé au module trésorerie de classe.');
+        }
+
+        $classeId = $user->classe_id;
+        abort_unless($classeId, 404, "Aucune classe n'est associée à ce compte.");
+
+        if (!Schema::hasTable('paiements') || !Schema::hasTable('dons')) {
+            abort(404, 'Les données de trésorerie ne sont pas encore disponibles.');
+        }
+
+        $validated = $request->validate([
+            'scope' => ['nullable', 'in:monthly,annual'],
+            'month' => ['nullable', 'date_format:Y-m'],
+            'year' => ['nullable', 'integer', 'digits:4', 'min:2000', 'max:2100'],
+        ]);
+
+        $period = $this->reportService->resolvePeriod(
+            $validated['scope'] ?? 'annual',
+            $validated['month'] ?? null,
+            isset($validated['year']) ? (int) $validated['year'] : null,
+        );
+
+        return $this->reportService->streamExcel(
+            $this->reportService->buildReport($period, $classeId),
+        );
     }
 
     public function index(Request $request)

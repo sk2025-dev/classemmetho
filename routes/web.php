@@ -450,6 +450,8 @@ Route::middleware(['auth'])->group(function () {
         // Routes module Trésorerie (Conducteur)
         Route::get('/conducteur/tresorerie', [ConducteurTresorerieController::class, 'index'])
             ->name('conducteur.tresorerie.index');
+        Route::get('/conducteur/tresorerie/export', [ConducteurTresorerieController::class, 'export'])
+            ->name('conducteur.tresorerie.export');
         Route::post('/conducteur/tresorerie/cotisations', [ConducteurTresorerieController::class, 'storeCotisation'])
             ->name('conducteur.tresorerie.cotisations.store');
         Route::get('/conducteur/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'showCotisation'])

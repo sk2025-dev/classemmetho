@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\Classe;
 use App\Models\Don;
 use App\Models\Paiement;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -68,10 +70,21 @@ class TresorerieReportService
         ];
     }
 
-    public function buildReport(array $period): array
+    /**
+     * @param int|null $classeId Restreint le rapport à une seule classe (portée conducteur) ;
+     *                           null = toutes classes confondues (portée admin).
+     */
+    public function buildReport(array $period, ?int $classeId = null): array
     {
         $startDate = $period['start']->toDateString();
         $endDate = $period['end']->toDateString();
+
+        $scopeToClasse = function ($query) use ($classeId) {
+            $query->where(function ($q) use ($classeId) {
+                $q->whereHas('family', fn ($f) => $f->where('classe_id', $classeId))
+                    ->orWhereHas('user', fn ($u) => $u->where('classe_id', $classeId));
+            });
+        };
 
         $paiements = Paiement::query()
             ->with([
@@ -82,6 +95,7 @@ class TresorerieReportService
                 'cotisation:id,nom',
             ])
             ->whereBetween('date_paiement', [$startDate, $endDate])
+            ->when($classeId, $scopeToClasse)
             ->orderBy('date_paiement')
             ->orderBy('id')
             ->get()
@@ -98,6 +112,7 @@ class TresorerieReportService
                 'campagne.classe:id,nom',
             ])
             ->whereBetween('date_don', [$startDate, $endDate])
+            ->when($classeId, $scopeToClasse)
             ->orderBy('date_don')
             ->orderBy('id')
             ->get()
@@ -119,6 +134,8 @@ class TresorerieReportService
             'meta' => [
                 ...$period,
                 'generated_at_display' => now()->format('d/m/Y H:i'),
+                'classe_id' => $classeId,
+                'classe' => $classeId ? Classe::find($classeId)?->nom : null,
             ],
             'summary' => [
                 'total_paiements' => (int) $paiements->sum('montant'),
@@ -155,7 +172,9 @@ class TresorerieReportService
         $spreadsheet = $this->makeSpreadsheet($report);
         $scope = (string) data_get($report, 'meta.scope', 'monthly');
         $slug = (string) data_get($report, 'meta.slug', now()->format('Y-m'));
-        $filename = sprintf('rapport-tresorerie-%s-%s.xlsx', $scope, $slug);
+        $classe = data_get($report, 'meta.classe');
+        $classeSuffix = $classe ? '-' . Str::slug($classe) : '';
+        $filename = sprintf('rapport-tresorerie-%s-%s%s.xlsx', $scope, $slug, $classeSuffix);
 
         return response()->streamDownload(function () use ($spreadsheet) {
             $writer = new Xlsx($spreadsheet);
@@ -254,6 +273,7 @@ class TresorerieReportService
 
         $rows = [
             ['Rapport', data_get($meta, 'title', 'Rapport tresorerie')],
+            ['Classe', data_get($meta, 'classe') ?: 'Toutes classes'],
             ['Periode', data_get($meta, 'label', '-')],
             ['Du', data_get($meta, 'start_display', '-')],
             ['Au', data_get($meta, 'end_display', '-')],
@@ -269,9 +289,9 @@ class TresorerieReportService
             ['Classes concernees', (int) ($summary['classes_distinctes'] ?? 0)],
         ];
 
-        $sheet->fromArray($rows, null, 'A1');
-        $this->styleHeaderRow($sheet, 7, 'A', 'B');
-        $this->formatCurrencyColumn($sheet, 'B', 8, 10);
+        $sheet->fromArray($rows, null, 'A1', true);
+        $this->styleHeaderRow($sheet, 8, 'A', 'B');
+        $this->formatCurrencyColumn($sheet, 'B', 9, 11);
         $this->autoSizeColumns($sheet, 2);
     }
 
@@ -281,7 +301,7 @@ class TresorerieReportService
         $spreadsheet->addSheet($sheet);
 
         $headers = ['Date', 'Famille', 'Membre', 'Classe', 'Cotisation', 'Montant', 'Mode', 'Statut', 'Reference', 'Note'];
-        $sheet->fromArray($headers, null, 'A1');
+        $sheet->fromArray($headers, null, 'A1', true);
 
         $rows = $paiements
             ->map(fn(array $row) => [
@@ -299,7 +319,7 @@ class TresorerieReportService
             ->all();
 
         if ($rows !== []) {
-            $sheet->fromArray($rows, null, 'A2');
+            $sheet->fromArray($rows, null, 'A2', true);
             $this->formatCurrencyColumn($sheet, 'F', 2, count($rows) + 1);
         }
 
@@ -313,7 +333,7 @@ class TresorerieReportService
         $spreadsheet->addSheet($sheet);
 
         $headers = ['Date', 'Famille', 'Donateur', 'Classe', 'Campagne', 'Type', 'Montant', 'Mode', 'Reference', 'Note'];
-        $sheet->fromArray($headers, null, 'A1');
+        $sheet->fromArray($headers, null, 'A1', true);
 
         $rows = $dons
             ->map(fn(array $row) => [
@@ -331,7 +351,7 @@ class TresorerieReportService
             ->all();
 
         if ($rows !== []) {
-            $sheet->fromArray($rows, null, 'A2');
+            $sheet->fromArray($rows, null, 'A2', true);
             $this->formatCurrencyColumn($sheet, 'G', 2, count($rows) + 1);
         }
 
@@ -354,7 +374,7 @@ class TresorerieReportService
             'Familles distinctes',
         ];
 
-        $sheet->fromArray($headers, null, 'A1');
+        $sheet->fromArray($headers, null, 'A1', true);
 
         $rows = $classes
             ->map(fn(array $row) => [
@@ -369,7 +389,7 @@ class TresorerieReportService
             ->all();
 
         if ($rows !== []) {
-            $sheet->fromArray($rows, null, 'A2');
+            $sheet->fromArray($rows, null, 'A2', true);
             $this->formatCurrencyColumn($sheet, 'B', 2, count($rows) + 1);
             $this->formatCurrencyColumn($sheet, 'D', 2, count($rows) + 1);
             $this->formatCurrencyColumn($sheet, 'F', 2, count($rows) + 1);
