@@ -36,7 +36,15 @@
       "Bash(php -l app/Http/Requests/ActesLiturgiques/StoreActeLiturgiqueRequest.php)",
       "Bash(php -l app/Services/ProgrammeObsequesService.php)",
       "Bash(php -l app/Models/ActeLiturgique.php)",
-      "Bash(grep -n \"modal === \\\\\"ceremony\\\\\" && selected\\\\|{modal === \\\\\"detail\\\\\"\\\\|<FichesMariageModal\\\\|closeModal}\\\\s*$\\\\|^            {modal\" resources/js/Pages/Conducteur/Liturgie/Index.jsx)"
+      "Bash(grep -n \"modal === \\\\\"ceremony\\\\\" && selected\\\\|{modal === \\\\\"detail\\\\\"\\\\|<FichesMariageModal\\\\|closeModal}\\\\s*$\\\\|^            {modal\" resources/js/Pages/Conducteur/Liturgie/Index.jsx)",
+      "Bash(grep -n 'protected $fillable\\\\|function campagne\\\\|function classe\\\\|function family\\\\|campagne_id\\\\|classe_id' app/Models/Don.php)",
+      "Bash(php -l app/Services/TresorerieReportService.php app/Http/Controllers/Conducteur/TresorerieController.php routes/web.php)",
+      "Bash(php -l app/Services/TresorerieReportService.php)",
+      "Bash(rm -f /private/tmp/claude-501/-Applications-XAMPP-xamppfiles-htdocs-classemmetho/117e0e4e-a995-4ca7-91f5-8b4cf5fe783b/scratchpad/export-test*.xlsx /private/tmp/claude-501/-Applications-XAMPP-xamppfiles-htdocs-classemmetho/117e0e4e-a995-4ca7-91f5-8b4cf5fe783b/scratchpad/export-admin.xlsx *)",
+      "Bash(git commit -m ' *)"
+    ],
+    "additionalDirectories": [
+      "/private/tmp/claude-501/-Applications-XAMPP-xamppfiles-htdocs-classemmetho/117e0e4e-a995-4ca7-91f5-8b4cf5fe783b/scratchpad"
     ]
   }
 }
