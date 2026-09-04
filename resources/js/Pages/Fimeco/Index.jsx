@@ -10,7 +10,7 @@ import {
     ChevronDown,
     CircleDollarSign,
     Download,
-    Edit3,
+    Eye,
     History,
     Landmark,
     LayoutGrid,
@@ -20,6 +20,7 @@ import {
     UploadCloud,
     Users,
     WalletCards,
+    X,
     XCircle,
 } from "lucide-react";
 import {
@@ -202,6 +203,9 @@ export default function FimecoIndex({
     cotisationsFimeco = [],
     importLogs = [],
 }) {
+    const [mainView, setMainView] = useState("consultation");
+    const [familyDetails, setFamilyDetails] = useState(null);
+    const [familyDetailsLoading, setFamilyDetailsLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [classeFilter, setClasseFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
@@ -450,19 +454,22 @@ export default function FimecoIndex({
         }
     };
 
-    const editFamily = (family) => {
-        setSubscriptionForm({
-            family_id: String(family.family_id),
-            montant_souscrit: String(family.montant_souscrit || ""),
-        });
-        setPanels((current) => ({ ...current, souscription: true }));
-        window.setTimeout(() => {
-            document.getElementById("fimeco-subscription-card")?.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
-            });
-        }, 80);
+    const viewFamilyDetails = async (family) => {
+        setFamilyDetails({ ...family, versements: null });
+        setFamilyDetailsLoading(true);
+        try {
+            const response = await axios.get(
+                withBasePath("", `/fimeco/familles/${family.family_id}/versements`),
+                { params: { annee } },
+            );
+            setFamilyDetails(response.data);
+        } catch (error) {
+            setFamilyDetails((current) => (current ? { ...current, versements: [], loadError: true } : current));
+        } finally {
+            setFamilyDetailsLoading(false);
+        }
     };
+    const closeFamilyDetails = () => setFamilyDetails(null);
 
     const onFilterChange = (setter) => (event) => {
         setter(event.target.value);
@@ -598,19 +605,49 @@ export default function FimecoIndex({
                         </div>
                     )}
 
-                    <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                        <StatCard label="Souscriptions" value={formatAmount(stats.montant_souscrit)} detail={`${stats.familles_souscrites || 0} famille(s) engagée(s)`} icon={WalletCards} color="indigo" />
-                        <StatCard label="Versements confirmés" value={formatAmount(stats.montant_paye)} detail={`Exercice ${annee}`} icon={CircleDollarSign} color="emerald" />
-                        <StatCard label="Reste à mobiliser" value={formatAmount(stats.montant_restant)} detail={`${stats.familles_soldees || 0} famille(s) soldée(s)`} icon={Banknote} color="amber" />
-                        <StatCard label="Taux de réalisation" value={`${Number(stats.taux_realisation || 0).toLocaleString("fr-FR")}%`} detail={`${stats.familles_total || 0} famille(s) au total`} icon={CheckCircle2} color="blue" />
+                    <div className="mb-6 inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+                        <button
+                            type="button"
+                            onClick={() => setMainView("consultation")}
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold transition ${
+                                mainView === "consultation"
+                                    ? "bg-indigo-600 text-white shadow-sm"
+                                    : "text-slate-500 hover:text-slate-700"
+                            }`}
+                        >
+                            <Eye size={14} /> Consultation
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setMainView("import")}
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold transition ${
+                                mainView === "import"
+                                    ? "bg-indigo-600 text-white shadow-sm"
+                                    : "text-slate-500 hover:text-slate-700"
+                            }`}
+                        >
+                            <UploadCloud size={14} /> Import &amp; journal
+                        </button>
                     </div>
 
-                    {(stats.versements_sans_annee || 0) > 0 && (
-                        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
-                            <strong>{stats.versements_sans_annee}</strong> versement(s) FIMECO historique(s) n'ont pas d'année d'exercice et ne sont pas inclus dans les totaux annuels.
-                        </div>
+                    {mainView === "consultation" && (
+                        <>
+                            <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                <StatCard label="Souscriptions" value={formatAmount(stats.montant_souscrit)} detail={`${stats.familles_souscrites || 0} famille(s) engagée(s)`} icon={WalletCards} color="indigo" />
+                                <StatCard label="Versements confirmés" value={formatAmount(stats.montant_paye)} detail={`Exercice ${annee}`} icon={CircleDollarSign} color="emerald" />
+                                <StatCard label="Reste à mobiliser" value={formatAmount(stats.montant_restant)} detail={`${stats.familles_soldees || 0} famille(s) soldée(s)`} icon={Banknote} color="amber" />
+                                <StatCard label="Taux de réalisation" value={`${Number(stats.taux_realisation || 0).toLocaleString("fr-FR")}%`} detail={`${stats.familles_total || 0} famille(s) au total`} icon={CheckCircle2} color="blue" />
+                            </div>
+
+                            {(stats.versements_sans_annee || 0) > 0 && (
+                                <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+                                    <strong>{stats.versements_sans_annee}</strong> versement(s) FIMECO historique(s) n'ont pas d'année d'exercice et ne sont pas inclus dans les totaux annuels.
+                                </div>
+                            )}
+                        </>
                     )}
 
+                    {mainView === "import" && (
                     <div className="mb-6 space-y-3">
                         <CollapsibleCard
                             icon={UploadCloud}
@@ -626,83 +663,6 @@ export default function FimecoIndex({
                                     only: ["annees", "stats", "familles", "classes", "versements", "importLogs"],
                                 })}
                             />
-                        </CollapsibleCard>
-
-                        <CollapsibleCard
-                            id="fimeco-subscription-card"
-                            icon={Edit3}
-                            accent="indigo"
-                            title="Gérer une souscription"
-                            subtitle={`Engagement annuel d'une famille pour ${annee}.`}
-                            open={panels.souscription}
-                            onToggle={() => togglePanel("souscription")}
-                        >
-                            <form id="fimeco-subscription-form" onSubmit={saveSubscription} className="space-y-4">
-                                <Field label="Famille">
-                                    <Select2Single
-                                        name="souscription_family_id"
-                                        value={subscriptionForm.family_id}
-                                        onChange={(event) => setSubscriptionForm((current) => ({ ...current, family_id: event.target.value }))}
-                                        options={familleSelectOptions}
-                                        placeholder="Rechercher une famille…"
-                                    />
-                                </Field>
-                                <Field label="Montant souscrit (F CFA)">
-                                    <input required min="0" step="1" type="number" value={subscriptionForm.montant_souscrit} onChange={(event) => setSubscriptionForm((current) => ({ ...current, montant_souscrit: event.target.value }))} className={inputClass} placeholder="Ex. 50 000" />
-                                </Field>
-                                <button disabled={savingSubscription || !subscriptionForm.family_id} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60">
-                                    {savingSubscription && <Loader2 className="animate-spin" size={17} />}
-                                    Enregistrer la souscription
-                                </button>
-                            </form>
-                        </CollapsibleCard>
-
-                        <CollapsibleCard
-                            icon={Banknote}
-                            accent="emerald"
-                            title="Enregistrer un versement"
-                            subtitle={`Versement confirmé pour l'exercice ${annee}.`}
-                            open={panels.versement}
-                            onToggle={() => togglePanel("versement")}
-                        >
-                            <form onSubmit={savePayment} className="grid gap-4 sm:grid-cols-2">
-                                <div className="sm:col-span-2">
-                                    <Field label="Famille">
-                                        <Select2Single
-                                            name="versement_family_id"
-                                            value={paymentForm.family_id}
-                                            onChange={(event) => setPaymentForm((current) => ({ ...current, family_id: event.target.value }))}
-                                            options={familleSelectOptions}
-                                            placeholder="Rechercher une famille…"
-                                            variant="green"
-                                        />
-                                    </Field>
-                                </div>
-                                <Field label="Montant (F CFA)">
-                                    <input required min="100" step="1" type="number" value={paymentForm.montant} onChange={(event) => setPaymentForm((current) => ({ ...current, montant: event.target.value }))} className={inputClass} />
-                                </Field>
-                                <Field label="Date du versement">
-                                    <input required type="date" value={paymentForm.date_paiement} onChange={(event) => setPaymentForm((current) => ({ ...current, date_paiement: event.target.value }))} className={inputClass} />
-                                </Field>
-                                <Field label="Mode de paiement">
-                                    <Select2Single
-                                        name="mode_paiement"
-                                        value={paymentForm.mode_paiement}
-                                        onChange={(event) => setPaymentForm((current) => ({ ...current, mode_paiement: event.target.value || "ESPECES" }))}
-                                        options={MODE_OPTIONS}
-                                        isClearable={false}
-                                        allowClearOption={false}
-                                        variant="green"
-                                    />
-                                </Field>
-                                <Field label="Note facultative">
-                                    <input type="text" maxLength="1000" value={paymentForm.note} onChange={(event) => setPaymentForm((current) => ({ ...current, note: event.target.value }))} className={inputClass} placeholder="Référence ou précision" />
-                                </Field>
-                                <button disabled={savingPayment || cotisationsFimeco.length === 0} className="sm:col-span-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
-                                    {savingPayment && <Loader2 className="animate-spin" size={17} />}
-                                    Enregistrer le versement
-                                </button>
-                            </form>
                         </CollapsibleCard>
 
                         <CollapsibleCard
@@ -855,7 +815,10 @@ export default function FimecoIndex({
                             )}
                         </CollapsibleCard>
                     </div>
+                    )}
 
+                    {mainView === "consultation" && (
+                    <>
                     <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-3">
@@ -1078,7 +1041,7 @@ export default function FimecoIndex({
                                             <td className="px-5 py-3.5 text-right font-bold text-emerald-700">{formatAmount(family.montant_paye)}</td>
                                             <td className="px-5 py-3.5 text-right font-bold text-amber-700">{formatAmount(family.montant_restant)}</td>
                                             <td className="px-5 py-3.5 text-center"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusStyles[family.statut]}`}>{statusLabels[family.statut]}</span></td>
-                                            <td className="px-5 py-3.5 text-center"><button type="button" onClick={() => editFamily(family)} className="rounded-lg border border-indigo-200 p-2 text-indigo-700 hover:bg-indigo-50" title="Modifier la souscription"><Edit3 size={15} /></button></td>
+                                            <td className="px-5 py-3.5 text-center"><button type="button" onClick={() => viewFamilyDetails(family)} className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50" title="Voir le détail des versements"><Eye size={14} /> Détails</button></td>
                                         </tr>
                                     ))}
                                     {visibleFamilies.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-500">Aucune famille ne correspond aux filtres.</td></tr>}
@@ -1148,8 +1111,79 @@ export default function FimecoIndex({
                             </div>
                         )}
                     </section>
+                    </>
+                    )}
                 </div>
             </div>
+
+            {familyDetails && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+                    <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
+                            <div>
+                                <h3 className="text-base font-black text-slate-900">{familyDetails.famille}</h3>
+                                <p className="mt-0.5 text-xs text-slate-500">
+                                    {familyDetails.code_famille || "Sans code"} · {familyDetails.classe} · Exercice {familyDetails.annee || annee}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeFamilyDetails}
+                                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 p-5 pb-0 text-center">
+                            <div className="rounded-xl bg-indigo-50 p-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-500">Souscrit</p>
+                                <p className="mt-1 text-sm font-black text-indigo-700">{formatAmount(familyDetails.montant_souscrit)}</p>
+                            </div>
+                            <div className="rounded-xl bg-emerald-50 p-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-500">Versé</p>
+                                <p className="mt-1 text-sm font-black text-emerald-700">{formatAmount(familyDetails.montant_paye)}</p>
+                            </div>
+                            <div className="rounded-xl bg-amber-50 p-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-amber-500">Reste</p>
+                                <p className="mt-1 text-sm font-black text-amber-700">{formatAmount(familyDetails.montant_restant)}</p>
+                            </div>
+                        </div>
+                        <div className="p-5">
+                            <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Détail des versements</h4>
+                            {familyDetailsLoading && (
+                                <div className="flex items-center gap-2 py-6 text-sm text-slate-500">
+                                    <Loader2 className="animate-spin" size={16} /> Chargement…
+                                </div>
+                            )}
+                            {!familyDetailsLoading && familyDetails.loadError && (
+                                <p className="py-4 text-sm text-red-600">Impossible de charger les versements de cette famille.</p>
+                            )}
+                            {!familyDetailsLoading && !familyDetails.loadError && Array.isArray(familyDetails.versements) && (
+                                <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-100">
+                                    {familyDetails.versements.length === 0 && (
+                                        <p className="p-4 text-center text-sm text-slate-400">
+                                            Aucun versement enregistré pour cet exercice.
+                                        </p>
+                                    )}
+                                    {familyDetails.versements.map((v) => (
+                                        <div key={v.id} className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-2.5 text-sm last:border-0">
+                                            <div>
+                                                <p className="font-semibold text-slate-800">{v.date || "-"}</p>
+                                                <p className="text-xs text-slate-500">
+                                                    {String(v.mode || "-").replaceAll("_", " ")}
+                                                    {v.reference ? ` · ${v.reference}` : ""}
+                                                </p>
+                                                {v.note && <p className="text-xs italic text-slate-400">{v.note}</p>}
+                                            </div>
+                                            <span className="shrink-0 font-black text-emerald-700">{formatAmount(v.montant)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

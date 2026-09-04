@@ -135,6 +135,7 @@ Route::middleware(['auth', 'fimeco'])->prefix('fimeco')->name('fimeco.')->group(
     Route::post('/souscriptions', [\App\Http\Controllers\Fimeco\DashboardController::class, 'storeSouscription'])->name('souscriptions.store');
     Route::post('/versements', [\App\Http\Controllers\Fimeco\DashboardController::class, 'storeVersement'])->name('versements.store');
     Route::post('/cotisation', [\App\Http\Controllers\Fimeco\DashboardController::class, 'ensureCotisation'])->name('cotisation.ensure');
+    Route::get('/familles/{family}/versements', [\App\Http\Controllers\Fimeco\DashboardController::class, 'familyVersements'])->name('familles.versements');
     Route::post('/import/souscriptions', [\App\Http\Controllers\Fimeco\ImportController::class, 'importSouscriptions'])->name('import.souscriptions');
     Route::post('/import/versements', [\App\Http\Controllers\Fimeco\ImportController::class, 'importVersements'])->name('import.versements');
 });

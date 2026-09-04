@@ -271,6 +271,60 @@ class DashboardController extends Controller
         ]);
     }
 
+    /**
+     * Détail des versements FIMECO d'UNE famille, pour une année donnée — alimente
+     * le bouton « Détails » du suivi global des familles (remplace l'ancien bouton
+     * de modification directe de la souscription).
+     */
+    public function familyVersements(Request $request, Family $family): JsonResponse
+    {
+        $currentYear = (int) now()->year;
+        $requestedYear = $request->integer('annee');
+        $annee = $requestedYear >= self::MIN_ANNEE && $requestedYear <= self::MAX_ANNEE
+            ? $requestedYear
+            : $currentYear;
+
+        $fimecoCotisationIds = $this->fimecoCotisations()->pluck('id')->all();
+
+        $souscription = FimecoSouscription::query()
+            ->where('family_id', $family->id)
+            ->where('annee', $annee)
+            ->value('montant_souscrit');
+
+        $versements = $this->countedPaymentsQuery($fimecoCotisationIds)
+            ->where('family_id', $family->id)
+            ->where('year', $annee)
+            ->with('cotisation:id,nom')
+            ->orderByDesc('date_paiement')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (Paiement $payment) => [
+                'id' => $payment->id,
+                'date' => optional($payment->date_paiement)->format('d/m/Y'),
+                'montant' => (int) $payment->montant,
+                'mode' => $payment->mode_paiement,
+                'reference' => $payment->reference_recu,
+                'note' => $payment->note,
+                'cotisation' => $payment->cotisation?->nom ?? 'FIMECO',
+            ])
+            ->values();
+
+        $montantSouscrit = (int) ($souscription ?? 0);
+        $montantPaye = (int) $versements->sum('montant');
+
+        return response()->json([
+            'family_id' => $family->id,
+            'famille' => $family->nom ?: 'Famille sans nom',
+            'code_famille' => $family->code_famille,
+            'classe' => $family->classe?->nom ?? 'Sans classe',
+            'annee' => $annee,
+            'montant_souscrit' => $montantSouscrit,
+            'montant_paye' => $montantPaye,
+            'montant_restant' => max(0, $montantSouscrit - $montantPaye),
+            'versements' => $versements,
+        ]);
+    }
+
     private function fimecoCotisations(): Builder
     {
         return Cotisation::query()
