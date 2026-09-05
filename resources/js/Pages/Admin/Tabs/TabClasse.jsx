@@ -2354,8 +2354,8 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in-up">
-            <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-gray-100">
+        <div className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto p-4 sm:py-10 bg-black/60 backdrop-blur-sm animate-fade-in-up">
+            <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] my-auto border border-gray-100">
                 <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center shrink-0">
                     <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
                         <span className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
@@ -2410,7 +2410,7 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
                         </svg>
                     </button>
                 </div>
-                <div className="overflow-y-auto p-6 bg-white">
+                <div className="flex-1 min-h-0 overflow-y-auto p-6 bg-white">
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="form-group">
                             <label className="form-label">
