@@ -124,7 +124,7 @@ export function resolveMemberPhotoUrl(member) {
     }
 
     if (cleanedPath.startsWith("/storage/")) {
-        return cleanedPath;
+        return toAppPath(cleanedPath);
     }
 
     if (cleanedPath.startsWith("/")) {
