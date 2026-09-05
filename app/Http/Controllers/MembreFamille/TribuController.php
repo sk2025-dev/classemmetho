@@ -33,6 +33,7 @@ class TribuController extends Controller
 
         if (!$tribu) {
             return Inertia::render('MembreFamille/Tribu', [
+                'basePath' => self::basePath($user),
                 'tribu' => null,
             ]);
         }
