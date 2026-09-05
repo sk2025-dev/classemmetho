@@ -1,6 +1,7 @@
-﻿import React from "react";
+﻿import React, { useState } from "react";
 import { useForm } from "@inertiajs/react";
 import { Link, router } from "@inertiajs/react";
+import axios from "axios";
 import { withBasePath } from "../../Utils/urlHelper";
 import {
     ArrowLeft,
@@ -14,9 +15,20 @@ import {
     Lock,
     Home,
     Hash,
+    ArrowRightLeft,
+    AlertTriangle,
+    Loader2,
+    CheckCircle2,
 } from "lucide-react";
 
-export default function EditFamily({ family, classes, villes, routeBase: routeBaseProp }) {
+export default function EditFamily({
+    family,
+    classes,
+    villes,
+    routeBase: routeBaseProp,
+    membres = [],
+    transferLocked = false,
+}) {
     const routeBase = routeBaseProp || ((typeof window !== "undefined" && window.location.pathname.startsWith("/pasteur"))
         ? "/pasteur"
         : "/responsable-famille");
@@ -54,6 +66,46 @@ export default function EditFamily({ family, classes, villes, routeBase: routeBa
 
     const handleCancel = () => {
         router.get(withBasePath("", `${routeBase}/inscriptions`));
+    };
+
+    const [selectedResponsableId, setSelectedResponsableId] = useState("");
+    const [showTransferConfirm, setShowTransferConfirm] = useState(false);
+    const [transferProcessing, setTransferProcessing] = useState(false);
+    const [transferError, setTransferError] = useState(null);
+    const [transferDone, setTransferDone] = useState(null);
+
+    const selectedMembre = membres.find((m) => String(m.id) === String(selectedResponsableId));
+
+    const openTransferConfirm = () => {
+        if (!selectedMembre) return;
+        setTransferError(null);
+        setShowTransferConfirm(true);
+    };
+
+    const confirmTransfer = async () => {
+        if (!selectedMembre) return;
+        setTransferProcessing(true);
+        setTransferError(null);
+        try {
+            const response = await axios.post(
+                withBasePath("", `${routeBase}/family/transfer-responsable`),
+                { new_responsable_id: selectedMembre.id },
+            );
+            setTransferDone(response.data?.message || "Transfert effectué avec succès.");
+            setShowTransferConfirm(false);
+            // Le rôle de l'utilisateur connecté vient de changer (il n'est plus
+            // responsable) : rechargement complet plutôt qu'une navigation Inertia,
+            // pour repartir sur un état d'authentification/menus totalement neuf.
+            window.setTimeout(() => {
+                window.location.href = withBasePath("", "/dashboard");
+            }, 1800);
+        } catch (error) {
+            setTransferError(
+                error?.response?.data?.message || "Impossible d'effectuer le transfert.",
+            );
+        } finally {
+            setTransferProcessing(false);
+        }
     };
 
     const Field = ({ label, icon: Icon, error, disabled, children }) => (
@@ -247,6 +299,84 @@ export default function EditFamily({ family, classes, villes, routeBase: routeBa
                         </p>
                     </div>
 
+                    {membres.length > 0 && (
+                        <>
+                            <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mx-8" />
+
+                            {/* Section 4 — Transfert de responsabilité (zone sensible) */}
+                            <div className="px-8 py-6">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-1 h-6 rounded-full bg-amber-500"></div>
+                                    <div className="p-2 bg-amber-50 rounded-lg">
+                                        <ArrowRightLeft className="w-4 h-4 text-amber-600" />
+                                    </div>
+                                    <h2 className="text-base font-bold text-gray-800 tracking-tight">
+                                        Transférer la responsabilité de la famille
+                                    </h2>
+                                </div>
+
+                                <p className="text-sm text-gray-500 mb-4">
+                                    Vous pouvez céder votre rôle de responsable à un autre membre majeur de
+                                    votre famille. Vous deviendrez alors un membre ordinaire et perdrez
+                                    l'accès à la gestion de la famille — cette action est immédiate.
+                                </p>
+
+                                {transferLocked && (
+                                    <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                                        <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                                        Aucun transfert n'est possible tant que votre famille est en cours de
+                                        transfert de classe ou archivée.
+                                    </div>
+                                )}
+
+                                {!transferLocked && transferDone && (
+                                    <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                                        <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+                                        <span>
+                                            {transferDone} Redirection en cours…
+                                        </span>
+                                    </div>
+                                )}
+
+                                {!transferLocked && !transferDone && (
+                                    <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+                                        <div className="flex-1">
+                                            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                                Nouveau responsable
+                                            </label>
+                                            <select
+                                                value={selectedResponsableId}
+                                                onChange={(e) => setSelectedResponsableId(e.target.value)}
+                                                className={`${inputActive} appearance-none cursor-pointer`}
+                                            >
+                                                <option value="">— Sélectionner un membre —</option>
+                                                {membres.map((m) => (
+                                                    <option key={m.id} value={m.id} disabled={!m.eligible}>
+                                                        {m.prenom} {m.nom}
+                                                        {m.eligible
+                                                            ? ` (${m.age} ans)`
+                                                            : m.age !== null
+                                                                ? ` (${m.age} ans — mineur, non éligible)`
+                                                                : " (date de naissance manquante, non éligible)"}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={openTransferConfirm}
+                                            disabled={!selectedMembre}
+                                            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-500 text-white font-bold text-sm hover:bg-amber-600 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <ArrowRightLeft className="w-4 h-4" />
+                                            Transférer
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+
                     {/* Footer */}
                     <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-end gap-3">
                         <button
@@ -269,6 +399,56 @@ export default function EditFamily({ family, classes, villes, routeBase: routeBa
                     </div>
                 </form>
             </div>
+
+            {showTransferConfirm && selectedMembre && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className="p-2.5 bg-amber-50 rounded-xl shrink-0">
+                                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-bold text-gray-900">
+                                    Confirmer le transfert de responsabilité
+                                </h3>
+                                <p className="mt-1.5 text-sm text-gray-500">
+                                    <strong>{selectedMembre.prenom} {selectedMembre.nom}</strong> deviendra
+                                    responsable de la famille <strong>{family.nom}</strong> et aura accès
+                                    complet à sa gestion. Vous deviendrez un membre ordinaire et perdrez
+                                    immédiatement cet accès. Cette action ne peut pas être annulée par
+                                    vous-même ensuite.
+                                </p>
+                            </div>
+                        </div>
+
+                        {transferError && (
+                            <p className="mb-4 flex items-center gap-1.5 text-xs font-semibold text-red-600">
+                                <X size={13} /> {transferError}
+                            </p>
+                        )}
+
+                        <div className="flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowTransferConfirm(false)}
+                                disabled={transferProcessing}
+                                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-100 transition-all disabled:opacity-50"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmTransfer}
+                                disabled={transferProcessing}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 text-white font-bold text-sm hover:bg-amber-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {transferProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
+                                Confirmer le transfert
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -559,6 +559,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/responsable-famille/inscriptions', [ResponsableFamilleInscriptionsController::class, 'index'])->name('responsable_famille.inscriptions');
         Route::get('/responsable-famille/family/edit', [\App\Http\Controllers\ResponsableFamille\FamilyController::class, 'edit'])->name('responsable_famille.family.edit');
         Route::post('/responsable-famille/family/update', [\App\Http\Controllers\ResponsableFamille\FamilyController::class, 'update'])->name('responsable_famille.family.update');
+        Route::post('/responsable-famille/family/transfer-responsable', [\App\Http\Controllers\ResponsableFamille\FamilyController::class, 'transferResponsable'])->name('responsable_famille.family.transfer_responsable');
         Route::get('/responsable-famille/members/create', [ResponsableFamilleMemberController::class, 'create'])->name('responsable_famille.members.create');
         Route::post('/responsable-famille/members/store', [ResponsableFamilleMemberController::class, 'store'])->name('responsable_famille.members.store');
         Route::get('/responsable-famille/members/{id}', [ResponsableFamilleMemberController::class, 'show'])->name('responsable_famille.members.show');
