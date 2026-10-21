@@ -304,7 +304,8 @@ function AppHeader({ auth, onLogout, basePath }) {
 export default function MainLayout({ children, auth }) {
     const [showGoodbyeLoader, setShowGoodbyeLoader] = useState(false);
     const [showInfoMenu, setShowInfoMenu] = useState(false);
-    const { flashAnnouncements = [], flash = {}, app } = usePage().props;
+    const { flashAnnouncements = [], flash = {}, app, sacrementsAccess } = usePage().props;
+    const isSacrementsPage = usePage().component === "Sacrements/Index";
     const basePath = app?.basePath || "";
     const { toasts, removeToast, success, error } = useToast();
     const lastSuccessRef = useRef(null);
@@ -555,8 +556,7 @@ export default function MainLayout({ children, auth }) {
         <div
             className="min-h-screen"
             style={{
-                background:
-                    "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
+                background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
                 minHeight: "100vh",
                 position: "relative",
                 overflowX: "hidden",
@@ -677,7 +677,7 @@ export default function MainLayout({ children, auth }) {
                 />
             )}
 
-            <main>{children}</main>
+            <main>{sacrementsAccess && !isSacrementsPage && children?.props?.peutInscrireSacrements !== true && <div className="px-4 py-2 border-b bg-emerald-50"><a className="text-sm font-medium text-emerald-900" href={withBasePath(basePath, '/sacrements')}>Baptême et première communion — inscriptions et listes</a></div>}{children}</main>
 
             {auth?.user?.classe?.logo_url && (
                 <div
@@ -689,7 +689,7 @@ export default function MainLayout({ children, auth }) {
                         backgroundRepeat: "no-repeat",
                         backgroundPosition: "center",
                         backgroundSize: "min(45vw, 480px)",
-                        opacity: 0.12,
+                        opacity: 0.05,
                         pointerEvents: "none",
                         zIndex: 30,
                     }}

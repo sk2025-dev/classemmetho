@@ -9,6 +9,7 @@ use App\Models\ActeLiturgiquePieceJointe;
 use App\Models\Classe;
 use App\Models\User;
 use App\Services\ActeLiturgiqueService;
+use App\Services\CampagneSacrementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +19,10 @@ use Inertia\Inertia;
 
 class LiturgieController extends Controller
 {
-    public function __construct(private ActeLiturgiqueService $service) {}
+    public function __construct(
+        private ActeLiturgiqueService $service,
+        private CampagneSacrementService $campagneSacrement,
+    ) {}
 
     public function index(Request $request)
     {
@@ -26,6 +30,7 @@ class LiturgieController extends Controller
         $user->load('classe', 'sacrements');
 
         $actes = ActeLiturgique::with(['membre', 'classe', 'historiques.acteur'])
+            ->whereNotIn('type_acte', CampagneSacrementService::TYPES_GATED)
             ->where(function ($query) use ($user) {
                 $query->where('created_by', $user->id)
                     ->orWhere('membre_id', $user->id);
@@ -115,6 +120,12 @@ class LiturgieController extends Controller
             $initialType = null;
         }
 
+        if ($initialType && $this->campagneSacrement->isGatedType($initialType) && !$this->campagneSacrement->isInscriptionOpen()) {
+            return redirect()
+                ->route('membre_famille.liturgie.index')
+                ->with('error', $this->campagneSacrement->publicStatus()['message_fermee']);
+        }
+
         return Inertia::render('ResponsableFamille/Liturgie/Form', [
             'actes' => $actes,
             'familyMembers' => [[
@@ -134,6 +145,7 @@ class LiturgieController extends Controller
             'initialType' => $initialType,
             'routeBase' => '/membre-famille/liturgie',
             'canSelectMember' => false,
+            'campagneSacrement' => $this->campagneSacrement->publicStatus(),
         ]);
     }
 
@@ -146,6 +158,15 @@ class LiturgieController extends Controller
         $payload['created_by'] = $user->id;
         $payload['statut'] = 'SOUMISE';
         $payload['membre_id'] = $user->id;
+
+        try {
+            $this->campagneSacrement->assertAcceptsInscription($payload['type_acte'] ?? null);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
 
         if (empty($payload['classe_id']) && $user->classe_id) {
             $payload['classe_id'] = $user->classe_id;

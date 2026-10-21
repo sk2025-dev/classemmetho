@@ -19,6 +19,25 @@ use Illuminate\Support\Facades\Log;
 
 class ActeLiturgiqueService
 {
+    public function notifyPastoralDecision(ActeLiturgique $acte, User $actor, bool $includeConductors = true): void
+    {
+        $users = User::whereIn('role', ['conducteur', 'bureau_conducteur'])->get();
+        foreach ($users as $recipient) {
+            $bureau = \App\Support\SacrementAccess::bureau($recipient);
+            $classConductor = $includeConductors && $acte->classe_id && $recipient->role === 'conducteur' && (int) $recipient->classe_id === (int) $acte->classe_id;
+            if (! $bureau && ! $classConductor) {
+                continue;
+            }
+            Notification::create([
+                'user_id' => $recipient->id, 'channel' => 'in_app', 'to' => $recipient->email ?? '',
+                'subject' => 'Décision pastorale sur un acte',
+                'body' => "Le pasteur {$actor->prenom} {$actor->nom} a enregistré la décision {$acte->statut} pour la demande {$acte->reference}.",
+                'data' => ['link' => config('app.url').($bureau ? '/president-conducteurs/dashboard' : '/conducteur/liturgie'), 'acte_id' => $acte->id],
+                'sent_at' => now(),
+            ]);
+        }
+    }
+
     private const STATUTS = [
         'SOUMISE',
         'EN_ATTENTE_CONDUCTEUR',
@@ -39,6 +58,9 @@ class ActeLiturgiqueService
      */
     public function create(array $data, User $actor): ActeLiturgique
     {
+        if (in_array($data['type_acte'] ?? '', CampagneSacrementService::TYPES_GATED, true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['type_acte' => 'Utilisez le module Baptême et première communion. Seul le responsable de famille initie les inscriptions.']);
+        }
         $data['reference'] = $data['reference'] ?? $this->generateReference();
         $data['created_by'] = $data['created_by'] ?? $actor->id;
         $data['statut'] = $data['statut'] ?? 'SOUMISE';
@@ -82,7 +104,9 @@ class ActeLiturgiqueService
             ]);
 
             // notify conducteurs for this class
-            if (!empty($acte->classe_id)) {
+            if ($actor->role === 'pasteur' && $acte->statut === 'VALIDEE') {
+                $this->notifyPastoralDecision($acte, $actor);
+            } elseif (!empty($acte->classe_id)) {
                 $conducteurs = User::query()
                     ->where('role', 'conducteur')
                     ->where('classe_id', $acte->classe_id)
@@ -121,6 +145,9 @@ class ActeLiturgiqueService
         ?string $commentaire = null,
         ?array $extraDetails = null
     ): ActeLiturgique {
+        if (in_array($acte->type_acte, CampagneSacrementService::TYPES_GATED, true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['statut' => 'Utilisez le circuit de validation des listes de sacrements.']);
+        }
         if (!in_array($newStatus, self::STATUTS, true)) {
             throw new InvalidArgumentException('Nouveau statut invalide.');
         }
@@ -384,6 +411,10 @@ class ActeLiturgiqueService
                     // ignore
                 }
             }
+        }
+
+        if ($actor->role === 'pasteur' && in_array($newStatus, ['VALIDEE', 'REFUSEE_PAR_PASTEUR'], true)) {
+            $this->notifyPastoralDecision($acte, $actor, false);
         }
 
         // responsable family email when acte celebrated or finished

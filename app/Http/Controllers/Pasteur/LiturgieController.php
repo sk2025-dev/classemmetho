@@ -43,6 +43,7 @@ class LiturgieController extends Controller
             'historiques.acteur',
         ])
             ->where('statut', 'TRANSMISE_AU_PASTEUR')
+            ->whereNotIn('type_acte', ['bapteme', 'premiere_communion', 'bapteme_premiere_communion'])
             ->where(function ($q) {
                 $q->where('est_annonce', false)
                     ->orWhereNull('est_annonce');
@@ -250,6 +251,11 @@ class LiturgieController extends Controller
             ->values();
 
         return Inertia::render('Pasteur/Liturgie/Index', [
+            'listesSacrements' => \App\Models\ListeSacrement::with(['classe', 'campagne', 'dossiers:id,liste_sacrement_id,statut,suivi_sacrement'])->where('statut', 'pasteur')->whereHas('campagne', fn ($q) => $q->whereNull('archivee_at'))->latest()->get(),
+            'historiqueSacrements' => fn () => \App\Models\ListeSacrement::with(['classe', 'campagne', 'dossiers:id,liste_sacrement_id,campagne_id,type_acte,statut,suivi_sacrement'])
+                ->withPastoralDecisions()->latest('updated_at')->get()
+                ->map(fn ($list) => array_replace($list->toArray(), ['candidats' => $list->pastoralCandidates()]))
+                ->filter(fn ($list) => count($list['candidats']) > 0)->values(),
             'actes' => $actes,
             'historique' => $historique,
             'familyMembers' => $familyMembers,
@@ -261,23 +267,69 @@ class LiturgieController extends Controller
         ]);
     }
 
+    public function create(Request $request)
+    {
+        return Inertia::render('ResponsableFamille/Liturgie/Selection', [
+            'basePath' => '/pasteur/liturgie', 'annonceSubmitUrl' => '/pasteur/annonces',
+            'familyMembers' => $this->requestMembers($request),
+            'peutInscrireSacrements' => \App\Support\SacrementAccess::responsable($request->user()),
+            'campagneSacrement' => app(\App\Services\CampagneSacrementService::class)->publicStatus(),
+            'circuitMessage' => 'Les actes demandés par le pasteur sont validés directement. Le conducteur de sa classe et le bureau des conducteurs sont informés.',
+        ]);
+    }
+
+    private function requestMembers(Request $request)
+    {
+        return User::where('family_id', $request->user()->family_id)->whereNotNull('family_id')->with('classe', 'family')->get();
+    }
+
+    public function createForm(Request $request)
+    {
+        $type = $request->query('type_acte');
+        abort_unless(in_array($type, ['mariage', 'naissance', 'deces'], true), 404);
+        return Inertia::render('ResponsableFamille/Liturgie/Form', [
+            'routeBase' => '/pasteur/liturgie', 'initialType' => $type,
+            'familyMembers' => $this->requestMembers($request),
+            'classes' => \App\Models\Classe::orderBy('nom')->get(['id', 'nom']),
+        ]);
+    }
+
     public function store(StoreActeLiturgiquePasteurRequest $request)
     {
         $user = Auth::user();
         $payload = $request->validated();
+        unset($payload['pieces_jointes']);
 
         $member = User::query()
             ->where('id', $payload['membre_id'])
             ->where('family_id', $user->family_id)
             ->firstOrFail();
 
-        $payload['classe_id'] = $payload['classe_id'] ?? $member->classe_id;
+        $payload['classe_id'] = $member->classe_id;
+        $payload['family_id'] = $member->family_id;
         $payload['details'] = $payload['details'] ?? [];
         $payload['created_by'] = $user->id;
         $payload['pasteur_id'] = $user->id;
         $payload['statut'] = 'VALIDEE';
 
-        $acte = $this->service->create($payload, $user)->load(['membre', 'classe', 'historiques.acteur']);
+        $paths = [];
+        try {
+            $acte = \Illuminate\Support\Facades\DB::transaction(function () use ($payload, $user, $request, &$paths) {
+                $acte = $this->service->create($payload, $user);
+                foreach ($request->file('pieces_jointes', []) as $file) {
+                    $path = $file->store('actes_liturgiques/'.$acte->id, 'public');
+                    $paths[] = $path;
+                    \App\Models\ActeLiturgiquePieceJointe::create(['acte_id' => $acte->id, 'path' => $path, 'original_name' => $file->getClientOriginalName(), 'mime_type' => $file->getMimeType(), 'size' => $file->getSize(), 'uploaded_by' => $user->id]);
+                }
+                return $acte->load(['membre', 'classe', 'historiques.acteur']);
+            });
+        } catch (\Throwable $error) {
+            foreach ($paths as $path) { Storage::disk('public')->delete($path); }
+            if ($error instanceof InvalidArgumentException) {
+                return response()->json(['message' => $error->getMessage()], 422);
+            }
+            throw $error;
+        }
 
         return response()->json([
             'success' => true,

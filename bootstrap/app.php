@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(prepend: [
             EnsureUtf8Encoding::class,
         ], append: [
+            \App\Http\Middleware\SacrementLegacyGuard::class,
             HandleInertiaRequests::class,
             EnsureDataConsentValidated::class,
         ]);

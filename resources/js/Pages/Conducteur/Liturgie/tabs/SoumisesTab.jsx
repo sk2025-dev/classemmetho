@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 
 const BADGE_CONFIG = {
+    bapteme_premiere_communion: { label: 'Baptême + Première communion', emoji: '💧', bg: '#dbeafe', color: '#1d4ed8' },
     bapteme:            { label: 'Baptême',               emoji: '💧', bg: '#dbeafe', color: '#1d4ed8' },
     mariage:            { label: 'Mariage',               emoji: '💍', bg: '#fce7f3', color: '#be185d' },
     deces:              { label: 'Décès',                 emoji: '🕯️', bg: '#f1f5f9', color: '#475569' },
@@ -95,7 +96,7 @@ export default function SoumisesTab({
                             À valider
                         </div>
                         <div className="panel-subtitle">
-                            Demandes des responsables de famille en attente de votre validation
+                            Demandes des familles et inscriptions aux sacrements en attente de votre validation
                         </div>
                     </div>
                     <div className="panel-actions">

@@ -47,6 +47,7 @@ class HandleInertiaRequests extends Middleware
                 'basePath' => $basePath,
             ],
             'csrf_token' => csrf_token(),
+            'sacrementsAccess' => $request->user() ? \App\Support\SacrementAccess::allowed($request->user()) : false,
             'flash' => [
                 'success' => fn() => $request->session()->get('success'),
                 'error' => fn() => $request->session()->get('error'),

@@ -10,6 +10,7 @@ use App\Models\ActeLiturgiquePieceJointe;
 use App\Models\Classe;
 use App\Models\User;
 use App\Services\ActeLiturgiqueService;
+use App\Services\CampagneSacrementService;
 use App\Services\ProgrammeObsequesService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,7 @@ class LiturgieController extends Controller
     public function __construct(
         private ActeLiturgiqueService $service,
         private ProgrammeObsequesService $programme,
+        private CampagneSacrementService $campagneSacrement,
     ) {}
 
     public function index(Request $request)
@@ -99,8 +101,10 @@ class LiturgieController extends Controller
             ->toArray();
 
         return Inertia::render('ResponsableFamille/Liturgie/Selection', [
+            'peutInscrireSacrements' => \App\Support\SacrementAccess::responsable(Auth::user()),
             'familyMembers' => $familyMembers,
             'actesEnCours' => $actesEnCours,
+            'campagneSacrement' => $this->campagneSacrement->publicStatus(),
         ]);
     }
 
@@ -118,11 +122,18 @@ class LiturgieController extends Controller
             $initialType = null;
         }
 
+        if ($initialType && $this->campagneSacrement->isGatedType($initialType) && !$this->campagneSacrement->isInscriptionOpen()) {
+            return redirect()
+                ->route('responsable_famille.liturgie.create')
+                ->with('error', $this->campagneSacrement->publicStatus()['message_fermee']);
+        }
+
         return Inertia::render('ResponsableFamille/Liturgie/Form', [
             'actes' => $actes,
             'familyMembers' => $familyMembers,
             'classes' => $classes,
             'initialType' => $initialType,
+            'campagneSacrement' => $this->campagneSacrement->publicStatus(),
         ]);
     }
 
@@ -134,6 +145,15 @@ class LiturgieController extends Controller
         unset($payload['pieces_jointes']);
         $payload['created_by'] = $user->id;
         $payload['statut'] = 'SOUMISE';
+
+        try {
+            $this->campagneSacrement->assertAcceptsInscription($payload['type_acte'] ?? null);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
 
         $targetMemberId = (int) ($payload['membre_id'] ?? 0);
         $isMemberInFamily = User::where('id', $targetMemberId)

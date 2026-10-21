@@ -11,6 +11,7 @@ import TabFamille from "./Tabs/TabFamille";
 import TabClasses from "./Tabs/TabClasse";
 import TabFonctions from "./Tabs/TabFonctions";
 import TabCarteVirtuelle from "./Tabs/TabCarteVirtuelle";
+import TabInscriptionBapteme from "./Tabs/TabInscriptionBapteme";
 import { withBasePath } from "../../Utils/urlHelper";
 
 export default function AdminPage({
@@ -27,6 +28,8 @@ export default function AdminPage({
     pasteurPrincipalNom = "",
     consentementActif = false,
     consentementTexte = "",
+    campagnesSacrements = [],
+    campagneSacrementStatus = {},
 }) {
     // Lire le query param 'tab' depuis l'URL pour conserver l'onglet actif après un reload
     const urlParams = new URLSearchParams(window.location.search);
@@ -48,6 +51,7 @@ export default function AdminPage({
         { id: "familles", label: "Familles" },
         { id: "classes", label: "Classes" },
         { id: "fonctions", label: "Fonctions" },
+        { id: "inscription_bapteme", label: "Ouverture inscription baptême" },
         { id: "carte", label: "Paramètres" },
     ];
 
@@ -462,7 +466,12 @@ export default function AdminPage({
                         {tabList.map((tab) => (
                             <button
                                 key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
+                                onClick={() => {
+                                    setActiveTab(tab.id);
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set("tab", tab.id);
+                                    window.history.replaceState({}, "", url);
+                                }}
                                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                                     activeTab === tab.id
                                         ? "bg-blue-500 text-white shadow-sm font-bold"
@@ -523,6 +532,13 @@ export default function AdminPage({
                         onUpdate={handleUpdateFonction}
                         onDelete={handleDeleteFonction}
                         onSuccess={toast.success}
+                    />
+                )}
+
+                {activeTab === "inscription_bapteme" && (
+                    <TabInscriptionBapteme
+                        campagnes={campagnesSacrements}
+                        status={campagneSacrementStatus}
                     />
                 )}
 

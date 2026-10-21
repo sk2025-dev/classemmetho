@@ -8,6 +8,7 @@ use App\Http\Requests\ActesLiturgiques\TransitionActeLiturgiqueRequest;
 use App\Models\ActeLiturgique;
 use App\Models\User;
 use App\Services\ActeLiturgiqueService;
+use App\Services\CampagneSacrementService;
 use App\Services\ProgrammeObsequesService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +25,7 @@ class LiturgieController extends Controller
     public function __construct(
         private ActeLiturgiqueService $service,
         private ProgrammeObsequesService $programme,
+        private CampagneSacrementService $campagneSacrement,
     ) {}
 
     public function index(Request $request)
@@ -160,6 +162,15 @@ class LiturgieController extends Controller
 
         if (empty($payload['classe_id']) && $user->classe_id) {
             $payload['classe_id'] = $user->classe_id;
+        }
+
+        try {
+            $this->campagneSacrement->assertAcceptsInscription($payload['type_acte'] ?? null);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         }
 
         $acte = $this->service->create($payload, $user)->load(['membre', 'classe', 'historiques.acteur']);

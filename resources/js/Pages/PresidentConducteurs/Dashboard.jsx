@@ -12,7 +12,10 @@ import TabTresorerie from "./Tabs/TabTresorerie";
 import TabFlashInfo from "./Tabs/TabFlashInfo";
 import TabSondages from "./Tabs/TabSondages";
 
+import TabFichesConducteurs from "./Tabs/TabFichesConducteurs";
+
 const TABS = [
+    { id: "fiches_conducteurs", label: "Fiche baptême / communion" },
     { id: "actes", label: "Validation des actes" },
     { id: "presences", label: "Présences" },
     { id: "programmes", label: "Programmes d'activité" },
@@ -110,6 +113,7 @@ export default function Dashboard({
                     ))}
                 </nav>
 
+                {activeTab === "fiches_conducteurs" && <TabFichesConducteurs />}
                 {activeTab === "actes" && (
                     <TabValidationActes
                         actes={actes}

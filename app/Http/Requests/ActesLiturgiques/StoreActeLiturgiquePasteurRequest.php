@@ -28,6 +28,8 @@ class StoreActeLiturgiquePasteurRequest extends FormRequest
             'classe_id' => ['nullable', 'integer', 'exists:classes,id'],
             'date_souhaitee' => ['nullable', 'date'],
             'details' => ['nullable', 'array'],
+            'pieces_jointes' => ['nullable', 'array', 'max:5'],
+            'pieces_jointes.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ];
     }
 }

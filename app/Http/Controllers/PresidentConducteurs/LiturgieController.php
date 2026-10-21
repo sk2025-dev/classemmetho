@@ -97,6 +97,7 @@ class LiturgieController extends Controller
     public function historique(Request $request)
     {
         $types = [
+            'bapteme_premiere_communion',
             ActeLiturgique::TYPE_NAISSANCE,
             ActeLiturgique::TYPE_DECES,
             ActeLiturgique::TYPE_PRIERE,
@@ -117,8 +118,8 @@ class LiturgieController extends Controller
             ->whereIn('type_acte', $types)
             ->whereNot('statut', ActeLiturgique::STATUT_Soumise);
 
-        if ($request->filled('type')) {
-            $query->where('type_acte', $request->string('type')->toString());
+        if ($request->filled('filtre_type') || $request->filled('type')) {
+            $query->where('type_acte', $request->input('filtre_type', $request->input('type')));
         }
 
         if ($request->filled('statut')) {
@@ -200,7 +201,7 @@ class LiturgieController extends Controller
                 'id'             => $acte->id,
                 'reference'      => $acte->reference,
                 'type_acte'      => $acte->type_acte,
-                'type_label'     => ActeLiturgique::getTypeOptions()[$acte->type_acte] ?? $acte->type_acte,
+                'type_label'     => $acte->type_acte === 'bapteme_premiere_communion' ? 'Baptême + Première communion' : (ActeLiturgique::getTypeOptions()[$acte->type_acte] ?? $acte->type_acte),
                 'statut'         => $acte->statut,
                 'statut_label'   => ActeLiturgique::getStatutOptions()[$acte->statut] ?? $acte->statut,
                 'membre'         => $acte->membre?->name,
@@ -216,7 +217,7 @@ class LiturgieController extends Controller
             ];
         });
 
-        return response()->json($actes);
+        return response()->json($actes->toArray() + ['classes' => \App\Models\Classe::orderBy('nom')->get(['id', 'nom'])]);
     }
 
     public function transition(TransitionActeLiturgiqueRequest $request, int $id)
@@ -275,6 +276,37 @@ class LiturgieController extends Controller
             'message' => $message,
             'acte'    => $updated,
         ]);
+    }
+
+    public function fichesRegroupees(Request $request)
+    {
+        $actes = ActeLiturgique::with(['membre', 'family', 'classe', 'conducteur'])
+            ->where(fn ($q) => $q->where('est_annonce', false)->orWhereNull('est_annonce'))
+            ->whereIn('type_acte', ['bapteme', 'premiere_communion', 'bapteme_premiere_communion'])
+            ->whereIn('statut', ['TRANSMISE_AU_BUREAU_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'])
+            ->where(function ($q) {
+                $q->whereNull('campagne_id')->orWhere(function ($managed) {
+                    $managed->whereNotNull('liste_sacrement_id')->where('suivi_sacrement->etape', '!=', 'brouillon');
+                });
+            })->orderBy('classe_id')->orderBy('id')->get();
+        $campaignYears = \App\Models\CampagneSacrement::whereIn('id', $actes->pluck('campagne_id')->filter())->pluck('annee', 'id');
+        $years = $actes->map(fn ($acte) => $campaignYears[$acte->campagne_id] ?? $acte->created_at?->year ?? now()->year)->unique()->sort()->values();
+        $title = 'Inscription cours de baptême et première communion — '.($years->isEmpty() ? now()->year : $years->implode(' / '));
+        $rows = $actes->map(fn ($acte) => [
+            'id' => $acte->id, 'reference' => $acte->reference,
+            'candidat' => trim(($acte->membre?->prenom ?? '').' '.($acte->membre?->nom ?? '')),
+            'contact' => collect([$acte->details['telephone'] ?? null, $acte->details['telephone2'] ?? null])->filter(fn ($value) => trim((string) $value) !== '')->unique()->implode(' / ') ?: ($acte->membre?->telephone ?: ($acte->family?->telephone ?: '—')),
+            'classe' => $acte->classe?->nom ?? 'Non renseignée',
+            'conducteur' => $acte->conducteur?->name ?? 'Non renseigné',
+            'type' => $acte->type_acte === 'bapteme_premiere_communion' ? 'Baptême + Première communion' : (ActeLiturgique::getTypeOptions()[$acte->type_acte] ?? $acte->type_acte),
+            'statut' => ActeLiturgique::getStatutOptions()[$acte->statut] ?? $acte->statut,
+            'date' => $acte->date_souhaitee?->format('d/m/Y') ?? '—',
+        ]);
+        if ($request->boolean('pdf')) {
+            return Pdf::loadView('pdf.fiches-conducteurs-regroupees', ['rows' => $rows, 'title' => $title, 'logoDataUri' => $this->buildImageDataUri(public_path('images/logo.png')), 'methoDataUri' => $this->buildImageDataUri(public_path('images/metho.jpg'))])->setPaper('a4', 'landscape')->download('fiche-bapteme-premiere-communion-toutes-classes.pdf');
+        }
+
+        return response()->json(['fiches' => $rows, 'title' => $title]);
     }
 
     public function ficheConducteur(Request $request, int $id)

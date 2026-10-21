@@ -16,13 +16,6 @@ import Select2Single from "../../../Components/Select2Single";
 
 const ACTE_OPTIONS = [
     {
-        key: "bapteme",
-        title: "Bapteme",
-        badge: "Sacrement",
-        description: "Demande de bapteme pour enfant ou adulte.",
-        tone: "blue",
-    },
-    {
         key: "mariage",
         title: "Mariage",
         badge: "Union",
@@ -85,6 +78,10 @@ export default function Selection({
     basePath: basePathProp = "/responsable-famille/liturgie",
     actesEnCours = [],
     familyMembers = [],
+    campagneSacrement = null,
+    peutInscrireSacrements = false,
+    circuitMessage = null,
+    annonceSubmitUrl = "/responsable-famille/annonces",
 }) {
     const basePath = withBasePath("", basePathProp);
     const [showAnnonceModal, setShowAnnonceModal] = useState(false);
@@ -166,7 +163,7 @@ export default function Selection({
         try {
             setAnnonceProcessing(true);
             await axios.post(
-                withBasePath("", "/responsable-famille/annonces"),
+                withBasePath("", annonceSubmitUrl),
                 annonceForm,
             );
             closeAnnonce();
@@ -301,7 +298,7 @@ export default function Selection({
                         );
                     })}
 
-                    {/* 5ème carte : Demande de prière */}
+                    {/* Demande de prière */}
                     <button
                         type="button"
                         onClick={openAnnonce}
@@ -327,14 +324,42 @@ export default function Selection({
                             </div>
                         </div>
                     </button>
+
+                    {peutInscrireSacrements && (
+                        <Link
+                            href={withBasePath("", campagneSacrement?.inscriptions_ouvertes ? "/sacrements?inscription=1" : "/sacrements")}
+                            className="group bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all"
+                        >
+                            <div className="h-1.5 bg-blue-500" />
+                            <div className="p-5">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-xs font-bold px-2.5 py-1 rounded-full border bg-blue-50 text-blue-700 border-blue-200">
+                                        Inscription
+                                    </span>
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                                    Baptême / première communion
+                                </h2>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    {campagneSacrement?.inscriptions_ouvertes
+                                        ? "Inscrire un membre de votre famille au baptême ou à la première communion."
+                                        : "Les inscriptions sont fermées. Vous pouvez consulter les dossiers de votre famille."}
+                                </p>
+                                <div className="inline-flex items-center justify-between w-full text-sm font-semibold text-slate-500">
+                                    {campagneSacrement?.inscriptions_ouvertes ? "Cliquer pour inscrire" : "Consulter les inscriptions"}
+                                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                </div>
+                            </div>
+                        </Link>
+                    )}
                 </div>
 
                 <div className="mt-6 bg-white/95 rounded-xl p-4 border border-gray-200">
                     <p className="text-sm text-gray-700">
-                        Le dossier suit ce circuit: <strong>Conducteur</strong>{" "}
+                        {circuitMessage || <>Le dossier suit ce circuit: <strong>Conducteur</strong>{" "}
                         puis <strong>Bureau des conducteurs</strong> puis{" "}
                         <strong>Pasteur</strong>. Vous serez notifie a
-                        chaque etape.
+                        chaque etape.</>}
                     </p>
                 </div>
             </div>

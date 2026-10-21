@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><style>body{font-family:DejaVu Sans,sans-serif;font-size:10px;color:#1e293b}h1{font-size:17px}.heading td{border:0;vertical-align:middle}.heading img{max-width:85px;max-height:75px}.heading .title{text-align:center}table{width:100%;border-collapse:collapse}th,td{padding:8px;border:1px solid #cbd5e1;text-align:left}th{background:#ecfdf5}thead{display:table-header-group}tr{page-break-inside:avoid}</style></head><body>
+<table class="heading"><tr><td style="width:95px">@if($methoDataUri)<img src="{{ $methoDataUri }}" alt="Église méthodiste">@endif</td><td class="title"><h1>{{ $title }}</h1></td><td style="width:95px;text-align:right">@if($logoDataUri)<img src="{{ $logoDataUri }}" alt="Jubilé de Cocody">@endif</td></tr></table><p>Toutes les classes</p><p>{{ $rows->count() }} demande(s) transmise(s) · Édité le {{ now()->format('d/m/Y H:i') }}</p>
+<table><thead><tr>@foreach(['Référence','Candidat','Contact','Classe','Conducteur','Sacrement','Date souhaitée','État'] as $title)<th>{{ $title }}</th>@endforeach</tr></thead><tbody>
+@forelse($rows as $row)<tr>@foreach(['reference','candidat','contact','classe','conducteur','type','date','statut'] as $key)<td>{{ $row[$key] }}</td>@endforeach</tr>@empty<tr><td colspan="8">Aucune fiche transmise.</td></tr>@endforelse
+</tbody></table></body></html>

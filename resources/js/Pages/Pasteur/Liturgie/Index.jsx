@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import ListesSacrements from "./ListesSacrements";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import axios from "axios";
 import { Link, usePage, router } from "@inertiajs/react";
 import MiniCalendar from "@/Components/MiniCalendar";
@@ -132,6 +133,8 @@ function RecapRow({ label, value }) {
 
 export default function Index({
     actes = [],
+    listesSacrements = [],
+    historiqueSacrements = [],
     historique = [],
     familyMembers = [],
     allMembers = [],
@@ -165,11 +168,19 @@ export default function Index({
     const totalActes = actesPaginator?.total || localActes.length;
 
     const [historiqueList, setHistoriqueList] = useState(historique);
+    useEffect(() => setHistoriqueList(historique), [historique]);
     const [activeActe, setActiveActe] = useState(null);
     const [modal, setModal] = useState(null);
     const [detailTab, setDetailTab] = useState("infos");
     const [commentaire, setCommentaire] = useState("");
     const [processing, setProcessing] = useState(false);
+    const wasProcessing = useRef(false);
+    useEffect(() => {
+        if (wasProcessing.current && !processing) {
+            router.reload({ only: ['actes', 'historique', 'annonces', 'annoncesHistorique', 'listesSacrements', 'historiqueSacrements'], preserveState: true, preserveScroll: true });
+        }
+        wasProcessing.current = processing;
+    }, [processing]);
     const [toast, setToast] = useState("");
     const [ficheModalOpen, setFicheModalOpen] = useState(false);
     const [sendingFiche, setSendingFiche] = useState(false);
@@ -221,7 +232,7 @@ export default function Index({
     const requiredActeFields = ACTE_REQUIRED_FIELDS[createForm.type_acte] || [];
 
     /* ── ANNONCES STATE ── */
-    const [activeTab, setActiveTab] = useState("actes");
+    const [activeTab, setActiveTab] = useState(() => totalActes === 0 && listesSacrements.length > 0 ? "sacrements" : "actes");
     const [annonces, setAnnonces] = useState(rawAnnonces);
     const [annoncesHistorique, setAnnoncesHistorique] = useState(
         rawAnnoncesHistorique,
@@ -1190,9 +1201,7 @@ export default function Index({
         }, {});
         return {
             total: totalActes + historiqueList.length,
-            pending: localActes.filter(
-                (a) => a.statut === "TRANSMISE_AU_PASTEUR",
-            ).length,
+            pending: totalActes,
             classes: Object.entries(byClass).map(([name, count]) => ({
                 name,
                 count,
@@ -1223,7 +1232,7 @@ export default function Index({
     };
     const notify = (message) => {
         setToast(message);
-        setTimeout(() => setToast(""), 3500);
+
     };
 
     const openFicheModal = () => {
@@ -2239,7 +2248,7 @@ export default function Index({
                                 </button>
                                 <button
                                     className="btn-hero-acte"
-                                    onClick={() => openModal("create")}
+                                    onClick={() => router.visit(withBasePath("", "/pasteur/liturgie/nouvelle"))}
                                 >
                                     <svg
                                         width="13"
@@ -2454,7 +2463,7 @@ export default function Index({
                         </div>
                         <div className="pastoral-content">
                             <div className="pastoral-title">
-                                le pastoral dans ce module
+                                Votre décision pastorale
                             </div>
                             <div className="pastoral-text">
                                 Vous exercez la{" "}
@@ -2489,6 +2498,7 @@ export default function Index({
                     {/* ── TABS + FILTRES ── */}
                     <div className="tab-toolbar">
                         <div className="main-tabs">
+                            <button className={`ptab ${activeTab === 'sacrements' ? 'active' : ''}`} onClick={() => setActiveTab('sacrements')}>Baptême / communion <span className="pastor-count">{listesSacrements.length}</span></button>
                             <button
                                 className={`ptab ${activeTab === "actes" ? "active" : ""}`}
                                 onClick={() => setActiveTab("actes")}
@@ -2578,7 +2588,7 @@ export default function Index({
                                 )}
                             </button>
                         </div>
-                        <div className="quick-tools">
+                        <div className="quick-tools" hidden={activeTab === "sacrements"}>
                             <select
                                 className="quick-dropdown"
                                 value={quickFilter}
@@ -2650,13 +2660,16 @@ export default function Index({
                             <input
                                 type="search"
                                 className="quick-search"
-                                placeholder="Recherche par nom, message, type..."
+                                aria-label="Rechercher dans les demandes affichées"
+                                placeholder="Rechercher dans les demandes affichées…"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
+                            <button className="btn-see" type="button" onClick={() => { setQuickFilter('all'); setSelectedFamily('all'); setSelectedClasse('all'); setSearchTerm(''); setSelectedIds([]); setSelectedAnnIds([]); }}>Réinitialiser</button>
                         </div>
                     </div>
 
+                    {activeTab === 'sacrements' && <ListesSacrements listes={listesSacrements} historique={historiqueSacrements}/>}
                     {/* ════════════════ TAB ACTES ════════════════ */}
                     {activeTab === "actes" && (
                         <>
@@ -2829,7 +2842,7 @@ export default function Index({
                                             <div className="acte-actions" onClick={(e) => e.stopPropagation()}>
                                                 <button className="btn-validate" onClick={() => isActe ? openModal('validate', item) : openAnnModal('validate', item)}>
                                                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                                                    {isActe ? 'Accepté' : 'Valider'}
+                                                    {isActe ? 'Valider l’acte' : 'Valider'}
                                                 </button>
                                                 <button className="btn-see" onClick={() => isActe ? openModal('detail', item) : openAnnModal('detail', item)}>
                                                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
@@ -6348,7 +6361,7 @@ export default function Index({
                 </div>
             )}
 
-            {toast && <div className="toast">{toast}</div>}
+            {toast && <div className="toast" role="status">{toast}<button type="button" aria-label="Fermer le message" onClick={() => setToast("")} style={{ marginLeft: 16 }}>×</button></div>}
         </div>
     );
 }
@@ -6439,7 +6452,8 @@ function formatDateWithDay(value) {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return value;
     const jour = d.toLocaleDateString("fr-FR", { weekday: "long" });
-    return `${jour.charAt(0).toUpperCase()}${jour.slice(1)} ${d.toLocaleDateString("fr-FR")}`;
+    return `${jour.charAt(0).toUpperCase()}${jour.slice(1)} ${d.toLocaleDateString("fr-FR")}
+`;
 }
 
 function formatDateTime(value) {
@@ -6840,4 +6854,102 @@ table tbody tr:nth-child(odd){background:rgba(248,250,252,0.5)}
 table tbody tr:hover{background:rgba(248,250,252,1)}
 table tbody td{padding:11px 16px;font-size:13px;color:#0f172a;vertical-align:top}
 table tbody input[type="checkbox"]{cursor:pointer}
+
+/* Pastoral workspace: retain the application theme with readable decision surfaces. */
+.pastor-page .content{max-width:1600px;margin:0 auto;padding:24px}
+.pastor-page .hero-header{box-shadow:0 8px 24px #0f172a20;margin-bottom:20px}
+.pastor-page .pastoral-box{display:none}
+.pastor-page .tab-toolbar{display:flex;flex-direction:column;align-items:stretch;gap:14px;margin-bottom:20px}
+.pastor-page .main-tabs{display:flex;flex-wrap:wrap;background:#fff;border:1px solid #e2e8f0;padding:6px;border-radius:14px;gap:4px}
+.pastor-page .ptab{padding:12px 16px;color:#475569}
+.pastor-page .ptab.active{background:#2563eb;color:#fff;box-shadow:none}
+.pastor-page .quick-tools{justify-content:flex-start;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;gap:12px}
+.pastor-page .quick-tools[hidden]{display:none}
+.pastor-page .quick-dropdown,.pastor-page .quick-search{background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;min-height:44px;max-width:100%}
+.pastor-page .quick-search{flex:1;min-width:220px}
+.pastor-page .layout-grid{grid-template-columns:minmax(0,1fr)}
+.pastor-page .side-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.pastor-page .panel{background:#fff;border:1px solid #e2e8f0;box-shadow:0 4px 16px #0f172a0a}
+.pastor-page .panel-head{background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.pastor-page .panel-title{color:#0f172a}.pastor-page .panel-sub{color:#64748b}
+.pastor-page .acte-card{padding:22px;border-bottom:1px solid #e2e8f0}
+.pastor-page .acte-card:hover{background:#f8fafc}
+.pastor-page .acte-actions{flex-wrap:wrap;gap:10px;margin-top:16px}
+.pastor-page .btn-validate{background:#2563eb;color:#fff;box-shadow:none;min-height:42px}
+.pastor-page .btn-see,.pastor-page .btn-pdf{background:#fff;color:#334155;border:1px solid #cbd5e1;min-height:42px}
+.pastor-page .btn-refuse-sm{background:#fff1f2;color:#be123c;border-color:#fecdd3;min-height:42px}
+.pastor-page button:disabled{opacity:.45;cursor:not-allowed}
+.pastor-page .pastor-count{background:#dbeafe;color:#1e40af;border-radius:20px;padding:2px 8px}
+.pastor-sacraments{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;color:#0f172a}
+.pastor-section-heading{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;margin-bottom:20px}
+.pastor-section-heading h2{font-size:20px;font-weight:700}.pastor-section-heading p,.pastor-list-card>p{color:#64748b;font-size:13px;margin:6px 0 12px}
+.pastor-section-heading>span{font-size:13px;background:#eff6ff;color:#1e40af;border-radius:20px;padding:8px 12px;align-self:flex-start}
+.pastor-list-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:16px}
+.pastor-list-card{border:1px solid #e2e8f0;border-radius:14px;padding:20px}.pastor-list-card h3{font-size:18px;font-weight:700}
+.pastor-list-card details{margin:14px 0;font-size:13px}.pastor-list-card summary{cursor:pointer;color:#1d4ed8}.pastor-list-card li{padding:8px 0;border-bottom:1px solid #f1f5f9}
+.pastor-detail-link{display:inline-block;color:#1d4ed8;font-size:13px;margin-bottom:16px}.pastor-list-actions{display:flex;flex-wrap:wrap;gap:8px}
+.pastor-success{padding:12px;background:#ecfdf5;color:#065f46;border-radius:10px;margin-bottom:16px}.pastor-empty{padding:24px;text-align:center;color:#64748b}
+.pastor-decision-overlay{position:fixed;inset:0;background:#0f172a99;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+.pastor-decision-modal{background:#fff;border:1px solid #e2e8f0;border-radius:20px;width:100%;max-width:960px;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:hidden;display:flex;flex-direction:column;color:#0f172a;box-shadow:0 24px 80px #0f172a40}
+.pastor-decision-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:22px 28px;border-bottom:1px solid #e2e8f0;flex-shrink:0;background:#f8fafc}
+.pastor-decision-eyebrow{color:#1d4ed8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.pastor-decision-modal h2{font-size:22px;line-height:1.3;font-weight:700;margin:5px 0}
+.pastor-decision-header p{font-size:13px;color:#64748b;margin:0}
+.pastor-decision-close{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:40px;height:40px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:26px}
+.pastor-decision-body{padding:20px 28px;overflow:auto;min-height:0;overscroll-behavior:contain;display:flex;flex-direction:column;gap:16px}
+.pastor-decision-summary{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.pastor-decision-summary>span{border:1px solid #dbeafe;background:#eff6ff;border-radius:10px;padding:8px 12px;font-size:13px;color:#1e40af}
+.pastor-decision-summary strong{font-size:18px;margin-right:4px}
+.pastor-decision-summary .pastor-decision-outcome{margin-left:auto;background:#ecfdf5;border-color:#a7f3d0;color:#047857;font-weight:600}
+.pastor-decision-search label,.pastor-decision-note label{display:block;font-size:14px;font-weight:600;margin-bottom:8px}
+.pastor-decision-search input{width:100%;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;font-size:14px;padding:10px 12px;min-height:44px}
+.pastor-decision-search p{font-size:12px;color:#64748b;margin:7px 0 0}
+.pastor-decision-candidates{border:1px solid #e2e8f0;border-radius:12px;overflow:auto;max-height:280px;max-height:min(30dvh,320px);flex-shrink:0;overscroll-behavior:contain}
+.pastor-decision-candidates table{width:100%;border-collapse:separate;border-spacing:0;text-align:left;table-layout:fixed;font-size:13px}
+.pastor-decision-candidates th{position:sticky;top:0;z-index:1;background:#eff6ff;color:#1e3a8a;font-weight:600;font-size:12px;padding:11px 12px;border-bottom:1px solid #dbeafe}
+.pastor-decision-candidates th:first-child{width:48px}.pastor-decision-candidates th:nth-child(2){width:38%}.pastor-decision-candidates th:nth-child(3){width:22%}
+.pastor-decision-candidates td{padding:11px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top;color:#334155;overflow-wrap:anywhere}
+.pastor-decision-candidates tbody tr:nth-child(even){background:#f8fafc}.pastor-decision-candidates tbody tr:last-child td{border-bottom:0}
+.pastor-decision-candidates td:first-child{color:#64748b;font-size:12px}
+.pastor-decision-candidates strong{color:#0f172a;font-weight:600}.pastor-decision-candidates small{display:block;color:#64748b;font-size:11px;margin-top:3px}
+.pastor-decision-class{display:inline-block;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:2px 6px;font-size:11px;font-weight:600}
+.pastor-decision-candidates .pastor-decision-empty{text-align:center;padding:24px;color:#64748b}
+.pastor-decision-notice{padding:12px 14px;background:#eff6ff;border-left:3px solid #3b82f6;border-radius:8px;font-size:13px;line-height:1.6;color:#1e40af;margin:0}
+.pastor-decision-note label span{font-weight:400;color:#64748b}
+.pastor-decision-note textarea{display:block;width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;background:#fff;font-size:14px;min-height:80px;resize:vertical}
+.pastor-decision-note small{display:block;font-size:11px;color:#64748b;margin-top:6px}
+.pastor-decision-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;flex-shrink:0;padding:16px 28px;border-top:1px solid #e2e8f0;background:#f8fafc}
+.pastor-decision-footer p{font-size:13px;margin:0}.pastor-decision-footer p span{display:block;font-size:12px;color:#64748b;margin-top:3px}
+.pastor-decision-error{padding:12px;background:#fff1f2;color:#9f1239;border:1px solid #fecdd3;border-radius:8px;font-size:13px}
+.pastor-decision-modal :focus-visible{outline:2px solid #2563eb;outline-offset:2px}.pastor-decision-modal h2:focus{outline:none}
+.pastor-decision-modal.is-refusal .pastor-decision-outcome{background:#fff1f2;border-color:#fecdd3;color:#be123c}.pastor-decision-modal.is-refusal .pastor-decision-notice{background:#fff1f2;border-color:#f43f5e;color:#9f1239}
+@media(max-width:640px){.pastor-decision-overlay{padding:8px}.pastor-decision-modal{max-height:calc(100dvh - 16px);border-radius:14px}.pastor-decision-header{padding:16px}.pastor-decision-modal h2{font-size:18px}.pastor-decision-body{padding:16px;gap:12px}.pastor-decision-footer{padding:12px 16px}.pastor-decision-footer .pastor-list-actions{width:100%}.pastor-decision-footer button{flex:1;justify-content:center}.pastor-decision-candidates table{min-width:520px}.pastor-decision-summary .pastor-decision-outcome{margin-left:0}}
+@media(max-width:640px){.pastor-page .content{padding:12px}.pastor-page .quick-search,.pastor-page .quick-dropdown{width:100%;min-width:0}.pastor-page .acte-actions>button{flex:1}.pastor-sacraments{padding:16px}}
+
+
+.pastor-sacrament-tabs{display:flex;flex-wrap:wrap;gap:8px;border-bottom:1px solid #e2e8f0;padding-bottom:12px;margin-bottom:24px}
+.pastor-sacrament-tabs button{padding:10px 16px;border-radius:10px;background:#f1f5f9;color:#475569;font-size:14px;font-weight:600}
+.pastor-sacrament-tabs button[aria-pressed=true]{background:#1d4ed8;color:#fff}.pastor-sacrament-tabs span{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:20px;background:#ffffff30}
+.pastor-sacrament-history h3{font-size:18px;font-weight:700;color:#0f172a}.pastor-history-description{font-size:13px;color:#64748b;margin:8px 0 20px}
+.pastor-history-filters{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px}
+.pastor-history-filters label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:#475569;flex:1;min-width:160px}
+.pastor-history-filters input,.pastor-history-filters select{width:100%;min-height:44px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:10px;font-size:13px;color:#0f172a}
+.pastor-history-downloads{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:20px 0;font-size:13px;color:#475569}
+.pastor-history-status{display:inline-block;font-size:12px;font-weight:600;border-radius:20px;padding:5px 10px;background:#fff7ed;color:#9a3412}
+.pastor-history-status.is-valider{background:#ecfdf5;color:#047857}.pastor-history-status.is-refuser{background:#fff1f2;color:#be123c}
+.pastor-history-note{margin-top:8px;font-size:12px;color:#475569}.pastor-history-note summary{cursor:pointer;color:#1d4ed8}.pastor-history-note p{max-width:300px;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:6px}
+
+.pastor-history-followup{min-width:275px;max-width:340px}.pastor-followup-actions{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.pastor-followup-actions button{font-size:12px;text-align:left}.pastor-followup-actions .pastor-detail-link{margin:6px 0;font-size:12px}
+.pastor-followup-modal{max-width:740px}.pastor-followup-fields{display:flex;flex-direction:column;gap:18px;border:0;padding:0;min-width:0}
+.pastor-followup-fields label{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:600;color:#334155}
+.pastor-followup-fields input,.pastor-followup-fields select,.pastor-followup-fields textarea{width:100%;min-width:0;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;padding:11px 12px;font-size:14px;font-weight:400}
+.pastor-followup-fields textarea{resize:vertical;min-height:90px}.pastor-followup-fields :disabled{opacity:.6}
+.pastor-followup-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pastor-followup-wide{grid-column:1/-1}
+@media(max-width:640px){.pastor-followup-grid{grid-template-columns:1fr}}
+
+.pastor-history-batch{border:1px solid #bfdbfe;background:#eff6ff;border-radius:12px;padding:16px;margin-bottom:18px;display:flex;flex-direction:column;gap:12px;font-size:14px;color:#1e3a8a}
+.pastor-followup-modal.is-grouped{max-width:960px}
+
+.pastor-candidate-sacrament{width:100%;min-width:0;min-height:44px;padding:8px;border:1px solid #93c5fd;border-radius:8px;background:#fff;color:#1e3a8a;font-size:12px}
 `

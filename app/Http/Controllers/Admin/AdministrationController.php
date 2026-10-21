@@ -515,7 +515,22 @@ class AdministrationController extends Controller
             ),
             'consentementActif' => \App\Support\DataConsent::isEnabled(),
             'consentementTexte' => \App\Support\DataConsent::texte(),
+            'campagnesSacrements' => $this->campagnesSacrementsPayload(),
+            'campagneSacrementStatus' => app(\App\Services\CampagneSacrementService::class)->publicStatus(),
         ]);
+    }
+
+    private function campagnesSacrementsPayload(): array
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('campagnes_sacrements')) {
+            return [];
+        }
+
+        return \App\Models\CampagneSacrement::query()
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (\App\Models\CampagneSacrement $c) => $c->toPublicArray())
+            ->all();
     }
 
     /**

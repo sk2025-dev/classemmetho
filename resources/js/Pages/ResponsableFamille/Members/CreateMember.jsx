@@ -95,7 +95,7 @@ const SacrementSection = ({
     );
 };
 
-export default function CreateMember({ family, errors }) {
+export default function CreateMember({ family, errors, sacrementRetour = null }) {
     // États pour les données persistantes
     const [fonctions, setFonctions] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -373,10 +373,16 @@ export default function CreateMember({ family, errors }) {
             const res = await axios.post(
                 withBasePath(
                     "",
-                    `/responsable-famille/members/store?family_id=${family.id}`,
+                    `/responsable-famille/members/store?family_id=${family.id}${sacrementRetour ? `&sacrement=${encodeURIComponent(sacrementRetour)}` : ""}`,
                 ),
                 formData,
             );
+
+            if (sacrementRetour && res.data?.redirect_url) {
+                clearFormPersistedData("createMember_");
+                Inertia.visit(res.data.redirect_url);
+                return;
+            }
 
             // Succès - Afficher toast avec bouton Modifier
             const addedMemberData = res.data?.data || data; // Récupérer les données du membre depuis la réponse API
@@ -423,7 +429,7 @@ export default function CreateMember({ family, errors }) {
                 Inertia.get(
                     withBasePath(
                         "",
-                        `/responsable-famille/inscriptions?family_id=${family.id}`,
+                        sacrementRetour ? `/sacrements?inscription=1&type_acte=${encodeURIComponent(sacrementRetour)}` : `/responsable-famille/inscriptions?family_id=${family.id}`,
                     ),
                 );
             }, 3500);
@@ -455,13 +461,17 @@ export default function CreateMember({ family, errors }) {
             <ToastContainer toasts={toasts} removeToast={removeToast} />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                {sacrementRetour && <div className="mb-4 rounded-xl bg-white p-4 text-blue-900">
+                    <strong>Étape 1 : ajouter la personne à votre famille.</strong>
+                    <p className="mt-1 text-sm">Après l’enregistrement, vous reviendrez automatiquement au formulaire d’inscription au sacrement, avec ce nouveau membre sélectionné. Renseignez uniquement les sacrements déjà reçus dans cette fiche.</p>
+                </div>}
                 {/* Header Compact */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                     <div className="flex items-center gap-4">
                         <Link
                             href={withBasePath(
                                 "",
-                                `/responsable-famille/inscriptions?family_id=${family.id}`,
+                                sacrementRetour ? `/sacrements?inscription=1&type_acte=${encodeURIComponent(sacrementRetour)}` : `/responsable-famille/inscriptions?family_id=${family.id}`,
                             )}
                             className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md"
                         >
@@ -1141,7 +1151,7 @@ export default function CreateMember({ family, errors }) {
                         <Link
                             href={withBasePath(
                                 "",
-                                `/responsable-famille/inscriptions?family_id=${family.id}`,
+                                sacrementRetour ? `/sacrements?inscription=1&type_acte=${encodeURIComponent(sacrementRetour)}` : `/responsable-famille/inscriptions?family_id=${family.id}`,
                             )}
                             className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2"
                         >
@@ -1156,8 +1166,7 @@ export default function CreateMember({ family, errors }) {
                                 <>Enregistrement...</>
                             ) : (
                                 <>
-                                    <Check className="w-4 h-4" /> Enregistrer le
-                                    Membre
+                                    <Check className="w-4 h-4" /> {sacrementRetour ? "Ajouter et poursuivre l’inscription" : "Enregistrer le membre"}
                                 </>
                             )}
                         </button>

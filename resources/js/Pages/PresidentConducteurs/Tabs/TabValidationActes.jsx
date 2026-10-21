@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { router } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
 import axios from "axios";
 import {
     formatProgrammeRow,
@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 
 /* ─── Helpers ────────────────────────────────────────── */
+const isSacrement = acte => ['bapteme', 'premiere_communion', 'bapteme_premiere_communion'].includes(acte.type_acte);
 const TYPE_LABELS = {
+    bapteme_premiere_communion: "Baptême + Première communion",
     bapteme:            "Baptême",
     mariage:            "Mariage",
     naissance:          "Naissance",
@@ -142,6 +144,8 @@ function ActeCard({ acte, onValidate, onRefuse, isProcessing, selected, onToggle
                     <label className="flex-shrink-0 mt-0.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                         <input
                             type="checkbox"
+                            disabled={isSacrement(acte)}
+                            title={isSacrement(acte) ? "Validation par liste de classe dans le module sacrements" : undefined}
                             checked={!!selected}
                             onChange={() => onToggleSelect(acte.id)}
                             className="w-4 h-4 rounded border-gray-300 text-purple-600 cursor-pointer accent-purple-600"
@@ -272,7 +276,10 @@ function ActeCard({ acte, onValidate, onRefuse, isProcessing, selected, onToggle
 
             {/* Actions */}
             <div className="p-4 flex flex-col gap-3">
-                {!showRefuseForm && !showValidateForm ? (
+                {isSacrement(acte) ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 p-3">
+                    <p className="text-sm text-emerald-900">Cette inscription se valide avec la liste de sa classe, après contrôle du conducteur.</p>
+                    <Link href={withBasePath('', `/sacrements${acte.campagne_id ? `?campagne_id=${acte.campagne_id}` : ''}#listes-transmises`)} className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white">Examiner et valider la liste → Pasteur</Link>
+                </div> : !showRefuseForm && !showValidateForm ? (
                     <div className="flex items-center gap-2 flex-wrap">
                         <a
                             href={withBasePath(
@@ -435,7 +442,8 @@ export default function TabValidationActes({
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [newRequestsCount, setNewRequestsCount] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [historiqueSearch, setHistoriqueSearch] = useState("");
+    const [historiqueSearch, setHistoriqueSearch] = useState(() => new URLSearchParams(window.location.search).get("historique_search") || "");
+    const lastHistoriqueSearch = useRef(historiqueSearch);
     const lastKnownCount = useRef(pendingCount);
     const pollingRef = useRef(null);
 
@@ -482,7 +490,6 @@ export default function TabValidationActes({
 
     const showToast = (msg, type = "success") => {
         setToast({ msg, type });
-        setTimeout(() => setToast(null), 4000);
     };
 
     const handlePageChange = (url) => {
@@ -510,8 +517,12 @@ export default function TabValidationActes({
 
     // Recherche dans l'historique (débounce 400ms)
     useEffect(() => {
+        if (historiqueSearch === lastHistoriqueSearch.current) return;
         const handle = setTimeout(() => {
-            router.get(window.location.pathname, { historique_search: historiqueSearch }, {
+            lastHistoriqueSearch.current = historiqueSearch;
+            const params = Object.fromEntries(new URLSearchParams(window.location.search));
+            delete params.historique_page;
+            router.get(window.location.pathname, { ...params, historique_search: historiqueSearch }, {
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,
@@ -528,6 +539,15 @@ export default function TabValidationActes({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [historiqueSearch]);
 
+    const refreshAfterDecision = () => new Promise(resolve => {
+        router.reload({
+            only: ["actes", "pendingCount", "validatedCount", "refusedCount", "historique"],
+            preserveState: true,
+            preserveScroll: true,
+            onFinish: resolve,
+        });
+    });
+
     const handleValidate = async (id, commentaire = "") => {
         try {
             setProcessing(true);
@@ -540,6 +560,7 @@ export default function TabValidationActes({
         } catch (e) {
             showToast(e?.response?.data?.message || "Erreur lors de la validation.", "error");
         } finally {
+            await refreshAfterDecision();
             setProcessing(false);
         }
     };
@@ -556,6 +577,7 @@ export default function TabValidationActes({
         } catch (e) {
             showToast(e?.response?.data?.message || "Erreur lors du refus.", "error");
         } finally {
+            await refreshAfterDecision();
             setProcessing(false);
         }
     };
@@ -567,18 +589,19 @@ export default function TabValidationActes({
             return n;
         });
 
+    const selectableActes = localActes.filter(a => !isSacrement(a));
     const toggleSelectAll = () => {
-        if (selectedIds.size === localActes.length && localActes.length > 0) {
+        if (selectedIds.size === selectableActes.length && selectableActes.length > 0) {
             setSelectedIds(new Set());
         } else {
-            setSelectedIds(new Set(localActes.map((a) => a.id)));
+            setSelectedIds(new Set(selectableActes.map((a) => a.id)));
         }
     };
 
-    const allSelected = localActes.length > 0 && selectedIds.size === localActes.length;
+    const allSelected = selectableActes.length > 0 && selectedIds.size === selectableActes.length;
 
     const handleBulkValidate = async () => {
-        const ids = Array.from(selectedIds);
+        const ids = Array.from(selectedIds).filter(id => selectableActes.some(a => a.id === id));
         if (!ids.length) return;
         try {
             setProcessing(true);
@@ -594,12 +617,13 @@ export default function TabValidationActes({
         } catch (e) {
             showToast(e?.response?.data?.message || "Erreur lors de la validation groupée.", "error");
         } finally {
+            await refreshAfterDecision();
             setProcessing(false);
         }
     };
 
     const handleBulkRefuse = async () => {
-        const ids = Array.from(selectedIds);
+        const ids = Array.from(selectedIds).filter(id => selectableActes.some(a => a.id === id));
         if (!ids.length) return;
         const motif = window.prompt(`Motif du refus pour ${ids.length} acte${ids.length > 1 ? "s" : ""} sélectionné${ids.length > 1 ? "s" : ""} :`);
         if (!motif?.trim()) return;
@@ -617,6 +641,7 @@ export default function TabValidationActes({
         } catch (e) {
             showToast(e?.response?.data?.message || "Erreur lors du refus groupé.", "error");
         } finally {
+            await refreshAfterDecision();
             setProcessing(false);
         }
     };
@@ -631,12 +656,13 @@ export default function TabValidationActes({
         <div>
             {/* Toast */}
             {toast && (
-                <div className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold transition-all ${
+                <div role={toast.type === "error" ? "alert" : "status"} aria-live="polite" className={`mb-5 flex items-center justify-between gap-4 px-4 py-3 rounded-xl shadow-sm text-sm font-semibold transition-all ${
                     toast.type === "error" ? "bg-red-600 text-white"
                     : toast.type === "info" ? "bg-blue-600 text-white"
                     : "bg-green-600 text-white"
                 }`}>
                     {toast.msg}
+                    <button type="button" onClick={() => setToast(null)} aria-label="Fermer le message" className="ml-3 rounded px-2 py-1">×</button>
                 </div>
             )}
 

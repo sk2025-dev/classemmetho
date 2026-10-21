@@ -1,3 +1,4 @@
+import DashboardFilter from "./DashboardFilter";
 import React, { useState } from "react";
 import { router, usePage } from "@inertiajs/react";
 import { Send, CheckCircle, Pencil, Trash2, Megaphone } from "lucide-react";
@@ -162,7 +163,7 @@ export default function TabFlashInfo({ flashInfos: flashInfosProp = [] }) {
 
                     <div>
                         <label className="block text-sm font-semibold text-gray-900 mb-1">Destinataires</label>
-                        <select
+                        <DashboardFilter
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                             value={targetRole}
                             onChange={(e) => setTargetRole(e.target.value)}
@@ -170,7 +171,7 @@ export default function TabFlashInfo({ flashInfos: flashInfosProp = [] }) {
                             {TARGET_OPTIONS.map((opt) => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
-                        </select>
+                        </DashboardFilter>
                     </div>
 
                     <button
@@ -262,7 +263,7 @@ export default function TabFlashInfo({ flashInfos: flashInfosProp = [] }) {
 
                             <div>
                                 <label className="block text-sm font-semibold text-gray-900 mb-1">Destinataires</label>
-                                <select
+                                <DashboardFilter
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                                     value={editTargetRole}
                                     onChange={(e) => setEditTargetRole(e.target.value)}
@@ -270,7 +271,7 @@ export default function TabFlashInfo({ flashInfos: flashInfosProp = [] }) {
                                     {TARGET_OPTIONS.map((opt) => (
                                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                                     ))}
-                                </select>
+                                </DashboardFilter>
                             </div>
 
                             {editError && <p className="text-xs text-red-500">{editError}</p>}

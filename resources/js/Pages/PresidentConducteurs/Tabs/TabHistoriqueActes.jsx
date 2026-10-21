@@ -1,3 +1,4 @@
+import DashboardFilter from "./DashboardFilter";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { withBasePath } from "../../../Utils/urlHelper";
@@ -8,8 +9,9 @@ import {
 const HISTORIQUE_URL = withBasePath("", "/president-conducteurs/liturgie/historique");
 
 const TYPE_OPTIONS = [
+    { value: "bapteme_premiere_communion", label: "Baptême + Première communion" },
     { value: "", label: "Tous les types" },
-    { value: "naissance", label: "Naissance" },
+    { value: "naissance", label: "Présentation d’enfant" },
     { value: "deces", label: "Décès" },
     { value: "priere", label: "Prière d'intercession" },
     { value: "grace", label: "Action de grâce" },
@@ -175,6 +177,7 @@ export default function TabHistoriqueActes() {
     const [error, setError] = useState(null);
 
     const [type, setType] = useState("");
+    const [classeId, setClasseId] = useState("");
     const [statut, setStatut] = useState("");
     const [search, setSearch] = useState("");
     const [searchInput, setSearchInput] = useState("");
@@ -195,7 +198,7 @@ export default function TabHistoriqueActes() {
         setError(null);
 
         axios
-            .get(HISTORIQUE_URL, { params: { type, statut, search, page } })
+            .get(HISTORIQUE_URL, { params: { filtre_type: type, statut, search, page, classe_id: classeId } })
             .then((res) => {
                 if (!cancelled) setActes(res.data);
             })
@@ -209,7 +212,7 @@ export default function TabHistoriqueActes() {
         return () => {
             cancelled = true;
         };
-    }, [type, statut, search, page]);
+    }, [type, statut, search, page, classeId]);
 
     const items = actes?.data ?? [];
 
@@ -232,7 +235,7 @@ export default function TabHistoriqueActes() {
 
                 <div className="flex flex-col gap-1">
                     <label className="text-xs font-semibold text-gray-500">Type d'acte</label>
-                    <select
+                    <DashboardFilter
                         value={type}
                         onChange={(e) => { setType(e.target.value); setPage(1); }}
                         className="border rounded-md px-2 py-1 text-xs text-gray-700"
@@ -240,12 +243,12 @@ export default function TabHistoriqueActes() {
                         {TYPE_OPTIONS.map((o) => (
                             <option key={o.value} value={o.value}>{o.label}</option>
                         ))}
-                    </select>
+                    </DashboardFilter>
                 </div>
 
                 <div className="flex flex-col gap-1">
                     <label className="text-xs font-semibold text-gray-500">Statut</label>
-                    <select
+                    <DashboardFilter
                         value={statut}
                         onChange={(e) => { setStatut(e.target.value); setPage(1); }}
                         className="border rounded-md px-2 py-1 text-xs text-gray-700"
@@ -253,9 +256,11 @@ export default function TabHistoriqueActes() {
                         {STATUT_OPTIONS.map((o) => (
                             <option key={o.value} value={o.value}>{o.label}</option>
                         ))}
-                    </select>
+                    </DashboardFilter>
                 </div>
 
+                <label className="flex flex-col gap-1 text-xs font-semibold text-gray-500">Classe<DashboardFilter value={classeId} onChange={e => { setClasseId(e.target.value); setPage(1); }}><option value="">Toutes les classes</option>{(actes?.classes || []).map(classe => <option key={classe.id} value={classe.id}>{classe.nom}</option>)}</DashboardFilter></label>
+                <button type="button" className="rounded-lg border px-3 py-2 text-sm text-slate-700" onClick={() => { setType(""); setStatut(""); setClasseId(""); setSearchInput(""); setSearch(""); setPage(1); }}>Réinitialiser</button>
                 {loading && (
                     <div className="flex items-center gap-1 text-xs text-gray-400">
                         <Loader2 size={14} className="animate-spin" /> Chargement...

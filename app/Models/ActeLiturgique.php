@@ -16,6 +16,9 @@ class ActeLiturgique extends Model
     protected $table = 'actes_liturgiques';
 
     protected $fillable = [
+        'campagne_id',
+        'liste_sacrement_id',
+        'suivi_sacrement',
         'reference',
         'type_acte',
         'statut',
@@ -46,6 +49,7 @@ class ActeLiturgique extends Model
         'date_publication' => 'datetime',
         'date_expiration' => 'datetime',
         'details' => 'array',
+        'suivi_sacrement' => 'array',
         'est_principale' => 'boolean',
         'vu_par_demandeur' => 'boolean',
     ];

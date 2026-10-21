@@ -9,6 +9,10 @@ use App\Models\User;
 use App\Models\Fonction;
 use App\Models\Ville;
 use App\Services\TransferWorkflowService;
+use App\Services\CampagneSacrementService;
+use App\Support\SacrementAccess;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -17,6 +21,14 @@ use App\Mail\SendCredentials;
 
 class MemberController extends Controller
 {
+    private function sacrementContinuation(Request $request, Family $family): ?string
+    {
+        $actor = $request->user();
+        abort_unless($actor && SacrementAccess::responsable($actor) && (int) $actor->family_id === (int) $family->id, 403);
+        $data = $request->validate(['sacrement' => ['nullable', Rule::in(CampagneSacrementService::TYPES_GATED)]]);
+        return $data['sacrement'] ?? null;
+    }
+
     private function isTransferLocked(User|Family|null $record): bool
     {
         return app(TransferWorkflowService::class)->isTransferLocked($record);
@@ -51,6 +63,7 @@ class MemberController extends Controller
     public function create(Request $request)
     {
         $family = Family::findOrFail($request->query('family_id'));
+        $sacrement = $this->sacrementContinuation($request, $family);
 
         if ($this->isTransferLocked($family)) {
             return redirect()->route('responsable_famille.inscriptions')
@@ -59,6 +72,7 @@ class MemberController extends Controller
 
         return Inertia::render('ResponsableFamille/Members/CreateMember', [
             'family' => $family,
+            'sacrementRetour' => $sacrement,
         ]);
     }
 
@@ -66,8 +80,12 @@ class MemberController extends Controller
     {
         $familyId = $request->query('family_id');
         $family = Family::findOrFail($familyId);
+        $sacrement = $this->sacrementContinuation($request, $family);
 
         if ($this->isTransferLocked($family)) {
+            if ($sacrement && $request->expectsJson()) {
+                throw ValidationException::withMessages(['family_id' => 'Aucun membre ne peut être ajouté à une famille en transfert ou archivée.']);
+            }
             return redirect()->route('responsable_famille.inscriptions')
                 ->with('error', 'Aucune nouvelle action n\'est possible sur une famille en transfert ou archivee.');
         }
@@ -81,7 +99,7 @@ class MemberController extends Controller
                 'telephone' => 'nullable|string|max:20',
                 'telephone2' => 'nullable|string|max:20',
                 'genre' => 'required|in:M,F',
-                'date_naissance' => 'nullable|date',
+                'date_naissance' => $sacrement ? 'required|date|before_or_equal:today' : 'nullable|date',
                 'statut_marital' => 'nullable|string|max:50|in:Célibataire,Marié(e),Divorcé(e),Veuf(ve),Dote',
                 'date_mariage' => 'nullable|date',
                 'lieu_mariage' => 'nullable|string|max:255',
@@ -129,6 +147,19 @@ class MemberController extends Controller
                 'date_mariage_religieux.required_if' => 'La date du mariage religieux est obligatoire si vous avez coché',
             ]
         );
+
+        if ($sacrement) {
+            $existing = User::withTrashed()
+                ->whereRaw('LOWER(TRIM(nom)) = ?', [mb_strtolower(trim($validated['nom']))])
+                ->whereRaw('LOWER(TRIM(prenom)) = ?', [mb_strtolower(trim($validated['prenom']))])
+                ->whereDate('date_naissance', $validated['date_naissance'])
+                ->first();
+            if ($existing) {
+                throw ValidationException::withMessages(['nom' => (int) $existing->family_id === (int) $family->id && !$existing->trashed()
+                    ? 'Cette personne figure déjà dans votre famille. Revenez à l’inscription et sélectionnez-la dans la liste.'
+                    : 'Une fiche existe déjà pour cette personne. Faites vérifier son rattachement familial avant de l’inscrire, sans créer de doublon.']);
+            }
+        }
 
         if (empty($validated['email'])) {
             $validated['email'] = null;
@@ -203,6 +234,14 @@ class MemberController extends Controller
         } catch (\Exception $e) {
             // Ne pas bloquer la création de l'utilisateur si l'envoi échoue
             logger()->warning('Send email SendCredentials failed for user id ' . $user->id . ': ' . $e->getMessage());
+        }
+
+        if ($sacrement) {
+            $redirect = route('sacrements.index', ['inscription' => 1, 'membre_id' => $user->id, 'type_acte' => $sacrement]);
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Membre ajouté à votre famille. Vous pouvez maintenant poursuivre son inscription.', 'redirect_url' => $redirect]);
+            }
+            return redirect()->to($redirect)->with('success', 'Membre ajouté à votre famille. Poursuivez son inscription au sacrement.');
         }
 
         return redirect()

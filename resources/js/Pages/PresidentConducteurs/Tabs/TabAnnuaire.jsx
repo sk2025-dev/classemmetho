@@ -1,3 +1,4 @@
+import DashboardFilter from "./DashboardFilter";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { router } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
@@ -1355,7 +1356,7 @@ export default function TabAnnuaire({
                         membres
                     </span>
                     {currentView === "all" && (
-                        <select
+                        <DashboardFilter
                             value={perPage}
                             onChange={(e) => {
                                 const newPerPage = parseInt(e.target.value);
@@ -1367,7 +1368,7 @@ export default function TabAnnuaire({
                             <option value={20}>20 par page</option>
                             <option value={50}>50 par page</option>
                             <option value={100}>100 par page</option>
-                        </select>
+                        </DashboardFilter>
                     )}
                 </div>
                 <div className="flex gap-2">
@@ -2115,7 +2116,7 @@ export default function TabAnnuaire({
                         />
                     </div>
 
-                    <select
+                    <DashboardFilter
                         value={classeFilter}
                         onChange={(e) =>
                             setClasseFilter(e.target.value)
@@ -2132,9 +2133,9 @@ export default function TabAnnuaire({
                                 {c.nom}
                             </option>
                         ))}
-                    </select>
+                    </DashboardFilter>
 
-                    <select
+                    <DashboardFilter
                         value={familleFilter}
                         onChange={(e) =>
                             setFamilleFilter(e.target.value)
@@ -2151,9 +2152,9 @@ export default function TabAnnuaire({
                                 {f.nom}
                             </option>
                         ))}
-                    </select>
+                    </DashboardFilter>
 
-                    <select
+                    <DashboardFilter
                         value={professionFilter}
                         onChange={(e) =>
                             setProfessionFilter(e.target.value)
@@ -2170,9 +2171,9 @@ export default function TabAnnuaire({
                                 {p.label}
                             </option>
                         ))}
-                    </select>
+                    </DashboardFilter>
 
-                    <select
+                    <DashboardFilter
                         value={roleFilter}
                         onChange={(e) => setRoleFilter(e.target.value)}
                         className="input-control"
@@ -2187,7 +2188,7 @@ export default function TabAnnuaire({
                                 {r.label}
                             </option>
                         ))}
-                    </select>
+                    </DashboardFilter>
 
                     <button
                         onClick={resetFilters}

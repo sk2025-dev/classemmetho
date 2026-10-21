@@ -79,9 +79,9 @@ Route::get('/dons/recu/{reference}', [\App\Http\Controllers\Public\DonationContr
 // Pages d'authentification (Inertia)
 Route::get('/login', function () {
     return Inertia::render('login');
-})->name('login');
+})->middleware('guest')->name('login');
 
-Route::post('/login', [\App\Http\Controllers\Auth\LoginController::class, 'login'])->name('login.attempt');
+Route::post('/login', [\App\Http\Controllers\Auth\LoginController::class, 'login'])->middleware('guest')->name('login.attempt');
 
 // Routes authentifiées
 Route::middleware(['auth'])->group(function () {
@@ -224,6 +224,16 @@ Route::middleware(['auth'])->group(function () {
         // Routes module Actes Liturgiques (Admin)
         Route::get('/admin/liturgie', [AdminLiturgieController::class, 'index'])->name('admin.liturgie.index');
         Route::post('/admin/liturgie', [AdminLiturgieController::class, 'store'])->name('admin.liturgie.store');
+
+        Route::get('/admin/liturgie/campagne-sacrements', [\App\Http\Controllers\Admin\CampagneSacrementController::class, 'index'])
+            ->name('admin.liturgie.campagne_sacrements.index');
+        Route::post('/admin/liturgie/campagne-sacrements', [\App\Http\Controllers\Admin\CampagneSacrementController::class, 'store'])
+            ->name('admin.liturgie.campagne_sacrements.store');
+        Route::post('/admin/liturgie/campagne-sacrements/{campagne}/fermer', [\App\Http\Controllers\Admin\CampagneSacrementController::class, 'fermer'])
+            ->name('admin.liturgie.campagne_sacrements.fermer');
+        Route::post('/admin/liturgie/campagne-sacrements/{campagne}/reouvrir', [\App\Http\Controllers\Admin\CampagneSacrementController::class, 'reouvrir'])
+            ->name('admin.liturgie.campagne_sacrements.reouvrir');
+
         Route::put('/admin/liturgie/{id}', [AdminLiturgieController::class, 'update'])->name('admin.liturgie.update');
         Route::post('/admin/liturgie/{id}/transition', [AdminLiturgieController::class, 'transition'])->name('admin.liturgie.transition');
         Route::delete('/admin/liturgie/{id}', [AdminLiturgieController::class, 'destroy'])->name('admin.liturgie.destroy');
@@ -638,6 +648,7 @@ Route::middleware(['auth'])->group(function () {
 
     // ===== ROUTES PRESIDENT DES CONDUCTEURS =====
     Route::middleware('role:bureau_conducteur')->group(function () {
+        Route::get('/president-conducteurs/fiches-conducteurs', [\App\Http\Controllers\PresidentConducteurs\LiturgieController::class, 'fichesRegroupees'])->name('president_conducteurs.fiches_regroupees');
         Route::get('/president-conducteurs/dashboard', [\App\Http\Controllers\PresidentConducteurs\DashboardController::class, 'index'])->name('president_conducteurs.dashboard');
 
         // Présences - statistiques
@@ -695,6 +706,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/pasteur/members/{id}/edit', [\App\Http\Controllers\Pasteur\MemberController::class, 'edit'])->name('pasteur.members.edit');
         Route::put('/pasteur/members/{id}', [\App\Http\Controllers\Pasteur\MemberController::class, 'update'])->name('pasteur.members.update');
         Route::get('/pasteur/liturgie', [PasteurLiturgieController::class, 'index'])->name('pasteur.liturgie.index');
+        Route::get('/pasteur/liturgie/nouvelle', [PasteurLiturgieController::class, 'create'])->name('pasteur.liturgie.create');
+        Route::get('/pasteur/liturgie/nouvelle/formulaire', [PasteurLiturgieController::class, 'createForm'])->name('pasteur.liturgie.create_form');
         Route::post('/pasteur/liturgie', [PasteurLiturgieController::class, 'store'])->name('pasteur.liturgie.store');
         Route::post('/pasteur/liturgie/{id}/transition', [PasteurLiturgieController::class, 'transition'])->name('pasteur.liturgie.transition');
         Route::post('/pasteur/liturgie/{id}/ceremonie/decision', [PasteurLiturgieController::class, 'decisionCeremonie'])->name('pasteur.liturgie.ceremonie.decision');
@@ -817,4 +830,21 @@ Route::middleware(['auth'])->group(function () {
     // Route pour changer le mot de passe
     Route::get('/profile/change-password', [ChangePasswordController::class, 'show'])->name('profile.change-password');
     Route::post('/profile/change-password', [ChangePasswordController::class, 'update'])->name('profile.change-password.update');
+});
+
+// Circuit des listes de baptême / première communion : droits vérifiés côté serveur.
+Route::middleware('auth')->prefix('sacrements')->name('sacrements.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\SacrementController::class, 'index'])->name('index');
+    Route::post('/dossiers', [\App\Http\Controllers\SacrementController::class, 'store'])->name('store');
+    Route::post('/actions', [\App\Http\Controllers\SacrementController::class, 'action'])->name('action');
+    Route::post('/reprendre', [\App\Http\Controllers\SacrementController::class, 'reprendre'])->name('reprendre');
+    Route::post('/transmettre', [\App\Http\Controllers\SacrementController::class, 'transmit'])->name('transmit');
+    Route::post('/listes/{liste}/candidats/{candidate}/refuser', [\App\Http\Controllers\SacrementController::class, 'refuseCandidate'])->name('refuse_candidate');
+    Route::post('/candidats/decision-pastorale', [\App\Http\Controllers\SacrementController::class, 'decidePastoralCandidates'])->name('decide_pastoral_candidates');
+    Route::post('/listes/validation-groupee', [\App\Http\Controllers\SacrementController::class, 'decideBatch'])->name('decide_batch');
+    Route::post('/listes/{liste}/decision', [\App\Http\Controllers\SacrementController::class, 'decide'])->name('decide');
+    Route::post('/campagnes', [\App\Http\Controllers\SacrementController::class, 'campaign'])->name('campaign');
+    Route::get('/pieces/{piece}', [\App\Http\Controllers\SacrementController::class, 'piece'])->name('piece');
+    Route::get('/dossiers/{acte}/certificat/{type}', [\App\Http\Controllers\SacrementController::class, 'certificate'])->name('certificate');
+    Route::get('/listes/{liste}/pdf', [\App\Http\Controllers\SacrementController::class, 'listPdf'])->name('list_pdf');
 });

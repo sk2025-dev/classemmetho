@@ -3,8 +3,58 @@ import { normalizePhotoUrl } from "@/Helpers/PhotoUrlHelper";
 import { withBasePath } from "../../../Utils/urlHelper";
 import Select2Single from "../../../Components/Select2Single";
 
+const normalizeSearch = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const sacrementTypes = ["bapteme", "premiere_communion", "bapteme_premiere_communion"];
+
+const isPendingActe = acte => acte.campagne_id && acte.suivi_sacrement?.etape
+    ? ['soumis', 'a_corriger'].includes(acte.suivi_sacrement.etape)
+    : ['SOUMISE', 'EN_ATTENTE_CONDUCTEUR'].includes(acte.statut);
+const isAwaitingConductor = acte => isPendingActe(acte)
+    && (!acte.demandeur_is_conducteur || sacrementTypes.includes(acte.type_acte))
+    && !['priere', 'grace', 'generale'].includes(String(acte.type_acte || '').toLowerCase());
+const isTransmittedActe = acte => acte.campagne_id && acte.suivi_sacrement?.etape
+    ? acte.suivi_sacrement.etape === 'transmis'
+    : ['TRANSMISE_AU_BUREAU_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR'].includes(acte.statut);
+
+const sacrementEtapes = { brouillon: "Brouillon", soumis: "À vérifier", a_corriger: "À corriger par la famille", controle: "Validé par le conducteur", transmis: "Liste transmise", admis: "Admis par le pasteur", partiel: "Célébration partielle", celebre: "Célébré", refuse: "Refusé / exclu", annule: "Annulé", reporte: "Reporté", archive: "Archivé" };
+
+function SacrementFiche({ acte }) {
+    const details = acte.details || {};
+    const suivi = acte.suivi_sacrement || {};
+    const fields = {
+        "Référence": acte.reference,
+        "Classe": acte.classe?.nom,
+        "État": sacrementEtapes[suivi.etape] || acte.statut,
+        "Téléphone de contact": details.telephone,
+        "Autre téléphone": details.telephone2,
+        "Adresse e-mail": details.email,
+        "Parents": details.parents,
+        "Parrain": details.parrain,
+        "Marraine": details.marraine,
+    };
+    return <article className="rounded-xl border border-slate-200 bg-white p-5">
+        <p className="text-sm font-semibold text-emerald-800">{prettyType(acte.type_acte)}</p>
+        <h3 className="mt-1 text-xl font-bold text-slate-900">{acte.membre?.prenom} {acte.membre?.nom}</h3>
+        <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {Object.entries(fields).map(([label, value]) => <div key={label}><dt className="text-sm text-slate-600">{label}</dt><dd className="break-words font-medium">{value || "Non renseigné"}</dd></div>)}
+        </dl>
+        {details.observations && <p className="mt-4 whitespace-pre-wrap"><strong>Informations complémentaires : </strong>{details.observations}</p>}
+        {(suivi.observation || suivi.controle?.observation || acte.note_conducteur) && <p className="mt-4 whitespace-pre-wrap"><strong>Observation du conducteur : </strong>{suivi.observation || suivi.controle?.observation || acte.note_conducteur}</p>}
+        {acte.historiques?.length > 0 && <section className="mt-5 border-t pt-4"><h4 className="font-semibold">Historique</h4><ol className="mt-2 space-y-3">{acte.historiques.map(h => <li key={h.id} className="text-sm"><p>{h.created_at ? new Date(h.created_at).toLocaleDateString("fr-FR") : ""} · {h.acteur?.prenom} {h.acteur?.nom} · {h.statut_nouveau}</p>{h.commentaire && <p className="whitespace-pre-wrap text-slate-600">{h.commentaire}</p>}</li>)}</ol></section>}
+    </article>;
+}
+
 // Composant pour visualiser les fiches PDF par date
-function FichesMariageModal({ open, onClose, acte, ids, onEdit, onSent }) {
+function FichesMariageModal({ open, onClose, acte, ids, selectedActes = [], onEdit, onSent }) {
+    const ficheActes = acte ? [acte] : selectedActes;
+    const nativeFiche = ficheActes.some(item => ["bapteme", "premiere_communion", "bapteme_premiere_communion"].includes(item.type_acte));
+    useEffect(() => {
+        if (!open) return;
+        const previous = document.activeElement;
+        const handleKey = event => { if (event.key === "Escape") onClose(); };
+        document.addEventListener("keydown", handleKey);
+        return () => { document.removeEventListener("keydown", handleKey); previous?.focus?.(); };
+    }, [open, onClose]);
     const [dates, setDates] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedDate, setSelectedDate] = useState(null);
@@ -26,6 +76,11 @@ function FichesMariageModal({ open, onClose, acte, ids, onEdit, onSent }) {
             "Bonjour,\n\nVeuillez trouver en pièce jointe la fiche finale des mariages.\n\nBien cordialement.",
         );
 
+        if (nativeFiche) {
+            setLoading(false);
+            setPdfUrl("");
+            return;
+        }
         if (acte) {
             setLoading(false);
             setSelectedDate(null);
@@ -61,7 +116,7 @@ function FichesMariageModal({ open, onClose, acte, ids, onEdit, onSent }) {
             .get(withBasePath("", "/api/conducteur/liturgie/fiches-dates"))
             .then((res) => setDates(res.data?.dates || []))
             .finally(() => setLoading(false));
-    }, [open, acte, ids]);
+    }, [open, acte, ids, nativeFiche]);
 
     const handleSendFromApp = async () => {
         const targetIds =
@@ -226,12 +281,15 @@ function FichesMariageModal({ open, onClose, acte, ids, onEdit, onSent }) {
                     borderRadius: 8,
                     padding: 24,
                     minWidth: 350,
-                    maxWidth: 700,
+                    maxWidth: nativeFiche ? 900 : 700,
                     width: "90%",
                     maxHeight: "90vh",
                     overflowY: "auto",
                     boxShadow: "0 2px 16px rgba(0,0,0,0.15)",
                 }}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Fiche de la demande"
             >
                 <div
                     style={{
@@ -242,10 +300,12 @@ function FichesMariageModal({ open, onClose, acte, ids, onEdit, onSent }) {
                     }}
                 >
                     <h2 style={{ margin: 0, fontSize: 20 }}>
-                        Fiches des demandes de mariage par jour
+                        {nativeFiche ? "Fiches d’inscription aux sacrements" : acte ? `Fiche de ${prettyType(acte.type_acte)}` : "Fiches des demandes de mariage par jour"}
                     </h2>
                     <button
                         onClick={onClose}
+                        aria-label="Fermer la fiche"
+                        autoFocus
                         style={{
                             fontSize: 22,
                             background: "none",
@@ -256,7 +316,15 @@ function FichesMariageModal({ open, onClose, acte, ids, onEdit, onSent }) {
                         &times;
                     </button>
                 </div>
-                {loading ? (
+                {nativeFiche ? (
+                    <div className="space-y-5 text-slate-900">
+                        {ficheActes.map(item => <SacrementFiche key={item.id} acte={item} />)}
+                        <div className="flex flex-wrap justify-end gap-3 border-t pt-4">
+                            <button type="button" onClick={onClose} className="rounded-lg border px-4 py-2">Fermer</button>
+                            <Link href={withBasePath("", "/sacrements")} className="rounded-lg bg-emerald-800 px-4 py-2 text-white">Accéder au suivi des inscriptions</Link>
+                        </div>
+                    </div>
+                ) : loading ? (
                     <div>Chargement…</div>
                 ) : acte ? (
                     <div>
@@ -399,7 +467,7 @@ function FichesMariageModal({ open, onClose, acte, ids, onEdit, onSent }) {
     );
 }
 import axios from "axios";
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
 import MiniCalendar from "../../../Components/MiniCalendar";
 import SoumisesTab from "./tabs/SoumisesTab";
 import TransmisesTab from "./tabs/TransmisesTab";
@@ -533,6 +601,23 @@ export default function Index({
     };
     /* ── ACTES state ── */
     const [localActes, setLocalActes] = useState(actes);
+    useEffect(() => {
+        setLocalActes(actes);
+        setSelectedIds(new Set());
+    }, [actes]);
+
+    useEffect(() => {
+        // Refresh server state when returning from the sacrament workflow or another tab.
+        const refresh = () => {
+            if (document.visibilityState === 'visible') {
+                router.reload({ only: ['actes'], preserveState: true, preserveScroll: true });
+            }
+        };
+        refresh();
+        window.addEventListener('focus', refresh);
+        return () => window.removeEventListener('focus', refresh);
+    }, []);
+
     const [tab, setTab] = useState("soumises");
     const [modal, setModal] = useState(null);
     const [programmeEdit, setProgrammeEdit] = useState(null);
@@ -633,11 +718,11 @@ export default function Index({
     /* ── COMPUTED actes ── */
     const stats = useMemo(() => {
         const soumises = localActes.filter(
-            (a) => ["SOUMISE", "EN_ATTENTE_CONDUCTEUR"].includes(a.statut),
+            (a) => isAwaitingConductor(a),
         ).length;
         const actesTransmises = localActes.filter(
             (a) =>
-                a.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" &&
+                isTransmittedActe(a) &&
                 !["priere", "grace", "generale"].includes(
                     String(a.type_acte || "").toLowerCase(),
                 ),
@@ -652,13 +737,15 @@ export default function Index({
         return { soumises, transmises, valides, total: localActes.length };
     }, [localActes, localAnnonces]);
 
-    const searchNeedle = searchTerm.trim().toLowerCase();
+    const searchNeedle = normalizeSearch(searchTerm.trim());
     const filteredActes = useMemo(() => {
         return localActes.filter((a) => {
             if (quickFilter === "mes_annonces") return false;
+            if (quickFilter === "sacrements" && !sacrementTypes.includes(a.type_acte)) return false;
             if (
                 quickFilter !== "all" &&
                 quickFilter !== "mes_demandes" &&
+                quickFilter !== "sacrements" &&
                 String(a.type_acte || "").toLowerCase() !==
                     quickFilter.toLowerCase()
             ) {
@@ -667,15 +754,15 @@ export default function Index({
             if (!searchNeedle) return true;
             return [
                 a.type_acte,
+                prettyType(a.type_acte),
                 a.reference,
                 a.statut,
+                sacrementEtapes[a.suivi_sacrement?.etape],
                 a.membre?.prenom,
                 a.membre?.nom,
                 a.classe?.nom,
             ].some((field) =>
-                String(field || "")
-                    .toLowerCase()
-                    .includes(searchNeedle),
+                normalizeSearch(field).includes(searchNeedle),
             );
         });
     }, [localActes, quickFilter, searchNeedle]);
@@ -683,17 +770,10 @@ export default function Index({
     // Types d'annonces à exclure de l'onglet soumises (deces est un acte liturgique, pas une annonce)
     const ANNONCE_TYPE_VALUES = ["priere", "grace", "generale"];
 
-    const soumises = filteredActes.filter(
-        (a) =>
-            ["SOUMISE", "EN_ATTENTE_CONDUCTEUR"].includes(a.statut) &&
-            !a.demandeur_is_conducteur &&
-            !ANNONCE_TYPE_VALUES.includes(
-                String(a.type_acte || "").toLowerCase(),
-            ),
-    );
+    const soumises = filteredActes.filter(isAwaitingConductor);
     const transmises = filteredActes.filter(
         (a) =>
-            a.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" && !ANNONCE_TYPE_VALUES.includes(
+            isTransmittedActe(a) && !ANNONCE_TYPE_VALUES.includes(
                 String(a.type_acte || "").toLowerCase(),
             ),
     );
@@ -942,9 +1022,7 @@ export default function Index({
                 a.createur?.nom,
                 a.nom_concerne,
             ].some((field) =>
-                String(field || "")
-                    .toLowerCase()
-                    .includes(searchNeedle),
+                normalizeSearch(field).includes(searchNeedle),
             );
         });
     }, [localAnnonces, quickFilter, searchNeedle]);
@@ -961,7 +1039,7 @@ export default function Index({
         (a) => a.statut === "SOUMISE" && !isMyAnnonce(a),
     );
     const annTransmises = filteredAnnonces.filter(
-        (a) => a.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" && !isMyAnnonce(a),
+        (a) => isTransmittedActe(a) && !isMyAnnonce(a),
     );
     const annTraitees = filteredAnnonces.filter(
         (a) => a.statut !== "SOUMISE" && !isMyAnnonce(a),
@@ -1008,6 +1086,7 @@ export default function Index({
         }
     }, [quickFilter]);
     useEffect(() => {
+        setSelectedIds(new Set());
         setSoumisesPage(1);
         setHistoriquePage(1);
         setAnnoncesPage(1);
@@ -1625,6 +1704,7 @@ export default function Index({
                 onClose={closeFicheModal}
                 acte={ficheModalActe}
                 ids={ficheModalSelectedIds}
+                selectedActes={localActes.filter(item => ficheModalSelectedIds.some(id => String(id) === String(item.id)))}
                 onSent={(payload) => {
                     const updatedActes = Array.isArray(payload?.actes)
                         ? payload.actes
@@ -2078,6 +2158,7 @@ export default function Index({
                         </div>
                         <div className="quick-tools">
                             <select
+                                aria-label="Filtrer par type de demande"
                                 className="quick-dropdown"
                                 value={quickFilter}
                                 onChange={(e) => setQuickFilter(e.target.value)}
@@ -2085,15 +2166,17 @@ export default function Index({
                                 <option value="all">
                                     🔍 Tous les contenus
                                 </option>
-                                <optgroup label="Actes liturgiques">
+                                <optgroup label="Inscriptions aux sacrements">
+                                    <option value="sacrements">Toutes les inscriptions aux sacrements</option>
                                     <option value="bapteme">💧 Baptême</option>
+                                    <option value="premiere_communion">🍞 Première communion</option>
+                                    <option value="bapteme_premiere_communion">💧🍞 Baptême + Première communion</option>
+                                </optgroup>
+                                <optgroup label="Actes liturgiques">
                                     <option value="deces">🕯️ Décès</option>
                                     <option value="mariage">💍 Mariage</option>
                                     <option value="naissance">
-                                        👶 Naissance
-                                    </option>
-                                    <option value="premiere_communion">
-                                        🍞 Première Communion
+                                        👶 Présentation d’enfant
                                     </option>
                                 </optgroup>
                                 <optgroup label="Demandes de prière">
@@ -2114,10 +2197,12 @@ export default function Index({
                             <input
                                 type="search"
                                 className="quick-search"
-                                placeholder="Recherche par nom, référence, statut..."
+                                aria-label="Rechercher une demande"
+                                placeholder="Nom, référence, sacrement, état..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
+                            {(quickFilter !== "all" || searchTerm) && <button type="button" className="btn" onClick={() => { setQuickFilter("all"); setSearchTerm(""); }}>Réinitialiser</button>}
                         </div>
                     </div>
 
