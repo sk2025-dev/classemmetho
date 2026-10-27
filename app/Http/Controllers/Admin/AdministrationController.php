@@ -96,7 +96,7 @@ class AdministrationController extends Controller
         // ÉTAPE 2: FORMATER LES INSCRIPTIONS
         // ═══════════════════════════════════════════════════════════════
 
-        $inscriptionsFormatted = $allInscriptions->map(function ($item) {
+        $inscriptionsFormatted = $allInscriptions->map(function ($item) use ($classes) {
             // A. Déterminer le NOM à afficher
             if ($item->type === 'family') {
                 $nomAffiche = $item->data['famille']['nom'] ?? "Famille inconnue";
@@ -117,12 +117,7 @@ class AdministrationController extends Controller
             $nomClasse = "Non assignée";
             $classeId = $item->data['famille']['classe_id'] ?? null;
             if ($classeId) {
-                try {
-                    $classeModel = \App\Models\Classe::find($classeId);
-                    $nomClasse = $classeModel?->nom ?? "Non assignée";
-                } catch (\Exception $e) {
-                    $nomClasse = "Non assignée";
-                }
+                $nomClasse = $classes->find($classeId)?->nom ?? "Non assignée";
             }
 
             // D. Calculer le STATUT ADMIN (Logique Métier -> Affichage UI)
@@ -149,16 +144,20 @@ class AdministrationController extends Controller
         // ÉTAPE 2: FORMATER LES CLASSES AVEC STATISTIQUES
         // ═══════════════════════════════════════════════════════════════
 
-        $classesFormatted = Classe::all()->map(function ($c) use ($allUsers) {
+        // Regroupement en une seule passe : filtrer tous les comptes pour
+        // chaque classe coûtait classes × comptes itérations.
+        $usersByClasseId = $allUsers->groupBy('classe_id');
+
+        $classesFormatted = $classes->map(function ($c) use ($usersByClasseId) {
             // Compter les utilisateurs de cette classe
-            $usersInClasse = $allUsers->filter(function ($u) use ($c) {
-                return $u->classe_id === $c->id;
-            });
+            $usersInClasse = $usersByClasseId->get($c->id, collect());
 
             // Récupérer les conducteurs assignés à cette classe
-            $conducteursInClasse = $allUsers->filter(function ($u) use ($c) {
-                return $u->classe_id === $c->id && $u->role === 'conducteur';
-            })->pluck('id')->toArray();
+            $conducteursInClasse = $usersInClasse
+                ->where('role', 'conducteur')
+                ->pluck('id')
+                ->values()
+                ->toArray();
 
             return [
                 'id' => $c->id,
@@ -185,21 +184,29 @@ class AdministrationController extends Controller
         // ÉTAPE 4: FORMATER LES FONCTIONS AVEC STATISTIQUES
         // ═══════════════════════════════════════════════════════════════
 
-        $fonctionsFormatted = $fonctions->map(function ($f) use ($allUsers) {
-            // Compter les utilisateurs avec cette fonction
-            $usersInFonction = $allUsers->filter(function ($u) use ($f) {
-                $hasPivotFonction = $u->relationLoaded('fonctions')
-                    && $u->fonctions->contains(fn ($fonction) => (int) $fonction->id === (int) $f->id);
+        // Compter les utilisateurs par fonction (pivot ou fonction_id) en une
+        // seule passe sur les comptes, chaque compte n'étant compté qu'une
+        // fois par fonction.
+        $membresCountByFonctionId = [];
+        foreach ($allUsers as $u) {
+            $fonctionIds = $u->fonctions->pluck('id')
+                ->push($u->fonction_id)
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique();
 
-                return $hasPivotFonction || (int) $u->fonction_id === (int) $f->id;
-            });
+            foreach ($fonctionIds as $fonctionId) {
+                $membresCountByFonctionId[$fonctionId] = ($membresCountByFonctionId[$fonctionId] ?? 0) + 1;
+            }
+        }
 
+        $fonctionsFormatted = $fonctions->map(function ($f) use ($membresCountByFonctionId) {
             return [
                 'id' => $f->id,
                 'nom' => $f->nom,
                 'description' => $f->description,
                 'niveau' => $f->niveau,
-                'membres_count' => $usersInFonction->count(),
+                'membres_count' => $membresCountByFonctionId[(int) $f->id] ?? 0,
             ];
         });
 
@@ -207,7 +214,9 @@ class AdministrationController extends Controller
         // ÉTAPE 5: FORMATER LES UTILISATEURS
         // ═══════════════════════════════════════════════════════════════
 
-        $membersFormatted = $allUsers->map(function ($m) use ($completedTransfersByUserId, $completedTransfersByFamilyId) {
+        $consentementActif = \App\Support\DataConsent::isEnabled();
+
+        $membersFormatted = $allUsers->map(function ($m) use ($completedTransfersByUserId, $completedTransfersByFamilyId, $consentementActif) {
             // Charger les sacrements s'ils existent
             $sacrements = $m->sacrements;
             $originFamilyCode = $m->getRelation('computedOriginFamilyTransferRequest')?->family?->code_famille;
@@ -239,7 +248,7 @@ class AdministrationController extends Controller
             // Consentement RGPD : s'applique aussi à l'administrateur sur cette
             // page — aucun rôle n'est exempté du flou tant que la famille n'a
             // pas validé.
-            $consentementNonValide = \App\Support\DataConsent::isEnabled() && !$m->aValideConsentement();
+            $consentementNonValide = $consentementActif && !$m->aValideConsentement();
             $consentementRequis = $consentementNonValide;
             $photoUrl = $m->profile_photo_url ?: PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom);
 
@@ -259,10 +268,10 @@ class AdministrationController extends Controller
                 'profil_photo' => $photoUrl,
                 'profile_photo_url' => $photoUrl,
                 'consentement_requis' => $consentementRequis,
-                'consentement_statut' => !\App\Support\DataConsent::isEnabled()
+                'consentement_statut' => !$consentementActif
                     ? null
                     : ($consentementNonValide ? 'en_attente' : 'valide'),
-                'consentement_statut_label' => !\App\Support\DataConsent::isEnabled()
+                'consentement_statut_label' => !$consentementActif
                     ? null
                     : ($consentementNonValide ? 'Consentement en attente' : 'Consentement validé'),
                 'role' => $m->role ?? 'utilisateur',
@@ -332,12 +341,16 @@ class AdministrationController extends Controller
         });
 
         // ═══════════════════════════════════════════════════════════════
-        // ÉTAPE 6: GROUPER LES UTILISATEURS (COMPATIBILITÉ)
+        // ÉTAPE 6: GROUPER LES UTILISATEURS (USAGE INTERNE)
         // ═══════════════════════════════════════════════════════════════
 
+        // Ces regroupements servent seulement à calculer les familles
+        // ci-dessous. Ils ne sont plus envoyés à la page : chacun recopiait
+        // la liste complète des membres (~3 Mo), si bien que la page recevait
+        // ~17 Mo de JSON. Administration.jsx les recalcule à partir de
+        // `membres`, envoyé une seule fois.
         $membersByFamily = [];
         $membersByFamilyCode = [];
-        $membersByResponsible = [];
 
         foreach ($membersFormatted as $memberData) {
             if ($memberData['famille']) {
@@ -354,42 +367,6 @@ class AdministrationController extends Controller
                     $membersByFamilyCode[$familyCode] = [];
                 }
                 $membersByFamilyCode[$familyCode][] = $memberData;
-            }
-
-            $responsableName = $memberData['role'] === 'responsable_famille' ?
-                ($memberData['prenom'] . ' ' . $memberData['nom']) : "N/A";
-
-            if (!isset($membersByResponsible[$responsableName])) {
-                $membersByResponsible[$responsableName] = [];
-            }
-            $membersByResponsible[$responsableName][] = $memberData;
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // ÉTAPE 7: GROUPER LES UTILISATEURS PAR FONCTION
-        // ═══════════════════════════════════════════════════════════════
-
-        $usersByFonction = [];
-        foreach ($membersFormatted as $member) {
-            $fonctionNames = [];
-
-            if (!empty($member['fonctions']) && is_array($member['fonctions'])) {
-                $fonctionNames = $member['fonctions'];
-            } elseif (!empty($member['fonction'])) {
-                $fonctionNames = preg_split('/\s*(?:,|;|\||\/|\bet\b)\s*/iu', (string) $member['fonction']) ?: [];
-            }
-
-            foreach ($fonctionNames as $fonctionName) {
-                $fonctionName = trim((string) $fonctionName);
-                if ($fonctionName === '') {
-                    continue;
-                }
-
-                if (!isset($usersByFonction[$fonctionName])) {
-                    $usersByFonction[$fonctionName] = [];
-                }
-
-                $usersByFonction[$fonctionName][] = $member;
             }
         }
 
@@ -487,10 +464,8 @@ class AdministrationController extends Controller
             'classes' => $classesFormatted,
             'fonctions' => $fonctionsFormatted,
 
-            // Utilisateurs et groupements
-            'membres' => $membersFormatted,
+            // Familles (les membres sont dans la prop `membres`)
             'familles' => $famillesFormatted,
-            'usersByFonction' => $usersByFonction,
 
             // Totaux
             'total_members' => $totalUsersCount,
@@ -498,9 +473,6 @@ class AdministrationController extends Controller
 
         return Inertia::render('Admin/Administration', [
             'dataByType' => $dataByType,
-            'membersByFamily' => $membersByFamily,
-            'membersByFamilyCode' => $membersByFamilyCode,
-            'membersByResponsible' => $membersByResponsible,
             'membres' => $membersFormatted,
             'availableClasses' => $availableClasses,
             'availableFonctions' => $availableFonctions,
@@ -513,7 +485,7 @@ class AdministrationController extends Controller
                 \App\Http\Controllers\Admin\SiteSettingController::PASTEUR_PRINCIPAL_KEY,
                 \App\Http\Controllers\Admin\SiteSettingController::PASTEUR_PRINCIPAL_DEFAULT,
             ),
-            'consentementActif' => \App\Support\DataConsent::isEnabled(),
+            'consentementActif' => $consentementActif,
             'consentementTexte' => \App\Support\DataConsent::texte(),
             'campagnesSacrements' => $this->campagnesSacrementsPayload(),
             'campagneSacrementStatus' => app(\App\Services\CampagneSacrementService::class)->publicStatus(),

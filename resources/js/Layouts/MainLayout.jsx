@@ -7,10 +7,43 @@ import useToast from "../Hooks/useToast";
 import ToastContainer from "../Components/ToastContainer";
 import { withBasePath } from "../Utils/urlHelper";
 
+// Guide HTML statique (public/guide-utilisateur/) : un fichier par espace.
+// L'espace affiché prime sur le rôle (ex. un pasteur dans son espace famille).
+const GUIDE_BY_PAGE_PREFIX = {
+    Admin: "admin.html",
+    Pasteur: "pasteur.html",
+    Conducteur: "conducteur.html",
+    PresidentConducteurs: "conducteur.html",
+    ResponsableFamille: "responsable-famille.html",
+    MembreFamille: "membre-famille.html",
+};
+
+const GUIDE_BY_ROLE = {
+    admin: "admin.html",
+    pasteur: "pasteur.html",
+    conducteur: "conducteur.html",
+    bureau_conducteur: "conducteur.html",
+    responsable: "responsable-famille.html",
+    responsable_famille: "responsable-famille.html",
+    membre_famille: "membre-famille.html",
+    tresorier: "membre-famille.html",
+};
+
+function getGuidePath(component, role) {
+    const prefix = String(component || "").split("/")[0];
+    const file =
+        GUIDE_BY_PAGE_PREFIX[prefix] ||
+        GUIDE_BY_ROLE[String(role || "").toLowerCase()] ||
+        "index.html";
+    return `/guide-utilisateur/${file}`;
+}
+
 // Header professionnel et minimaliste
 function AppHeader({ auth, onLogout, basePath }) {
     const [profileOpen, setProfileOpen] = useState(false);
+    const { component } = usePage();
     const withBase = (path) => withBasePath(basePath, path);
+    const guideUrl = withBase(getGuidePath(component, auth?.user?.role));
 
     const getRoleLabel = (role) => {
         const labels = {
@@ -97,6 +130,30 @@ function AppHeader({ auth, onLogout, basePath }) {
                                 </span>
                             </div>
                         </div>
+
+                        {/* Guide d'utilisation (nouvel onglet) */}
+                        <a
+                            href={guideUrl}
+                            target="_blank"
+                            rel="noopener"
+                            title="Guide d'utilisation"
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                            <svg
+                                className="w-5 h-5 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                                />
+                            </svg>
+                            <span className="hidden md:inline">Guide</span>
+                        </a>
 
                         {/* Profil Dropdown */}
                         <div className="relative">
@@ -265,6 +322,30 @@ function AppHeader({ auth, onLogout, basePath }) {
                                             </svg>
                                             <span>Mon profil</span>
                                         </Link>
+                                        <a
+                                            href={withBase("/guide-utilisateur/index.html")}
+                                            target="_blank"
+                                            rel="noopener"
+                                            className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                                            onClick={() =>
+                                                setProfileOpen(false)
+                                            }
+                                        >
+                                            <svg
+                                                className="w-4 h-4 text-gray-400"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                />
+                                            </svg>
+                                            <span>Guide d'utilisation (tous les rôles)</span>
+                                        </a>
 
                                         <div className="my-2 border-t border-gray-200"></div>
                                         <button

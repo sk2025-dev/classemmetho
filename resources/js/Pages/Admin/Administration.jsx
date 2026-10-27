@@ -17,9 +17,6 @@ import { withBasePath } from "../../Utils/urlHelper";
 export default function AdminPage({
     auth,
     dataByType: initialDataByType = {},
-    membersByFamily: initialMembersByFamily = {},
-    membersByFamilyCode: initialMembersByFamilyCode = {},
-    membersByResponsible: initialMembersByResponsible = {},
     membres: initialMembres = [], // ✅ Liste des membres (utilisateurs)
     availableClasses: initialAvailableClasses = [], // ✅ Classes disponibles
     availableFonctions: initialAvailableFonctions = [], // ✅ Fonctions disponibles
@@ -74,6 +71,47 @@ export default function AdminPage({
     useEffect(() => {
         setMembresData(initialMembres || []);
     }, [initialMembres]);
+
+    // Regroupements des membres calculés ici plutôt qu'envoyés par le
+    // serveur : chacun recopiait la liste complète (~3 Mo de JSON en plus).
+    const membersByFamilyCode = React.useMemo(() => {
+        const groups = {};
+        for (const membre of initialMembres || []) {
+            if (!membre.code_famille) continue;
+            (groups[membre.code_famille] ||= []).push(membre);
+        }
+        return groups;
+    }, [initialMembres]);
+
+    const usersByFonction = React.useMemo(() => {
+        const groups = {};
+        for (const membre of initialMembres || []) {
+            let fonctionNames = [];
+            if (Array.isArray(membre.fonctions) && membre.fonctions.length > 0) {
+                fonctionNames = membre.fonctions;
+            } else if (membre.fonction) {
+                fonctionNames = String(membre.fonction).split(
+                    /\s*(?:,|;|\||\/|\bet\b)\s*/iu,
+                );
+            }
+
+            for (const name of fonctionNames) {
+                const fonctionName = String(name ?? "").trim();
+                if (fonctionName === "") continue;
+                (groups[fonctionName] ||= []).push(membre);
+            }
+        }
+        return groups;
+    }, [initialMembres]);
+
+    const dataByType = React.useMemo(
+        () => ({
+            ...initialDataByType,
+            membres: initialMembres || [],
+            usersByFonction,
+        }),
+        [initialDataByType, initialMembres, usersByFonction],
+    );
 
     // --- LOGIQUE D'APPEL API ---
 
@@ -489,7 +527,7 @@ export default function AdminPage({
             <div className="relative z-10 flex-1 flex flex-col pt-4 overflow-hidden px-4 sm:px-6 lg:px-8 pb-8">
                 {activeTab === "utilisateurs" && (
                     <TabUtilisateurs
-                        rawData={initialDataByType}
+                        rawData={dataByType}
                         membres={membresData}
                         availableClasses={initialAvailableClasses}
                         availableFonctions={initialAvailableFonctions}
@@ -503,7 +541,7 @@ export default function AdminPage({
                 {activeTab === "familles" && (
                     <TabFamille
                         familles={initialDataByType?.familles || []}
-                        membersByFamilyCode={initialMembersByFamilyCode}
+                        membersByFamilyCode={membersByFamilyCode}
                     />
                 )}
 
@@ -511,11 +549,10 @@ export default function AdminPage({
                     <TabClasses
                         key={`classes-${classesData?.length || 0}`}
                         rawData={{
-                            ...initialDataByType,
+                            ...dataByType,
                             classes: classesData,
                         }}
                         membresData={initialMembres}
-                        famillesData={initialMembersByFamily}
                         onAddClass={handleSaveClass}
                         onEditClass={handleUpdateClass}
                         onDeleteClasse={handleDeleteClass}
@@ -526,7 +563,7 @@ export default function AdminPage({
 
                 {activeTab === "fonctions" && (
                     <TabFonctions
-                        rawData={initialDataByType}
+                        rawData={dataByType}
                         membresData={initialMembres}
                         onAdd={handleAddFonction}
                         onUpdate={handleUpdateFonction}

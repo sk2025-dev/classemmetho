@@ -13,7 +13,11 @@ class SiteSetting extends Model
 
     public static function get(string $key, ?string $default = null): ?string
     {
-        $all = Cache::rememberForever(self::CACHE_KEY, function () {
+        // memo() garde la valeur en mémoire pour la requête (ou le job) en
+        // cours : get() est appelé des milliers de fois sur les pages qui
+        // listent tous les comptes (consentement RGPD par utilisateur), et
+        // chaque appel relisait sinon le fichier de cache.
+        $all = Cache::memo()->rememberForever(self::CACHE_KEY, function () {
             return static::pluck('value', 'key')->all();
         });
 
@@ -23,6 +27,6 @@ class SiteSetting extends Model
     public static function set(string $key, ?string $value): void
     {
         static::updateOrCreate(['key' => $key], ['value' => $value]);
-        Cache::forget(self::CACHE_KEY);
+        Cache::memo()->forget(self::CACHE_KEY);
     }
 }
