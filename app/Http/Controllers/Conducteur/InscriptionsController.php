@@ -131,10 +131,6 @@ class InscriptionsController extends Controller
                     ];
                 });
 
-                Log::info('✅ DEBUG - Toutes les inscriptions en base', [
-                    'total_count' => $allInscriptionsInDb,
-                    'inscriptions' => $allInscriptionsData,
-                ]);
 
                 Log::info('Conducteur Inscriptions Debug', [
                     'conducteur_id' => $user->id,
@@ -838,13 +834,6 @@ class InscriptionsController extends Controller
         if ($user->role !== 'conducteur') {
             abort(403, 'Accès non autorisé');
         }
-
-        // Log toutes les données reçues pour debug
-        \Log::info('Conducteur/Inscription - Données reçues', [
-            'all' => $request->all(),
-            'input' => $request->input(),
-            'files' => $request->allFiles(),
-        ]);
 
         try {
             $validated = $request->validate([

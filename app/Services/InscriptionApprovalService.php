@@ -110,7 +110,7 @@ class InscriptionApprovalService
         Log::info('📋 Extracted data', [
             'membres_count' => count($membresData),
             'first_membre_keys' => array_keys($membresData[0] ?? []),
-            'first_membre_photo_path' => $membresData[0]['photo_path'] ?? 'MISSING',
+            // photo_path masqué (PII potentiel)
         ]);
 
         $responsableNom = $inscription->responsable_nom ?? ($responsableData['nom'] ?? null);
@@ -193,9 +193,9 @@ class InscriptionApprovalService
             foreach ($membresData as $index => $membreData) {
                 Log::info('👤 Creating family member', [
                     'index' => $index,
-                    'name' => $membreData['prenom'] . ' ' . $membreData['nom'],
-                    'photo_path_in_data' => $membreData['photo_path'] ?? 'MISSING',
-                    'photo_url_in_data' => $membreData['photo_url'] ?? 'MISSING',
+                    // nom masqué (PII)
+                    'has_photo_path' => isset($membreData['photo_path']),
+                    'has_photo_url' => isset($membreData['photo_url']),
                 ]);
 
                 $member = User::create([
@@ -240,8 +240,8 @@ class InscriptionApprovalService
 
                 Log::info('✅ Member created', [
                     'member_id' => $member->id,
-                    'name' => $member->prenom . ' ' . $member->nom,
-                    'photo_path_saved' => $member->photo_path ?? 'NULL',
+                    // nom masqué (PII)
+                    'has_photo_path' => !empty($member->photo_path),
                 ]);
 
                 // Créer les sacrements du membre
@@ -349,8 +349,8 @@ class InscriptionApprovalService
             foreach ($membresData as $index => $membreData) {
                 Log::info('👤 Creating member for conductor', [
                     'index' => $index,
-                    'name' => ($membreData['prenom'] ?? '') . ' ' . ($membreData['nom'] ?? ''),
-                    'photo_path_in_data' => $membreData['photo_path'] ?? 'MISSING',
+                    // nom masqué (PII)
+                    'has_photo_path' => isset($membreData['photo_path']),
                 ]);
 
                 $member = User::create([
@@ -395,8 +395,8 @@ class InscriptionApprovalService
 
                 Log::info('✅ Member for conductor created', [
                     'member_id' => $member->id,
-                    'name' => ($member->prenom ?? '') . ' ' . ($member->nom ?? ''),
-                    'photo_path_saved' => $member->photo_path ?? 'NULL',
+                    // nom masqué (PII)
+                    'has_photo_path' => !empty($member->photo_path),
                 ]);
 
                 // Créer les sacrements du membre
@@ -417,7 +417,7 @@ class InscriptionApprovalService
             } catch (\Exception $e) {
                 Log::error('Erreur lors de l\'envoi des identifiants au conducteur', [
                     'user_id' => $conductor->id,
-                    'email' => $conductor->email,
+                    // email masqué (PII)
                     'error' => $e->getMessage(),
                 ]);
             }

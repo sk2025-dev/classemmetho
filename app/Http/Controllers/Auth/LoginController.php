@@ -29,7 +29,8 @@ class LoginController extends Controller
     public function login(Request $request)
     {
         Log::info('Login attempt received', [
-            'all_data' => $request->all(),
+            'code_membre' => $normalizedLogin,
+            'has_password' => !empty($password),
             'headers' => $request->headers->keys(),
         ]);
 
@@ -126,7 +127,7 @@ class LoginController extends Controller
             'user_id' => $user->id,
             'code_membre' => $user->code_membre,
             'identifier' => $user->identifier,
-            'email' => $user->email,
+            // email masqué (PII)
         ]);
 
         // Mettre à jour last_login_at

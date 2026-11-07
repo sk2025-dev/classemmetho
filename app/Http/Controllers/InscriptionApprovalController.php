@@ -112,7 +112,7 @@ class InscriptionApprovalController extends Controller
                         } catch (\Exception $e) {
                             Log::error('Erreur lors de l\'envoi des identifiants du pasteur', [
                                 'user_id' => $user->id,
-                                'email' => $user->email,
+                                // email masqué (PII)
                                 'error' => $e->getMessage(),
                             ]);
                         }
@@ -246,7 +246,7 @@ class InscriptionApprovalController extends Controller
                 } catch (\Exception $e) {
                     Log::error('Erreur lors de l\'envoi des identifiants', [
                         'user_id' => $user->id,
-                        'email' => $user->email,
+                        // email masqué (PII)
                         'error' => $e->getMessage(),
                     ]);
                 }
@@ -550,13 +550,13 @@ class InscriptionApprovalController extends Controller
 
                 Log::info('Email de refus envoyé', [
                     'inscription_id' => $inscription->id,
-                    'email' => $email,
+                    // email masqué (PII)
                     'type' => $inscription->type,
                 ]);
             } catch (\Exception $e) {
                 Log::error('Erreur lors de l\'envoi de l\'email de refus', [
                     'inscription_id' => $inscription->id,
-                    'email' => $email,
+                    // email masqué (PII)
                     'error' => $e->getMessage(),
                 ]);
             }

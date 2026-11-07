@@ -42,14 +42,20 @@ class RegistrationController extends Controller
                 }
             }
 
-            Log::info('Registration payload received', ['payload' => $input]);
+            Log::info('Registration payload received', [
+            'type' => $type,
+            'has_famille' => isset($input['famille']),
+            'has_responsable' => isset($input['responsable']),
+            'membres_count' => is_array($input['membres'] ?? null) ? count($input['membres']) : 0,
+            'has_photos' => isset($files['responsable']['photo']) || !empty(array_filter($files['membres'] ?? [], fn($m) => isset($m['photo']))),
+        ]);
 
-            // ✅ Log les photos reçues (debugging)
+            // ✅ Log les photos reçues (debugging) - sans données sensibles
             Log::info('🖼️ Photos dans le payload', [
-                'responsable_photo' => $input['responsable']['photo'] ?? 'ABSENT',
+                'responsable_photo_present' => isset($input['responsable']['photo']),
                 'responsable_photo_type' => gettype($input['responsable']['photo'] ?? null),
                 'membres_count' => count($input['membres'] ?? []),
-                'membres_photos' => array_filter(array_map(fn($m) => $m['photo'] ?? null, $input['membres'] ?? []))
+                'membres_with_photos' => count(array_filter(array_map(fn($m) => $m['photo'] ?? null, $input['membres'] ?? [])))
             ]);
 
             $validated = $this->validateRegistration($input);
@@ -57,8 +63,8 @@ class RegistrationController extends Controller
             if (!$validated['success']) {
                 Log::warning('❌ Validation failed - detailed errors', [
                     'errors' => $validated['errors'],
-                    'received_famille' => $input['famille'] ?? [],
-                    'received_responsable' => array_diff_key($input['responsable'] ?? [], ['photo' => true, 'photoPreview' => true]),
+                    'received_famille_keys' => array_keys($input['famille'] ?? []),
+                    'received_responsable_keys' => array_keys(array_diff_key($input['responsable'] ?? [], ['photo' => true, 'photoPreview' => true])),
                     'received_membres_count' => is_array($input['membres'] ?? null) ? count($input['membres']) : 0,
                 ]);
 
@@ -76,7 +82,7 @@ class RegistrationController extends Controller
             if (empty($data['responsable']) && !empty($data['membres']) && is_array($data['membres'])) {
                 $data['responsable'] = array_shift($data['membres']);
                 Log::info('Responsable vide détecté - utilisation du premier membre comme responsable', [
-                    'responsable' => $data['responsable']['nom'] ?? 'N/A'
+                    // nom masqué (PII)
                 ]);
             }
 
@@ -129,7 +135,7 @@ class RegistrationController extends Controller
                                 $photoPath = $membre['photo_path'] ?? null;
                                 $photoUrl  = $membre['photo_url'] ?? null;
                                 Log::info('🔄 Photo responsable récupérée du premier membre', [
-                                    'member_name' => ($membre['prenom'] ?? '') . ' ' . ($membre['nom'] ?? ''),
+                                    // member_name masqué (PII)
                                     'photo_path' => $photoPath,
                                     'photo_url' => $photoUrl
                                 ]);
@@ -260,8 +266,8 @@ class RegistrationController extends Controller
                     'reference' => 'INS-' . now()->format('Ymd') . '-' . str_pad($inscriptionFamille->id, 6, '0', STR_PAD_LEFT),
                     'type'      => $inscriptionFamille->type,
                     'status'    => $inscriptionFamille->status,
-                    'email'     => $inscriptionFamille->responsable_email,
-                    'responsable' => $inscriptionFamille->responsable_prenom . ' ' . $inscriptionFamille->responsable_nom,
+                    // email masqué (PII)
+                    // responsable masqué (PII)
                     'membres_count' => count($data['membres'] ?? []),
                     'classe_id' => $inscriptionFamille->classe_id,
                     'validation_version' => '2.0',
@@ -637,7 +643,7 @@ class RegistrationController extends Controller
             Log::info('Inscription conducteur reçue', [
                 'method'       => $request->method(),
                 'content_type' => $request->header('Content-Type'),
-                'all_data'     => $request->all(),
+                // all_data masqué (PII) - contient données sensibles
             ]);
 
             $validated = $request->validate([
@@ -857,7 +863,7 @@ class RegistrationController extends Controller
 
                 Log::info('Inscription conducteur créée', [
                     'inscription_id' => $inscription->id,
-                    'email'          => $inscription->email,
+                    // email masqué (PII)
                     'status'         => $inscription->status,
                 ]);
 

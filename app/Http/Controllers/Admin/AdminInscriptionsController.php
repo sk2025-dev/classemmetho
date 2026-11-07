@@ -325,7 +325,7 @@ class AdminInscriptionsController extends Controller
 
                 Log::info('Emails d\'identifiants envoyés pour la famille', [
                     'family_id' => $family->id,
-                    'responsable_email' => $responsable->email,
+                    'responsable_id' => $responsable->id,
                     'membres_count' => count($membres),
                 ]);
             } catch (\Exception $e) {
@@ -590,7 +590,7 @@ class AdminInscriptionsController extends Controller
 
                 Log::info('Emails d\'identifiants envoyés pour le conducteur', [
                     'family_id' => $family->id,
-                    'conductor_email' => $conductor->email,
+                    'conductor_id' => $conductor->id,
                     'membres_count' => count($validated['membres'] ?? []),
                 ]);
             } catch (\Exception $e) {
@@ -848,7 +848,7 @@ class AdminInscriptionsController extends Controller
 
                 Log::info('Email d\'identifiants envoyé pour le pasteur', [
                     'pastor_id' => $pastor->id,
-                    'pastor_email' => $pastor->email,
+                    // email masqué (PII)
                 ]);
 
                 // Envoyer aussi aux membres

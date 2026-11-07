@@ -1016,7 +1016,6 @@ class ExcelImportController extends Controller
             if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 \Log::warning('Envoi identifiants: email invalide', [
                     'user_id' => $user->id,
-                    'email' => $email,
                 ]);
                 return;
             }
@@ -1029,7 +1028,7 @@ class ExcelImportController extends Controller
         } catch (\Exception $e) {
             \Log::error('Erreur lors de l\'envoi des identifiants:', [
                 'user_id' => $user->id,
-                'email' => $user->email,
+                // email masqué (PII)
                 'error' => $e->getMessage(),
             ]);
         }
