@@ -273,9 +273,6 @@ export default function EditMember({ member, family, villes = [] }) {
 
         setLoading(true);
 
-        // Logging pour débugger
-        console.log("Données à envoyer:", JSON.stringify(data, null, 2));
-
         // Valider que les champs requis ne sont pas vides
         if (!data.nom || !data.nom.trim()) {
             showError("Le nom est obligatoire");
@@ -335,8 +332,6 @@ export default function EditMember({ member, family, villes = [] }) {
                 formData.append(k, v ?? "");
             });
 
-            console.log("Données FormData prêtes pour envoi");
-
             // Envoyer via router avec FormData
             router.post(
                 withBasePath("", `/responsable-famille/members/${member.id}?_method=PUT`),
@@ -348,10 +343,6 @@ export default function EditMember({ member, family, villes = [] }) {
                         window.localStorage.removeItem("editMember_memberId");
                     },
                     onError: (errors) => {
-                        console.error(
-                            "Erreurs de validation:",
-                            JSON.stringify(errors, null, 2),
-                        );
                         const errorMessages = Object.entries(errors).map(
                             ([field, message]) => {
                                 return `${field}: ${message}`;
@@ -395,8 +386,6 @@ export default function EditMember({ member, family, villes = [] }) {
                 submitData[k] = v;
             });
 
-            console.log("Données JSON prêtes pour envoi:", submitData);
-
             // Utiliser Inertia router.put() pour les données JSON
             router.put(
                 withBasePath("", `/responsable-famille/members/${member.id}`),
@@ -409,8 +398,7 @@ export default function EditMember({ member, family, villes = [] }) {
                     },
                     onError: (errors) => {
                         console.error(
-                            "Erreurs de validation:",
-                            JSON.stringify(errors, null, 2),
+                            "Erreurs de validation:"
                         );
                         const errorMessages = Object.entries(errors).map(
                             ([field, message]) => {

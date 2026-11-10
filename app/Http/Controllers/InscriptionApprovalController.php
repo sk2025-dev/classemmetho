@@ -112,7 +112,6 @@ class InscriptionApprovalController extends Controller
                         } catch (\Exception $e) {
                             Log::error('Erreur lors de l\'envoi des identifiants du pasteur', [
                                 'user_id' => $user->id,
-                                // email masqué (PII)
                                 'error' => $e->getMessage(),
                             ]);
                         }
@@ -120,7 +119,6 @@ class InscriptionApprovalController extends Controller
                         Log::info('Compte utilisateur créé pour pasteur', [
                             'inscription_id' => $inscription->id,
                             'user_id' => $user->id,
-                            'role' => $role,
                             'classe_id' => $inscription->classe_id,
                         ]);
                     }
@@ -246,7 +244,6 @@ class InscriptionApprovalController extends Controller
                 } catch (\Exception $e) {
                     Log::error('Erreur lors de l\'envoi des identifiants', [
                         'user_id' => $user->id,
-                        // email masqué (PII)
                         'error' => $e->getMessage(),
                     ]);
                 }
@@ -254,7 +251,6 @@ class InscriptionApprovalController extends Controller
                 Log::info('Inscription approuvée', [
                     'inscription_id' => $inscription->id,
                     'user_id' => $user->id,
-                    'role' => $role,
                     'family_id' => $family?->id,
                 ]);
 
@@ -447,7 +443,6 @@ class InscriptionApprovalController extends Controller
                         } catch (\Exception $e) {
                             Log::error('Erreur lors de l\'envoi des identifiants du pasteur', [
                                 'user_id' => $user->id,
-                                'email' => $user->email,
                                 'error' => $e->getMessage(),
                             ]);
                         }
@@ -455,7 +450,6 @@ class InscriptionApprovalController extends Controller
                         Log::info('Compte utilisateur créé pour pasteur', [
                             'inscription_id' => $inscription->id,
                             'user_id' => $user->id,
-                            'role' => $role,
                             'classe_id' => $inscription->classe_id,
                         ]);
                     }
@@ -550,13 +544,11 @@ class InscriptionApprovalController extends Controller
 
                 Log::info('Email de refus envoyé', [
                     'inscription_id' => $inscription->id,
-                    // email masqué (PII)
                     'type' => $inscription->type,
                 ]);
             } catch (\Exception $e) {
                 Log::error('Erreur lors de l\'envoi de l\'email de refus', [
                     'inscription_id' => $inscription->id,
-                    // email masqué (PII)
                     'error' => $e->getMessage(),
                 ]);
             }
@@ -776,7 +768,6 @@ class InscriptionApprovalController extends Controller
         } catch (\Exception $e) {
             Log::error('Erreur lors de l\'envoi des identifiants au conducteur', [
                 'user_id' => $userConducteur->id,
-                'email' => $userConducteur->email,
                 'error' => $e->getMessage(),
             ]);
         }
@@ -832,7 +823,6 @@ class InscriptionApprovalController extends Controller
                 } catch (\Exception $e) {
                     Log::error('Erreur lors de l\'envoi des identifiants au membre de conducteur', [
                         'user_id' => $userMembre->id,
-                        'email' => $membreData['email'] ?? 'N/A',
                         'error' => $e->getMessage(),
                     ]);
                 }
@@ -840,7 +830,6 @@ class InscriptionApprovalController extends Controller
                 Log::info('Membre de famille du conducteur créé', [
                     'user_id' => $userMembre->id,
                     'family_id' => $family->id,
-                    'nom' => $membreData['nom'] ?? null,
                 ]);
             }
         }
@@ -939,7 +928,6 @@ class InscriptionApprovalController extends Controller
         } catch (\Exception $e) {
             Log::error('Erreur lors de l\'envoi des identifiants au responsable', [
                 'user_id' => $userResponsable->id,
-                'email' => $userResponsable->email,
                 'error' => $e->getMessage(),
             ]);
         }
@@ -999,7 +987,6 @@ class InscriptionApprovalController extends Controller
                 } catch (\Exception $e) {
                     Log::error('Erreur lors de l\'envoi des identifiants au membre', [
                         'user_id' => $userMembre->id,
-                        'email' => $membreData['email'] ?? 'N/A',
                         'error' => $e->getMessage(),
                     ]);
                 }
@@ -1019,7 +1006,6 @@ class InscriptionApprovalController extends Controller
                 Log::info('Membre de famille créé', [
                     'user_id' => $userMembre->id,
                     'family_id' => $family->id,
-                    'nom' => $membreData['nom'] ?? null,
                 ]);
             }
         }
@@ -1121,7 +1107,6 @@ class InscriptionApprovalController extends Controller
         } catch (\Exception $e) {
             Log::error('Erreur lors de l\'envoi des identifiants à l\'utilisateur individuel', [
                 'user_id' => $user->id,
-                'email' => $user->email,
                 'error' => $e->getMessage(),
             ]);
         }
@@ -1130,7 +1115,6 @@ class InscriptionApprovalController extends Controller
             'inscription_id' => $inscription->id,
             'user_id' => $user->id,
             'family_id' => $family->id,
-            'role' => $role,
         ]);
     }
 
@@ -1261,7 +1245,6 @@ class InscriptionApprovalController extends Controller
             UserSacrement::create($sacrementRecord);
             Log::info('Sacrements créés pour l\'utilisateur', [
                 'user_id' => $user->id,
-                'data' => $sacrementRecord,
             ]);
         } catch (\Exception $e) {
             Log::error('Erreur lors de la création des sacrements', [

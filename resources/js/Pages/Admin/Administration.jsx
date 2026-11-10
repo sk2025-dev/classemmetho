@@ -156,12 +156,6 @@ export default function AdminPage({
 
     const handleDeleteClass = (classe) => {
         return new Promise((resolve, reject) => {
-            console.log(
-                "🗑️ handleDeleteClass appelé pour:",
-                classe.nom,
-                "ID:",
-                classe.id,
-            );
 
             // Vérifier si la classe a des membres actifs
             if (classe.membres_active_count > 0) {
@@ -171,13 +165,9 @@ export default function AdminPage({
                 return;
             }
 
-            console.log(
-                "✅ Classe vide, envoi DELETE request via router.delete()",
-            );
 
             router.delete(withBasePath("", `/admin/classes/${classe.id}`), {
                 onSuccess: (page) => {
-                    console.log("✅ DELETE réussi");
                     toast.success(
                         `Classe "${classe.nom}" supprimée avec succès`,
                     );
@@ -320,7 +310,6 @@ export default function AdminPage({
                     toast.success(`Membre ${displayStatus} avec succès`);
                 },
                 onError: (errors) => {
-                    console.error("Erreur changement statut membre:", errors);
                     toast.error("Erreur lors du changement de statut");
                 },
             },
@@ -346,7 +335,6 @@ export default function AdminPage({
                 toast.success("Membre ajouté avec succès");
             },
             onError: (errors) => {
-                console.error("Erreur ajout membre:", errors);
                 toast.error("Erreur lors de l'ajout du membre");
             },
         });
@@ -368,7 +356,6 @@ export default function AdminPage({
                 router.reload({ only: ["availableFonctions"] });
             },
             onError: (errors) => {
-                console.error("Erreur création fonction:", errors);
                 toast.error("Erreur lors de la création de la fonction");
             },
         });
@@ -384,7 +371,6 @@ export default function AdminPage({
                     router.reload({ only: ["availableFonctions"] });
                 },
                 onError: (errors) => {
-                    console.error("Erreur modification fonction:", errors);
                     toast.error(
                         "Erreur lors de la modification de la fonction",
                     );
@@ -401,7 +387,6 @@ export default function AdminPage({
                     router.reload({ only: ["availableFonctions"] });
                 },
                 onError: (errors) => {
-                    console.error("Erreur suppression fonction:", errors);
                     toast.error("Erreur lors de la suppression de la fonction");
                 },
             });
@@ -421,7 +406,6 @@ export default function AdminPage({
                     toast.success("Inscription approuvée avec succès");
                 },
                 onError: (errors) => {
-                    console.error("Erreur approbation:", errors);
                     toast.error("Erreur lors de l'approbation");
                 },
             },
@@ -440,7 +424,6 @@ export default function AdminPage({
                     toast.success("Inscription rejetée");
                 },
                 onError: (errors) => {
-                    console.error("Erreur rejet:", errors);
                     toast.error("Erreur lors du rejet");
                 },
             },

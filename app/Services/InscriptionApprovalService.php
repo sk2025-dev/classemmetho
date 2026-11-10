@@ -110,7 +110,6 @@ class InscriptionApprovalService
         Log::info('📋 Extracted data', [
             'membres_count' => count($membresData),
             'first_membre_keys' => array_keys($membresData[0] ?? []),
-            // photo_path masqué (PII potentiel)
         ]);
 
         $responsableNom = $inscription->responsable_nom ?? ($responsableData['nom'] ?? null);
@@ -193,7 +192,6 @@ class InscriptionApprovalService
             foreach ($membresData as $index => $membreData) {
                 Log::info('👤 Creating family member', [
                     'index' => $index,
-                    // nom masqué (PII)
                     'has_photo_path' => isset($membreData['photo_path']),
                     'has_photo_url' => isset($membreData['photo_url']),
                 ]);
@@ -240,7 +238,6 @@ class InscriptionApprovalService
 
                 Log::info('✅ Member created', [
                     'member_id' => $member->id,
-                    // nom masqué (PII)
                     'has_photo_path' => !empty($member->photo_path),
                 ]);
 
@@ -349,7 +346,6 @@ class InscriptionApprovalService
             foreach ($membresData as $index => $membreData) {
                 Log::info('👤 Creating member for conductor', [
                     'index' => $index,
-                    // nom masqué (PII)
                     'has_photo_path' => isset($membreData['photo_path']),
                 ]);
 
@@ -395,7 +391,6 @@ class InscriptionApprovalService
 
                 Log::info('✅ Member for conductor created', [
                     'member_id' => $member->id,
-                    // nom masqué (PII)
                     'has_photo_path' => !empty($member->photo_path),
                 ]);
 
@@ -417,7 +412,6 @@ class InscriptionApprovalService
             } catch (\Exception $e) {
                 Log::error('Erreur lors de l\'envoi des identifiants au conducteur', [
                     'user_id' => $conductor->id,
-                    // email masqué (PII)
                     'error' => $e->getMessage(),
                 ]);
             }

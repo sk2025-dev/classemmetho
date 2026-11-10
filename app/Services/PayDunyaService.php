@@ -82,12 +82,7 @@ class PayDunyaService
             }
 
             if (!$invoice->create()) {
-                Log::warning('PayDunya init failed', [
-                    'paiement_id' => $paiement->id,
-                    'response_code' => $invoice->response_code,
-                    'response_text' => $invoice->response_text,
-                    'provider' => $paiement->provider,
-                ]);
+                Log::warning('PayDunya init failed');
 
                 return [
                     'success' => false,
@@ -117,7 +112,6 @@ class PayDunyaService
 
             Log::info('PayDunya payment initiated', [
                 'paiement_id' => $paiement->id,
-                'transaction_id' => $transactionId,
             ]);
 
             return [
@@ -128,7 +122,6 @@ class PayDunyaService
         } catch (\Exception $e) {
             Log::error('PayDunya initiation exception', [
                 'error' => $e->getMessage(),
-                'paiement_id' => $paiement->id,
             ]);
 
             return [
@@ -183,11 +176,6 @@ class PayDunyaService
                 }
             }
 
-            Log::info('PayDunya transaction verified', [
-                'transaction_id' => $tokenToVerify,
-                'status' => $mappedStatus,
-            ]);
-
             return [
                 'success' => true,
                 'status' => $mappedStatus,
@@ -199,7 +187,6 @@ class PayDunyaService
         } catch (\Exception $e) {
             Log::error('PayDunya verify exception', [
                 'error' => $e->getMessage(),
-                'transaction_id' => $tokenToVerify,
             ]);
 
             return [

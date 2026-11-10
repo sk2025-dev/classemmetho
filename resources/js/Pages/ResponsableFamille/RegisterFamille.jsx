@@ -448,7 +448,6 @@ export default function RegisterFamille({
                 );
                 if (classesRes.ok) {
                     const classesData = await classesRes.json();
-                    console.log("Classes chargées:", classesData);
                     setClassesDatabase(
                         classesData.data && Array.isArray(classesData.data)
                             ? classesData.data
@@ -853,12 +852,6 @@ export default function RegisterFamille({
             if (!famille.classe_id)
                 newErrors["famille.classe_id"] =
                     "Veuillez sélectionner une classe.";
-            console.log(
-                "Validation Step 1 - classe_id:",
-                famille.classe_id,
-                "errors:",
-                newErrors,
-            );
         }
         if (s === 2) {
             if (!responsable.nom) newErrors["responsable.nom"] = "Requis";
@@ -915,8 +908,6 @@ export default function RegisterFamille({
                         "Lieu du mariage religieux requis";
             }
 
-            // Lien de parenté is now optional
-            console.log("Validation Step 2 - errors:", newErrors);
         }
         if (s === 3) {
             // Si l'utilisateur a choisi d'ajouter des membres, les valider
@@ -960,11 +951,6 @@ export default function RegisterFamille({
         for (let s = 1; s <= totalSteps; s++) {
             if (!validateStep(s)) {
                 console.error(`❌ Validation échouée au step ${s}`);
-                console.log(`État step ${s}:`, {
-                    famille,
-                    responsable,
-                    membres,
-                });
                 setStep(s);
                 return;
             }
@@ -982,7 +968,6 @@ export default function RegisterFamille({
             return;
         }
 
-        console.log("✓ Tous les validations passées");
         setLoading(true);
 
         const formData = new FormData(); /*  */
@@ -1102,18 +1087,6 @@ export default function RegisterFamille({
             if (csrfToken) {
                 headers["X-CSRF-TOKEN"] = csrfToken;
             }
-
-            // Log les données envoyées
-            console.log("📤 Envoi des données...");
-            console.log("FormData contient:", {
-                famille,
-                responsable: {
-                    ...responsable,
-                    photo: responsable.photo ? "File object" : null,
-                },
-                membres: membres.length + " membres",
-                consentement,
-            });
 
             const res = await axios.post(
                 withBasePath("", "/register"),

@@ -1319,15 +1319,6 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
             formData.append("_token", csrfToken);
         }
 
-        // Log les données envoyées pour déboguer
-        console.log("Données envoyées au serveur:");
-        for (let [key, value] of formData.entries()) {
-            console.log(
-                `${key}:`,
-                value instanceof File ? `File: ${value.name}` : value,
-            );
-        }
-
         try {
             const res = await axios.post(
                 withBasePath("", `/admin/membres/${memberData.id}?_method=PUT`),
@@ -1337,9 +1328,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
             showToast("Membre mis à jour avec succès !", "success");
             router.reload({ only: ["membres", "dataByType"] });
         } catch (err) {
-            console.error("Erreur complète:", err);
             console.error("Response status:", err?.response?.status);
-            console.error("Response data:", err?.response?.data);
 
             const apiErrors = err?.response?.data?.errors;
             if (apiErrors) {
@@ -2133,19 +2122,6 @@ const TabUtilisateurs = ({
             setFonctionsList(availableFonctions);
         }
     }, [availableClasses, availableFonctions]);
-
-    // Afficher une ligne exemple des données membres
-    useEffect(() => {
-        if (membres && membres.length > 0) {
-            console.log("Structure d'un membre exemple:", {
-                id: membres[0].id,
-                classe_id: membres[0].classe_id,
-                classe: membres[0].classe,
-                fonction_id: membres[0].fonction_id,
-                fonction_nom: membres[0].fonction,
-            });
-        }
-    }, [membres]);
 
     // ✅ Recharger les données si elles sont vides
     useEffect(() => {

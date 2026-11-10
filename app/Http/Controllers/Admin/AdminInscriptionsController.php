@@ -344,7 +344,6 @@ class AdminInscriptionsController extends Controller
                 'success' => true,
                 'message' => '🎉 Excellente nouvelle ! La famille a été créée avec succès. Tous les membres peuvent maintenant se connecter avec leur email et le mot de passe temporaire. Bienvenue dans notre communauté spirituelle !',
                 'family_id' => $family->id,
-                'temp_password' => $tempPassword, // Pour debug, à retirer en prod
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             DB::rollBack();
@@ -609,7 +608,6 @@ class AdminInscriptionsController extends Controller
                 'success' => true,
                 'message' => 'Conducteur et sa famille créés avec succès ! Les utilisateurs peuvent se connecter avec leur email et le mot de passe temporaire.',
                 'family_id' => $family->id,
-                'temp_password' => $tempPassword, // Pour debug, à retirer en prod
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             DB::rollBack();
@@ -848,7 +846,6 @@ class AdminInscriptionsController extends Controller
 
                 Log::info('Email d\'identifiants envoyé pour le pasteur', [
                     'pastor_id' => $pastor->id,
-                    // email masqué (PII)
                 ]);
 
                 // Envoyer aussi aux membres
@@ -1015,14 +1012,12 @@ class AdminInscriptionsController extends Controller
             );
 
             Log::info('Sacrements créés/mis à jour pour user ' . $user->id, [
-                'user_name' => $user->nom . ' ' . $user->prenom,
                 'statut_marital' => $statutMarital,
             ]);
         } catch (\Exception $e) {
             Log::error('Erreur création/mise à jour sacrements pour user ' . $user->id, [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'user_data' => $data
             ]);
             // Ne pas throw l'exception pour ne pas bloquer la création de l'utilisateur
         }

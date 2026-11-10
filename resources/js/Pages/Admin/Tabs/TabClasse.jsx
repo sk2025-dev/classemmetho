@@ -2784,9 +2784,6 @@ const TabClasses = ({
         const textAction = newStatus === "inactive" ? "désactiver" : "activer";
         const patchUrl = withBasePath("", `/admin/classes/${selectedClasseForToggle.id}/status`);
 
-        console.log("📤 Envoi PATCH:", patchUrl);
-        console.log("📊 Nouveau statut:", newStatus);
-        console.log("🔍 Classe sélectionnée:", selectedClasseForToggle);
 
         // Envoyer la requête PATCH directement
         router.patch(

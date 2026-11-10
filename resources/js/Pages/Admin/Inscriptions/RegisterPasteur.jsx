@@ -1239,10 +1239,6 @@ export default function RegisterFamille({
 
         // --- 3. Membres - Valider et envoyer ---
         if (membres.length > 0) {
-            console.log(
-                "Membres avant envoi (brut):",
-                JSON.stringify(membres, null, 2),
-            );
 
             // Valider les données des membres AVANT envoi
             const membreValidationErrors = {};
@@ -1492,15 +1488,11 @@ export default function RegisterFamille({
             localStorage.removeItem("registerWelcomeState");
         } catch (err) {
             console.error(
-                "❌ ERREUR LORS DE LA SOUMISSION - Détails complets:",
+                "❌ ERREUR LORS DE LA SOUMISSION",
                 {
                     status: err?.response?.status,
                     statusText: err?.response?.statusText,
-                    data: err?.response?.data,
                     message: err?.message,
-                    allErrorData: err?.response?.data
-                        ? JSON.stringify(err.response.data, null, 2)
-                        : "N/A",
                 },
             );
 

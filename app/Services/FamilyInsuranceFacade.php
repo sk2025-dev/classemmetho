@@ -232,7 +232,7 @@ class FamilyInsuranceFacade
     {
         $email = $memberData['email'] ?? null;
         if (!$email) {
-            Log::warning('Member data has no email', ['member' => $memberData]);
+            Log::warning('Member data has no email');
             return null;
         }
 
@@ -285,7 +285,6 @@ class FamilyInsuranceFacade
             return $user;
         } catch (Exception $e) {
             Log::error('Failed to create member user', [
-                'email' => $email,
                 'error' => $e->getMessage(),
             ]);
             return null;

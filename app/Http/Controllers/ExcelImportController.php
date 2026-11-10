@@ -708,9 +708,6 @@ class ExcelImportController extends Controller
 
             \Log::info('Import User créé avec succès', [
                 'user_id' => $user->id,
-                'identifier' => $user->identifier,
-                'nom' => $user->nom,
-                'prenom' => $user->prenom,
                 'classe_id' => $user->classe_id,
                 'ville_id' => $user->ville_id,
                 'family_id' => $user->family_id,
@@ -798,14 +795,12 @@ class ExcelImportController extends Controller
 
         \Log::info('Import Sacrement', [
             'line' => $lineNumber,
-            'user_code' => $userCode,
             'user_id_found' => $userId,
             'available_codes' => array_keys($userCodeToId),
         ]);
 
         if (!$userId) {
             \Log::warning('Sacrement: user_code non trouvé', [
-                'user_code' => $userCode,
                 'line' => $lineNumber,
                 'available' => array_keys($userCodeToId),
             ]);
@@ -856,7 +851,6 @@ class ExcelImportController extends Controller
         if ($hasSacrementData) {
             \Log::info('Sauvegarde sacrement', [
                 'user_id' => $userId,
-                'data' => $sacrementDataRow,
             ]);
 
             UserSacrement::updateOrCreate(
@@ -872,7 +866,6 @@ class ExcelImportController extends Controller
         } else {
             \Log::info('Pas de données de sacrement à la ligne ' . $lineNumber, [
                 'user_id' => $userId,
-                'user_code' => $userCode,
             ]);
             $result['sacrements']['skipped']++;
         }
@@ -1028,7 +1021,6 @@ class ExcelImportController extends Controller
         } catch (\Exception $e) {
             \Log::error('Erreur lors de l\'envoi des identifiants:', [
                 'user_id' => $user->id,
-                // email masqué (PII)
                 'error' => $e->getMessage(),
             ]);
         }

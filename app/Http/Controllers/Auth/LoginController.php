@@ -28,11 +28,7 @@ class LoginController extends Controller
      */
     public function login(Request $request)
     {
-        Log::info('Login attempt received', [
-            'code_membre' => $normalizedLogin,
-            'has_password' => !empty($password),
-            'headers' => $request->headers->keys(),
-        ]);
+        Log::info('Login attempt received');
 
         // Validation
         $request->validate([
@@ -58,7 +54,7 @@ class LoginController extends Controller
 
         // Utilisateur non trouvé
         if (!$user) {
-            Log::warning('Login attempt with non-existent member code', ['code_membre' => $login]);
+            Log::warning('Login attempt with non-existent member code');
 
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json(['message' => $genericErrorMessage], 422);
@@ -85,7 +81,7 @@ class LoginController extends Controller
 
         // Vérifier le mot de passe
         if (! $this->passwordMatches($password, (string) $user->password)) {
-            Log::warning('Failed login attempt', ['user_id' => $user->id, 'login' => $login]);
+            Log::warning('Failed login attempt', ['user_id' => $user->id]);
 
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json(['message' => $genericErrorMessage], 422);
@@ -125,9 +121,6 @@ class LoginController extends Controller
         // Logger la connexion
         Log::info('User logged in successfully', [
             'user_id' => $user->id,
-            'code_membre' => $user->code_membre,
-            'identifier' => $user->identifier,
-            // email masqué (PII)
         ]);
 
         // Mettre à jour last_login_at

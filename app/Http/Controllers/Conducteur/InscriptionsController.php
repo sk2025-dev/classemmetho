@@ -694,13 +694,10 @@ class InscriptionsController extends Controller
                         $newUser->save();
                         Log::info('Email envoyé avec succès', [
                             'user_id' => $newUser->id,
-                            'email' => $newUser->email,
-                            'identifier' => $identifier,
                         ]);
                     } catch (\Exception $mailError) {
                         Log::warning('Email sending failed during approval', [
                             'user_id' => $newUser->id,
-                            'email' => $newUser->email,
                             'error' => $mailError->getMessage(),
                         ]);
                     }
@@ -795,13 +792,11 @@ class InscriptionsController extends Controller
 
                 Log::info('Email de refus envoyé par conducteur', [
                     'inscription_id' => $inscription->id,
-                    'email' => $userResponsable->email,
                     'conducteur_id' => $user->id,
                 ]);
             } catch (\Exception $e) {
                 Log::error('Erreur lors de l\'envoi de l\'email de refus (conducteur)', [
                     'inscription_id' => $inscription->id,
-                    'email' => $userResponsable->email ?? 'N/A',
                     'error' => $e->getMessage(),
                 ]);
             }
@@ -966,7 +961,6 @@ class InscriptionsController extends Controller
         } catch (\Exception $e) {
             \Log::error('Conducteur/Inscription - Exception', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
             return back()->with('error', 'Erreur lors de l\'ajout du membre');
         }
@@ -1320,7 +1314,6 @@ class InscriptionsController extends Controller
             Log::info('Inscription modifiée par conducteur', [
                 'inscription_id' => $inscription->id,
                 'conducteur_id' => $user->id,
-                'email' => $inscription->email,
             ]);
 
             return response()->json([
@@ -1565,7 +1558,6 @@ class InscriptionsController extends Controller
             DB::rollBack();
             Log::error('Erreur création famille conducteur', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             return response()->json([
                 'error' => 'Une erreur est survenue lors de la création de la famille.',
@@ -1616,7 +1608,6 @@ class InscriptionsController extends Controller
         } catch (\Exception $e) {
             Log::warning('Erreur création sacrements pour user ' . $user->id, [
                 'error' => $e->getMessage(),
-                'user_data' => $data
             ]);
         }
     }

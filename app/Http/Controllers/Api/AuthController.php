@@ -32,7 +32,7 @@ class AuthController extends Controller
         $genericErrorMessage = 'Code membre ou mot de passe incorrect.';
 
         if (!$user || $user->trashed() || !Hash::check((string) $request->input('password'), (string) $user->password)) {
-            Log::warning('API login failed', ['code_membre' => $request->input('code_membre')]);
+            Log::warning('API login failed');
 
             throw ValidationException::withMessages([
                 'code_membre' => $genericErrorMessage,

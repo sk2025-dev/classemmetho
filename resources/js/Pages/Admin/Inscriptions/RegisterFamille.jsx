@@ -1049,10 +1049,7 @@ export default function RegisterFamille({
 
         // === 3. MEMBRES ===
         if (membres.length > 0) {
-            console.log(
-                "Membres avant envoi:",
-                JSON.stringify(membres, null, 2),
-            );
+            
             const membreFields = [
                 "nom",
                 "prenom",
@@ -1168,12 +1165,6 @@ export default function RegisterFamille({
         // ✅ Ajouter le token CSRF au FormData
         if (csrfToken) {
             formData.append("_token", csrfToken);
-        }
-
-        // 🔍 LOG: Afficher tous les champs envoyés
-        console.log("📤 FormData envoyé au backend:");
-        for (let [key, value] of formData.entries()) {
-            console.log(`  ${key}: ${value}`);
         }
 
         try {
@@ -1297,11 +1288,7 @@ export default function RegisterFamille({
                 err?.response?.status,
             );
             console.error("Message:", apiMessage);
-            console.error(
-                "Erreurs détaillées:",
-                JSON.stringify(apiErrors, null, 2),
-            );
-            console.error("Réponse complète:", err?.response?.data);
+            
 
             if (Object.keys(apiErrors).length > 0) {
                 // Construire un message d'erreur clair et lisible pour le toast

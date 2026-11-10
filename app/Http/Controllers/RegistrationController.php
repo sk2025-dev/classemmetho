@@ -42,21 +42,10 @@ class RegistrationController extends Controller
                 }
             }
 
-            Log::info('Registration payload received', [
-            'type' => $type,
-            'has_famille' => isset($input['famille']),
-            'has_responsable' => isset($input['responsable']),
-            'membres_count' => is_array($input['membres'] ?? null) ? count($input['membres']) : 0,
-            'has_photos' => isset($files['responsable']['photo']) || !empty(array_filter($files['membres'] ?? [], fn($m) => isset($m['photo']))),
-        ]);
+            Log::info('Registration payload received');
 
             // ✅ Log les photos reçues (debugging) - sans données sensibles
-            Log::info('🖼️ Photos dans le payload', [
-                'responsable_photo_present' => isset($input['responsable']['photo']),
-                'responsable_photo_type' => gettype($input['responsable']['photo'] ?? null),
-                'membres_count' => count($input['membres'] ?? []),
-                'membres_with_photos' => count(array_filter(array_map(fn($m) => $m['photo'] ?? null, $input['membres'] ?? [])))
-            ]);
+            Log::info('🖼️ Photos dans le payload');
 
             $validated = $this->validateRegistration($input);
 
@@ -81,9 +70,7 @@ class RegistrationController extends Controller
 
             if (empty($data['responsable']) && !empty($data['membres']) && is_array($data['membres'])) {
                 $data['responsable'] = array_shift($data['membres']);
-                Log::info('Responsable vide détecté - utilisation du premier membre comme responsable', [
-                    // nom masqué (PII)
-                ]);
+                Log::info('Responsable vide détecté - utilisation du premier membre comme responsable');
             }
 
             $duplicateCheck = $this->checkDuplicates($data);
@@ -110,7 +97,6 @@ class RegistrationController extends Controller
                         'type' => gettype($photoVal),
                         'is_string' => is_string($photoVal),
                         'is_object' => is_object($photoVal),
-                        'value' => is_string($photoVal) ? substr($photoVal, 0, 100) : 'N/A'
                     ]);
 
                     if (is_object($photoVal) && method_exists($photoVal, 'isValid') && $photoVal->isValid()) {
@@ -134,11 +120,7 @@ class RegistrationController extends Controller
                             if (!empty($membre['photo_path']) || !empty($membre['photo_url'])) {
                                 $photoPath = $membre['photo_path'] ?? null;
                                 $photoUrl  = $membre['photo_url'] ?? null;
-                                Log::info('🔄 Photo responsable récupérée du premier membre', [
-                                    // member_name masqué (PII)
-                                    'photo_path' => $photoPath,
-                                    'photo_url' => $photoUrl
-                                ]);
+                                Log::info('🔄 Photo responsable récupérée du premier membre');
                                 break; // On prend le premier membre avec une photo
                             }
                         }
@@ -263,22 +245,6 @@ class RegistrationController extends Controller
 
                 Log::info('Inscription créée avec succès - Validation renforcée appliquée', [
                     'id'        => $inscriptionFamille->id,
-                    'reference' => 'INS-' . now()->format('Ymd') . '-' . str_pad($inscriptionFamille->id, 6, '0', STR_PAD_LEFT),
-                    'type'      => $inscriptionFamille->type,
-                    'status'    => $inscriptionFamille->status,
-                    // email masqué (PII)
-                    // responsable masqué (PII)
-                    'membres_count' => count($data['membres'] ?? []),
-                    'classe_id' => $inscriptionFamille->classe_id,
-                    'validation_version' => '2.0',
-                    'security_checks_passed' => true,
-                    'duplicate_check_performed' => true,
-                    'ip_address' => request()->ip(),
-                    'processing_metadata' => [
-                        'requires_admin_approval'     => true,
-                        'requires_conductor_approval' => true,
-                        'estimated_completion_days'   => 3
-                    ]
                 ]);
 
                 return [$inscriptionFamille];
@@ -643,7 +609,6 @@ class RegistrationController extends Controller
             Log::info('Inscription conducteur reçue', [
                 'method'       => $request->method(),
                 'content_type' => $request->header('Content-Type'),
-                // all_data masqué (PII) - contient données sensibles
             ]);
 
             $validated = $request->validate([
@@ -724,11 +689,7 @@ class RegistrationController extends Controller
                             if (!empty($member['photo_path']) || !empty($member['photo_url'])) {
                                 $photoPath = $member['photo_path'] ?? null;
                                 $photoUrl  = $member['photo_url'] ?? null;
-                                Log::info('🔄 Photo conducteur récupérée du premier membre', [
-                                    'member_name' => ($member['prenom'] ?? '') . ' ' . ($member['nom'] ?? ''),
-                                    'photo_path' => $photoPath,
-                                    'photo_url' => $photoUrl
-                                ]);
+                                Log::info('🔄 Photo conducteur récupérée du premier membre');
                                 break;
                             }
                         }
@@ -863,7 +824,6 @@ class RegistrationController extends Controller
 
                 Log::info('Inscription conducteur créée', [
                     'inscription_id' => $inscription->id,
-                    // email masqué (PII)
                     'status'         => $inscription->status,
                 ]);
 
@@ -890,9 +850,6 @@ class RegistrationController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Erreur de validation inscription conducteur', [
                 'errors'             => $e->errors(),
-                'validation_version' => '2.0',
-                'ip_address'         => request()->ip(),
-                'user_agent'         => request()->userAgent()
             ]);
             return response()->json([
                 'success'            => false,
@@ -928,11 +885,7 @@ class RegistrationController extends Controller
 
             $photoUrl = '/storage/' . ltrim($path, '/');
 
-            Log::info('Photo stockée avec succès', [
-                'path'     => $path,
-                'url'      => $photoUrl,
-                'filename' => $filename
-            ]);
+            Log::info('Photo stockée avec succès');
 
             return ['path' => $path, 'url' => $photoUrl];
         } catch (\Exception $e) {
@@ -957,11 +910,7 @@ class RegistrationController extends Controller
 
             $path = $file->store('inscriptions', 'public');
 
-            Log::info('Photo stockée avec succès', [
-                'path'          => $path,
-                'original_name' => $file->getClientOriginalName(),
-                'size'          => $file->getSize(),
-            ]);
+            Log::info('Photo stockée avec succès');
 
             return $path;
         } catch (\Exception $e) {

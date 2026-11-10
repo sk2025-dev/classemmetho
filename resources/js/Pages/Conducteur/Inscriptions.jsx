@@ -395,22 +395,6 @@ export default function Inscriptions({
         total: 0,
     });
 
-    // === DEBUG: Affichage des inscriptions reçues ===
-    useEffect(() => {
-        console.log("DEBUG - Inscriptions reçues du backend:", {
-            nombre_inscriptions: (inscriptions || []).length,
-            inscriptions: inscriptions || [],
-            details: (inscriptions || []).map((insc) => ({
-                id: insc.id,
-                nom: insc.nom,
-                prenom: insc.prenom,
-                type: insc.type,
-                status: insc.status,
-                email: insc.email,
-            })),
-        });
-    }, [inscriptions]);
-
     const tableHeaderClass =
         activeTab === "pending"
             ? "bg-yellow-500 text-white"
@@ -775,15 +759,6 @@ export default function Inscriptions({
             (item) => item.status === "rejected",
         ).length;
 
-        console.log("DEBUG - Stats calculées:", {
-            pending,
-            approved,
-            rejected,
-            total: pending + approved + rejected,
-            inscriptions_total: inscriptionsOnly.length,
-            members_total: membersOnly.length,
-        });
-
         setCalculatedStats({
             pending,
             approved,
@@ -792,30 +767,6 @@ export default function Inscriptions({
         });
     }, [inscriptions, members]); // Se recalcule quand les inscriptions/membres changent
 
-    // === DEBUG DÉTAILLÉ ===
-    useEffect(() => {
-        console.log("DEBUG COMPLET - Inscriptions vs Members:", {
-            inscriptions_count: inscriptionsOnly.length,
-            inscriptions_par_status: {
-                pending: inscriptionsOnly.filter((i) => i.status === "pending")
-                    .length,
-                approved: inscriptionsOnly.filter(
-                    (i) => i.status === "approved",
-                ).length,
-                rejected: inscriptionsOnly.filter(
-                    (i) => i.status === "rejected",
-                ).length,
-            },
-            members_count: membersOnly.length,
-            members_details: membersOnly.map((m) => ({
-                id: m.id,
-                nom: `${m.nom} ${m.prenom}`,
-                status: m.status,
-            })),
-            filtered_items_count: filteredItems.length,
-            active_tab: activeTab,
-        });
-    }, [inscriptionsOnly, membersOnly, filteredItems, activeTab]);
 
     // Stats membres pour le nouveau bloc de résumé
     const memberStats = React.useMemo(() => {
@@ -1450,7 +1401,6 @@ setSelectedMember(normalized);
     };
 
     const openEditModal = async (item) => {
-        console.log("DEBUG OPEN EDIT MODAL - item reçu:", item);
         setModalMode("edit");
         setShowDetailModal(false);
         setShowMemberModal(false);
@@ -1492,35 +1442,6 @@ setSelectedMember(normalized);
             }
         }
 
-        console.log(
-            "DEBUG OPEN EDIT MODAL - member trouvé (après fusion):",
-            member,
-        );
-        console.log("DEBUG - Toutes les clés du member:", Object.keys(member));
-        console.log(
-            "DEBUG - statut_marital:",
-            member.statut_marital,
-            "type:",
-            typeof member.statut_marital,
-        );
-        console.log(
-            "DEBUG - relation:",
-            member.relation,
-            "type:",
-            typeof member.relation,
-        );
-        console.log(
-            "DEBUG - fonction_id:",
-            member.fonction_id,
-            "type:",
-            typeof member.fonction_id,
-        );
-        console.log(
-            "DEBUG - genre:",
-            member.genre,
-            "type:",
-            typeof member.genre,
-        );
     };
 
     // Fonction pour sauvegarder automatiquement en mode édition
@@ -1690,9 +1611,6 @@ setSelectedMember(normalized);
                 (f) => f.familyId === userFamilyId,
             );
 
-            console.log("Conducteur (user connecté):", conducteur);
-            console.log("Famille actuelle:", currentFamily);
-
             if (!conducteur) {
                 alert(
                     "Erreur: Conducteur non trouvé. Veuillez vous reconnecter.",
@@ -1734,16 +1652,10 @@ setSelectedMember(normalized);
                 formData.append("_token", csrfToken);
             }
 
-            console.log(
-                "FormData envoyé à /conducteur/quick-member:",
-                Array.from(formData.entries()),
-            );
-
             setIsSubmitting(true);
             axios
                 .post(withBasePath("", "/conducteur/quick-member"), formData)
                 .then((response) => {
-                    console.log("Succès!", response.data);
                     showSuccessToast("Le membre a bien ete ajoute.", 2500);
                     setShowModal(false);
                     setTimeout(() => {
@@ -1751,13 +1663,9 @@ setSelectedMember(normalized);
                     }, 600);
                 })
                 .catch((err) => {
-                    console.error("Erreur complète:", err);
-                    console.log("Response data:", err?.response?.data);
 
                     const apiErrors = err?.response?.data?.errors;
                     const message = err?.response?.data?.message;
-
-                    console.log("Erreurs API:", apiErrors);
 
                     if (apiErrors && Object.keys(apiErrors).length > 0) {
                         const errorMessages = Object.entries(apiErrors)
@@ -3755,7 +3663,7 @@ setSelectedMember(normalized);
                 </div>
 
                 {/* MODAL AJOUT / EDITION */}
-                {console.log("showModal state:", showModal) ||
+                {
                     (showModal && (
                         <div
                             className="fixed inset-0 z-[60] flex items-center justify-center"

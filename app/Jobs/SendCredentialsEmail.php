@@ -41,7 +41,6 @@ class SendCredentialsEmail implements ShouldQueue
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             Log::warning('Envoi identifiants: email invalide', [
                 'user_id' => $user->id,
-                // email masqué (PII)
             ]);
             return;
         }

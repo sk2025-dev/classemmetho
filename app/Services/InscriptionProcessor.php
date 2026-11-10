@@ -287,12 +287,9 @@ class InscriptionProcessor
                 'inscription_id' => $inscription->id,
                 'status_from_db' => $inscription->status,
                 'status_attribute' => $inscription->getAttribute('status'),
-                'full_record' => $inscription->toArray(),
             ]);
         } else {
-            Log::warning('Inscription has no ID, cannot update status', [
-                'inscription_email' => $inscription->email,
-            ]);
+            Log::warning('Inscription has no ID, cannot update status');
         }
 
         return ['user' => $user, 'password' => $plainPassword, 'identifier' => $identifier];
