@@ -57,7 +57,7 @@ class ProfileController extends Controller
                 'relation' => 'nullable|string|max:255',
                 'date_mariage' => 'nullable|date',
                 'lieu_mariage' => 'nullable|string|max:255',
-                'photo' => 'nullable',
+                'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
                 'baptise' => 'nullable|in:0,1',
                 'date_bapteme' => 'nullable|date|required_if:baptise,1',
                 'lieu_bapteme' => 'nullable|string|max:255|required_if:baptise,1',
