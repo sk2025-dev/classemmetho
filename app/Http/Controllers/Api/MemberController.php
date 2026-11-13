@@ -19,7 +19,7 @@ class MemberController extends Controller
             'email' => 'nullable|email|unique:users,email',
             'telephone' => 'nullable|string',
             'genre' => 'required|in:M,F',
-            'date_naissance' => 'nullable|date',
+            'date_naissance' => 'nullable|date|before_or_equal:today',
             'statut_marital' => 'nullable|string',
             'adresse' => 'nullable|string',
             'fonction_id' => 'nullable|exists:fonctions,id',

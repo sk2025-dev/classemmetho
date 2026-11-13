@@ -387,6 +387,10 @@ class RegistrationController extends Controller
         } else {
             $birthDate = new \DateTime($responsable['dateNaissance']);
             $today     = new \DateTime();
+            // Vérifier si la date est dans le futur
+            if ($birthDate > $today) {
+                $errors['responsable.dateNaissance'] = ['La date de naissance ne peut pas être dans le futur.'];
+            }
             $age       = $today->diff($birthDate)->y;
             if ($age < 18) {
                 $errors['responsable.dateNaissance'] = ['L\'âge minimum requis est de 18 ans.'];
@@ -466,6 +470,12 @@ class RegistrationController extends Controller
 
                 if (!empty($membre['dateNaissance']) && !$this->isValidDate($membre['dateNaissance'])) {
                     $errors["membres.{$i}.dateNaissance"] = ['La date de naissance du membre n\'est pas valide.'];
+                } elseif (!empty($membre['dateNaissance'])) {
+                    $birthDate = new \DateTime($membre['dateNaissance']);
+                    $today     = new \DateTime();
+                    if ($birthDate > $today) {
+                        $errors["membres.{$i}.dateNaissance"] = ['La date de naissance ne peut pas être dans le futur.'];
+                    }
                 }
 
                 if (!empty($membre['genre']) && !in_array($membre['genre'], ['M', 'F'])) {
@@ -633,19 +643,19 @@ class RegistrationController extends Controller
                 'membres.*.profession_detail' => 'nullable|string|max:255',
                 'membres.*.niveau_etude'      => 'nullable|string|max:255',
                 'statutMarital' => 'nullable|string',
-                'dateMariageniv' => 'nullable|date_format:Y-m-d',
+                'dateMariageniv' => 'nullable|date|before_or_equal:today',
                 'lieuMariagePerso' => 'nullable|string|max:255',
-                'dateDivorce'  => 'nullable|date_format:Y-m-d',
-                'dateDecesConjoint' => 'nullable|date_format:Y-m-d',
+                'dateDivorce'  => 'nullable|date|before_or_equal:today',
+                'dateDecesConjoint' => 'nullable|date|before_or_equal:today',
                 'classe_id'    => 'required|integer|exists:classes,id',
                 'spirituel.baptise' => 'required|string|in:true,false',
-                'spirituel.dateBapteme' => 'nullable|date_format:Y-m-d',
+                'spirituel.dateBapteme' => 'nullable|date|before_or_equal:today',
                 'spirituel.lieuBapteme' => 'nullable|string|max:255',
                 'spirituel.premiereCommunion' => 'required|string|in:true,false',
-                'spirituel.datePremiereCommunion' => 'nullable|date_format:Y-m-d',
+                'spirituel.datePremiereCommunion' => 'nullable|date|before_or_equal:today',
                 'spirituel.lieuPremiereCommunion' => 'nullable|string|max:255',
                 'spirituel.marieReligieusement' => 'required|string|in:true,false',
-                'spirituel.dateMariage' => 'nullable|date_format:Y-m-d',
+                'spirituel.dateMariage' => 'nullable|date|before_or_equal:today',
                 'spirituel.lieuMariage' => 'nullable|string|max:255',
                 'isResponsableFamille' => 'nullable|string',
                 'familyData.nom' => 'nullable|string|max:255',
@@ -658,7 +668,15 @@ class RegistrationController extends Controller
                 'selectedRoles'    => 'nullable|array',
                 'selectedRoles.*.id' => 'nullable|integer|exists:fonctions,id',
                 'responsable.lienParente' => 'nullable|string|max:255',
-            ], [], [
+            ], [
+                'dateNaissance.before_or_equal' => 'La date de naissance ne peut pas être dans le futur',
+                'dateMariageniv.before_or_equal' => 'La date de mariage ne peut pas être dans le futur',
+                'dateDivorce.before_or_equal' => 'La date de divorce ne peut pas être dans le futur',
+                'dateDecesConjoint.before_or_equal' => 'La date de décès ne peut pas être dans le futur',
+                'spirituel.dateBapteme.before_or_equal' => 'La date du baptême ne peut pas être dans le futur',
+                'spirituel.datePremiereCommunion.before_or_equal' => 'La date de la première communion ne peut pas être dans le futur',
+                'spirituel.dateMariage.before_or_equal' => 'La date du mariage religieux ne peut pas être dans le futur',
+            ], [
                 'nom'          => 'Nom',
                 'prenom'       => 'Prénom',
                 'email'        => 'Email',

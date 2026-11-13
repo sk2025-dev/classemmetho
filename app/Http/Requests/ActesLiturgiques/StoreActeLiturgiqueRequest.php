@@ -3,6 +3,7 @@
 namespace App\Http\Requests\ActesLiturgiques;
 
 use App\Services\ProgrammeObsequesService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -86,24 +87,33 @@ class StoreActeLiturgiqueRequest extends FormRequest
             $type = $this->input('type_acte');
 
             $requiredByType = [
-                // baptême form does not include a generic "date" field anymore,
-                // frontend only sends date_souhaitee / details specific keys, so
-                // we no longer force a missing key here. keep the entry in case
-                // we want to add other requirements later.
                 'bapteme' => [],
                 'premiere_communion' => ['date', 'lieu'],
                 'bapteme_premiere_communion' => ['date', 'lieu'],
                 'confirmation' => ['confirmand', 'date', 'lieu'],
-                // Le membre concerne est deja l'un des conjoints
                 'mariage' => [],
                 'naissance' => ['nom_enfant', 'date_naissance'],
-                // Le membre concerne est deja le defunt
                 'deces' => ['date_deces'],
             ];
 
             foreach (($requiredByType[$type] ?? []) as $field) {
                 if (!array_key_exists($field, $details) || $details[$field] === null || $details[$field] === '') {
                     $validator->errors()->add("details.{$field}", "Le champ {$field} est obligatoire pour le type {$type}.");
+                }
+            }
+
+            // Validation des dates : ne pas accepter de dates futures pour les événements passés
+            if ($type === 'naissance' && !empty($details['date_naissance'])) {
+                $dateNaissance = \Carbon\Carbon::parse($details['date_naissance']);
+                if ($dateNaissance->gt(now())) {
+                    $validator->errors()->add('details.date_naissance', 'La date de naissance ne peut pas être dans le futur.');
+                }
+            }
+
+            if ($type === 'deces' && !empty($details['date_deces'])) {
+                $dateDeces = \Carbon\Carbon::parse($details['date_deces']);
+                if ($dateDeces->gt(now())) {
+                    $validator->errors()->add('details.date_deces', 'La date de décès ne peut pas être dans le futur.');
                 }
             }
 

@@ -19,7 +19,7 @@ class StoreMembreRequest extends FormRequest
             'genre' => ['nullable', 'in:M,F,Autre'],
             'telephone' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
-            'date_naissance' => ['nullable', 'date'],
+            'date_naissance' => ['nullable', 'date', 'before_or_equal:today'],
             'role' => ['nullable', 'string', 'max:50'],
             'profession' => ['nullable', 'string', 'max:255'],
             'relation' => ['nullable', 'string', 'max:100'],

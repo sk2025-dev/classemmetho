@@ -110,12 +110,13 @@ class SondageController extends Controller
             'answers' => ['nullable', 'array'],
             'respondentProfile' => ['required', 'array'],
             'respondentProfile.genre' => ['required', 'string', 'max:255'],
-            'respondentProfile.date_naissance' => ['required', 'date'],
+            'respondentProfile.date_naissance' => ['required', 'date', 'before_or_equal:today'],
             'respondentProfile.employment_status' => ['required', 'string', 'max:255'],
         ], [
             'respondentProfile.genre.required' => 'Le genre est obligatoire.',
             'respondentProfile.date_naissance.required' => 'La date de naissance est obligatoire.',
             'respondentProfile.date_naissance.date' => 'La date de naissance est invalide.',
+            'respondentProfile.date_naissance.before_or_equal' => 'La date de naissance ne peut pas être dans le futur.',
             'respondentProfile.employment_status.required' => 'La situation socio-pro est obligatoire.',
         ]);
 

@@ -27,7 +27,7 @@ class UpdateMembreRequest extends FormRequest
                 'max:255',
                 Rule::unique('users', 'email')->ignore($userId),
             ],
-            'date_naissance' => ['nullable', 'date'],
+            'date_naissance' => ['nullable', 'date', 'before_or_equal:today'],
             'role' => ['nullable', 'string', 'max:50'],
             'profession' => ['nullable', 'string', 'max:255'],
             'relation' => ['nullable', 'string', 'max:100'],

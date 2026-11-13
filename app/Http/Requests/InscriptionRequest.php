@@ -22,7 +22,7 @@ class InscriptionRequest extends FormRequest
             'email' => ['required_if:type,famille', 'email', 'max:255', 'unique:users,email'],
             'password' => ['nullable', 'string', 'min:8'],
             'telephone' => ['required_if:type,famille', 'string', 'max:50'],
-            'date_naissance' => ['required_if:type,famille', 'date'],
+            'date_naissance' => ['required_if:type,famille', 'date', 'before_or_equal:today'],
             'genre' => ['required_if:type,famille', 'string', 'max:20'],
             'profession' => ['required_if:type,famille', 'string', 'max:255'],
             'statutMarital' => ['required_if:type,famille', 'string', 'max:50'],
