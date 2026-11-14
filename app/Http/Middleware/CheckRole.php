@@ -38,8 +38,6 @@ class CheckRole
             return $next($request);
         }
 
-        Log::debug('role check', compact('userRole', 'effectiveRole', 'roles', 'isFamilyResponsible'));
-
         if (
             in_array($effectiveRole, $roles, true) ||
             in_array($userRole, $roles, true) ||
