@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Family;
 use App\Models\UserSacrement;
 use App\Models\Classe;
+use App\Models\Fonction;
 use App\Mail\SendCredentials;
 use App\Traits\GeneratesIdentifier;
 use Illuminate\Http\Request;
@@ -69,7 +70,15 @@ class RegisterMemberController extends Controller
                 'responsable.employment_status' => 'nullable|string|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
                 'responsable.fonction_professionnelle' => 'nullable|string|max:255',
                 'responsable.fonction_ids' => 'nullable|array|max:10',
-                'responsable.fonction_ids.*' => 'integer|exists:fonctions,id',
+                'responsable.fonction_ids.*' => ['integer', 'exists:fonctions,id', function ($attribute, $value, $fail) {
+                    $forbiddenFonctions = Fonction::whereIn('nom', [
+                        'marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs',
+                        'Marqueur de présence', 'Marqueur presence', 'Président des conducteurs', 'President des conducteurs'
+                    ])->pluck('id', 'nom')->all();
+                    if (isset($forbiddenFonctions[$value])) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . $forbiddenFonctions[$value] . ' ».');
+                    }
+                }],
                 'responsable.adresse' => 'nullable|string|max:1000',
                 'responsable.ville_id' => 'nullable|exists:villes,id',
                 'responsable.statutMarital' => 'nullable|string|max:255',
@@ -117,7 +126,15 @@ class RegisterMemberController extends Controller
                 'membres.*.lieuMariageReligieux' => 'nullable|string|max:255',
                 'membres.*.fonction' => 'nullable|string|max:255',
                 'membres.*.fonction_ids' => 'nullable|array|max:10',
-                'membres.*.fonction_ids.*' => 'integer|exists:fonctions,id',
+                'membres.*.fonction_ids.*' => ['integer', 'exists:fonctions,id', function ($attribute, $value, $fail) {
+                    $forbiddenFonctions = Fonction::whereIn('nom', [
+                        'marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs',
+                        'Marqueur de présence', 'Marqueur presence', 'Président des conducteurs', 'President des conducteurs'
+                    ])->pluck('id', 'nom')->all();
+                    if (isset($forbiddenFonctions[$value])) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . $forbiddenFonctions[$value] . ' ».');
+                    }
+                }],
                 'membres.*.profession' => 'nullable|string|max:255',
                 'membres.*.employment_status' => 'nullable|string|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
                 'membres.*.photo' => 'nullable',

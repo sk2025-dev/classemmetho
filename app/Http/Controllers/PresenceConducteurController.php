@@ -476,9 +476,10 @@ class PresenceConducteurController extends Controller
     private function getPresenceMarkerFunction(bool $createIfMissing = true): ?Fonction
     {
         $fonction = Fonction::query()
-            ->whereRaw('LOWER(nom) = ?', ['marqueur de présence'])
-            ->orWhereRaw('LOWER(nom) = ?', ['marqueur de presence'])
-            ->orWhereRaw('LOWER(nom) = ?', ['marqueur presence'])
+            ->whereIn('nom', [
+                'marqueur de présence', 'marqueur de presence', 'marqueur presence',
+                'Marqueur de présence', 'Marqueur de presence', 'Marqueur presence',
+            ])
             ->first();
 
         if (! $fonction && $createIfMissing) {

@@ -8,6 +8,7 @@ use App\Models\Fonction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
@@ -53,7 +54,15 @@ class ProfileController extends Controller
                 'profession' => 'nullable|string|max:255',
                 'niveau_etude' => 'nullable|string|max:255',
                 'fonction_ids' => 'nullable|array',
-                'fonction_ids.*' => 'exists:fonctions,id',
+                'fonction_ids.*' => ['integer', 'exists:fonctions,id', function ($attribute, $value, $fail) {
+                    $forbiddenFonctions = Fonction::whereIn('nom', [
+                        'marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs',
+                        'Marqueur de présence', 'Marqueur presence', 'Président des conducteurs', 'President des conducteurs'
+                    ])->pluck('id', 'nom')->all();
+                    if (isset($forbiddenFonctions[$value])) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . $forbiddenFonctions[$value] . ' ».');
+                    }
+                }],
                 'relation' => 'nullable|string|max:255',
                 'date_mariage' => 'nullable|date|before_or_equal:today',
                 'lieu_mariage' => 'nullable|string|max:255',
