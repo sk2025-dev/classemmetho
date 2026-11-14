@@ -56,7 +56,7 @@ Route::get('/', function () {
 Route::get('/certificat/verification/{reference}', [VerificationCertificatController::class, 'show'])
     ->name('certificat.verification');
 
-Route::get('/presence/{token}', [\App\Http\Controllers\Public\PresenceScanController::class, 'show'])
+Route::middleware(['auth'])->get('/presence/{token}', [\App\Http\Controllers\Public\PresenceScanController::class, 'show'])
     ->name('presence.scan.show');
 
 Route::get('/sondages/public/{token}', [\App\Http\Controllers\Public\SondageController::class, 'show'])

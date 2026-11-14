@@ -40,8 +40,8 @@ Route::post('/photo/upload-inscription', [PhotoUploadController::class, 'uploadI
 // Paiement public (don en ligne depuis Welcome)
 Route::post('/payment', [PaymentController::class, 'store']);
 
-// Présence publique via QR code
-Route::post('/presence', [PresenceController::class, 'store']);
+// Présence via QR code (authentifié + marqueur de présence + rate limiting)
+Route::middleware(['auth:sanctum', 'throttle:30,1'])->post('/presence', [PresenceController::class, 'store']);
 
 // Route API standard documentée pour upload photo (authentifié)
 Route::middleware(['auth:sanctum'])->post('/photo/upload', [PhotoController::class, 'upload']);

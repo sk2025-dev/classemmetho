@@ -20,6 +20,17 @@ class PresenceController extends Controller
             'code_membre' => ['required', 'string', 'max:30'],
         ]);
 
+        // L'utilisateur authentifié est le marqueur de présence
+        $marker = Auth::user();
+
+        // Vérifier que l'utilisateur a la fonction "marqueur de présence"
+        if (! $this->isPresenceMarker($marker)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès refusé. Seuls les marqueurs de présence peuvent effectuer cette action.',
+            ], 403);
+        }
+
         $event = $this->resolveEventByToken($validated['token']);
         if (! $event) {
             return response()->json([
@@ -28,10 +39,19 @@ class PresenceController extends Controller
             ], 404);
         }
 
+        // Vérifier que le marqueur appartient à la classe de l'événement
+        if ((int) $marker->classe_id !== (int) $event->class_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ce QR code ne correspond pas à votre classe.',
+            ], 403);
+        }
+
         if ($windowError = $this->checkQrWindowOpen($event)) {
             return $windowError;
         }
 
+        // Trouver le membre à pointer par son code_membre dans la même classe
         $member = User::query()
             ->where('code_membre', $validated['code_membre'])
             ->where('classe_id', $event->class_id)
@@ -40,7 +60,7 @@ class PresenceController extends Controller
         if (! $member) {
             return response()->json([
                 'success' => false,
-                'message' => 'Code membre invalide.',
+                'message' => 'Code membre invalide ou membre n\'appartenant pas à votre classe.',
             ], 422);
         }
 
