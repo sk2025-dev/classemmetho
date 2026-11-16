@@ -2455,6 +2455,7 @@ export default function Index({
                                 <Field label="Date choisie" required>
                                     <input
                                         type="date"
+                                        max={new Date().toISOString().split('T')[0]}
                                         className="ann-input"
                                         value={ceremonyForm.date_souhaitee}
                                         onChange={(e) =>

@@ -202,7 +202,7 @@ export default function Index({ campagnes, campagne, dossiers, listes, membres, 
                         <legend className="px-2 text-sm font-semibold text-blue-950">Baptême déjà reçu</legend>
                         <p className="text-sm text-slate-600">Renseignez les informations connues. Elles seront vérifiées par le conducteur avant d’être enregistrées sur la fiche du membre. Vous pouvez les compléter plus tard.</p>
                         <div className="grid sm:grid-cols-2 gap-4">
-                            <label className="block text-sm font-medium">Date du baptême<input type="date" className={`${input} mt-1`} value={details.bapteme_date} onChange={e => setDetails({ ...details, bapteme_date: e.target.value })}/></label>
+                            <label className="block text-sm font-medium">Date du baptême<input type="date" className={`${input} mt-1`} value={details.bapteme_date} max={new Date().toISOString().split("T")[0]} onChange={e => setDetails({ ...details, bapteme_date: e.target.value })}/></label>
                             <label className="block text-sm font-medium">Lieu du baptême<input className={`${input} mt-1`} maxLength={255} placeholder="Église, paroisse ou ville" value={details.bapteme_lieu} onChange={e => setDetails({ ...details, bapteme_lieu: e.target.value })}/></label>
                         </div>
                         <p className="text-xs text-slate-600">Vous pouvez joindre un certificat dans les pièces justificatives ci-dessous.</p>

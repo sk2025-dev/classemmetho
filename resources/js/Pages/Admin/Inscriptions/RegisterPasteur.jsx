@@ -914,6 +914,12 @@ export default function RegisterFamille({
     const handlePhotoChange = (e, type) => {
         const file = e.target.files && e.target.files[0];
         if (file) {
+            // Validation MIME types - Alignée sur backend CM-020 : mimes:jpeg,png,jpg,gif,webp|max:5120
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                showWarning("Format non autorisé. Formats acceptés : JPEG, PNG, JPG, GIF, WEBP");
+                return;
+            }
             if (file.size > 5 * 1024 * 1024) {
                 showWarning("Le fichier est trop volumineux (max 5MB).");
                 return;
@@ -1957,14 +1963,14 @@ export default function RegisterFamille({
                                 </div>
                                 <input
                                     type="file"
-                                    accept="image/*"
+                                    accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                                     onChange={(e) =>
                                         handlePhotoChange(e, "responsable")
                                     }
                                     className="file:py-1 file:px-3 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
                                 />
                                 <p className="text-xs text-gray-600 text-center">
-                                    JPG, PNG (max 5MB)
+                                    JPEG, PNG, JPG, GIF, WEBP (max 5MB)
                                 </p>
                             </div>
                         </div>
@@ -2041,6 +2047,7 @@ export default function RegisterFamille({
                                 <input
                                     ref={respDateNaissanceRef}
                                     type="date"
+                                    max={new Date().toISOString().split('T')[0]}
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
                                     value={responsable.dateNaissance}
                                     onChange={(e) =>
@@ -2198,6 +2205,10 @@ export default function RegisterFamille({
                                     }}
                                     options={churchRoles}
                                     placeholder="Sélectionner des fonctions..."
+                                    excludedFunctions={[
+                                        "Marqueur de présence",
+                                        "Président des conducteurs",
+                                    ]}
                                 />
                             </FormField>
                         </div>
@@ -2294,6 +2305,7 @@ export default function RegisterFamille({
                                     >
                                         <input
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none focus:border-blue-500"
                                             value={responsable.dateMariage}
                                             onChange={(e) =>
@@ -2334,6 +2346,7 @@ export default function RegisterFamille({
                                     >
                                         <input
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none"
                                             value={responsable.dateDivorce}
                                             onChange={(e) =>
@@ -2373,6 +2386,7 @@ export default function RegisterFamille({
                                     >
                                         <input
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none"
                                             value={responsable.dateDeces}
                                             onChange={(e) =>
@@ -2439,6 +2453,7 @@ export default function RegisterFamille({
                                         <FormField label="Date du baptême">
                                             <input
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 className="w-full h-10 border border-gray-300 rounded px-2 bg-white"
                                                 value={responsable.dateBapteme}
                                                 onChange={(e) =>
@@ -2500,6 +2515,7 @@ export default function RegisterFamille({
                                         <FormField label="Date de la première communion">
                                             <input
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 className="w-full h-10 border border-gray-300 rounded px-2 bg-white"
                                                 value={
                                                     responsable.datePremiereCommunion
@@ -2567,6 +2583,7 @@ export default function RegisterFamille({
                                         <FormField label="Date du mariage religieux">
                                             <input
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 className="w-full h-10 border border-gray-300 rounded px-2 bg-white"
                                                 value={
                                                     responsable.dateMariageReligieux
@@ -2696,14 +2713,14 @@ export default function RegisterFamille({
                                         </div>
                                         <input
                                             type="file"
-                                            accept="image/*"
+                                            accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                                             onChange={(e) =>
                                                 handlePhotoChange(e, "membre")
                                             }
                                             className="file:py-1 file:px-3 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
                                         />
                                         <p className="text-xs text-gray-600 text-center">
-                                            JPG, PNG (max 5MB)
+                                            JPEG, PNG, JPG, GIF, WEBP (max 5MB)
                                         </p>
                                     </div>
                                 </div>
@@ -2791,6 +2808,7 @@ export default function RegisterFamille({
                                         <input
                                             ref={membreDateNaissanceRef}
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             className={STYLES.input}
                                             value={membreTemp.dateNaissance}
                                             onChange={(e) =>
@@ -2885,6 +2903,10 @@ export default function RegisterFamille({
                                             }}
                                             options={churchRoles}
                                             placeholder="Sélectionner des fonctions..."
+                                            excludedFunctions={[
+                                                "Marqueur de présence",
+                                                "Président des conducteurs",
+                                            ]}
                                         />
                                     </FormField>
                                     <FormField
@@ -3054,6 +3076,7 @@ export default function RegisterFamille({
                                         >
                                             <input
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 className={STYLES.input}
                                                 value={membreTemp.dateMariage}
                                                 onChange={(e) =>
@@ -3113,6 +3136,7 @@ export default function RegisterFamille({
                                         >
                                             <input
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 className={STYLES.input}
                                                 value={membreTemp.dateDivorce}
                                                 onChange={(e) =>
@@ -3172,6 +3196,7 @@ export default function RegisterFamille({
                                         >
                                             <input
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 className={STYLES.input}
                                                 value={membreTemp.dateDeces}
                                                 onChange={(e) =>
@@ -3223,6 +3248,7 @@ export default function RegisterFamille({
                                         >
                                             <input
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 className={STYLES.input}
                                                 value={membreTemp.dote || ""}
                                                 onChange={(e) =>
@@ -3302,6 +3328,7 @@ export default function RegisterFamille({
                                                 <FormField label="Date de baptême">
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className={STYLES.input}
                                                         value={
                                                             membreTemp.dateBapteme ||
@@ -3371,6 +3398,7 @@ export default function RegisterFamille({
                                                 <FormField label="Date de première communion">
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className={STYLES.input}
                                                         value={
                                                             membreTemp.datePremiereCommunion ||
@@ -3440,6 +3468,7 @@ export default function RegisterFamille({
                                                 <FormField label="Date du mariage religieux">
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className={STYLES.input}
                                                         value={
                                                             membreTemp.dateMariageReligieux ||

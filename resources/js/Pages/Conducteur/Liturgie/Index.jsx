@@ -3218,6 +3218,7 @@ export default function Index({
                                             <input
                                                 className="modal-input"
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 value={
                                                     createForm.date_souhaitee
                                                 }
@@ -3626,6 +3627,7 @@ export default function Index({
                                             <input
                                                 className="ann-input"
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 value={annonceForm.date_annonce}
                                                 onChange={(e) =>
                                                     setAnnonceForm((prev) => ({

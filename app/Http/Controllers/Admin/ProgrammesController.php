@@ -61,6 +61,19 @@ class ProgrammesController extends Controller
             'moderateur' => 'nullable|string|max:255',
             'famille_reception' => 'nullable|string|max:255',
             'lieu' => 'nullable|string|max:500',
+        ], [], [
+            // Validation personnalisée pour la cohérence des heures sur une même journée
+            'end_time' => function ($attribute, $value, $fail) use ($request) {
+                $startDate = $request->input('date');
+                $startTime = $request->input('time');
+
+                // Pour l'admin, pas de end_date, donc c'est toujours une seule journée
+                if ($value && $startTime) {
+                    if ($value < $startTime) {
+                        $fail('Pour un événement d\'une seule journée, l\'heure de fin ne peut pas être antérieure à l\'heure de début.');
+                    }
+                }
+            },
         ]);
 
         $event = SpecialEvent::create([
@@ -96,6 +109,23 @@ class ProgrammesController extends Controller
             'activities.*.moderateur' => 'nullable|string|max:255',
             'activities.*.famille_reception' => 'nullable|string|max:255',
             'activities.*.lieu' => 'nullable|string|max:500',
+        ], [], [
+            // Validation personnalisée pour la cohérence des heures sur une même journée
+            'activities.*.end_time' => function ($attribute, $value, $fail) use ($request) {
+                $activityIndex = (int) explode('.', $attribute)[1];
+                $activity = $request->input("activities.{$activityIndex}");
+
+                if ($activity) {
+                    $startTime = $activity['time'] ?? null;
+
+                    // Pour l'admin, pas de end_date, donc c'est toujours une seule journée
+                    if ($value && $startTime) {
+                        if ($value < $startTime) {
+                            $fail("Pour l'activité « {$activity['title']} » (d'une seule journée), l'heure de fin ne peut pas être antérieure à l'heure de début.");
+                        }
+                    }
+                }
+            },
         ]);
 
         $created = [];

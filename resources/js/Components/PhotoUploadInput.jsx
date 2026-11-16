@@ -189,13 +189,15 @@ export default function PhotoUploadInput({
     };
 
     const uploadPhoto = async (file) => {
-        // Validation locale
-        if (!file.type.startsWith("image/")) {
-            setError("Veuillez sélectionner une image");
+        // Validation locale - Alignée sur backend CM-020 : mimes:jpeg,png,jpg,gif,webp|max:5120
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+
+        if (!allowedTypes.includes(file.type)) {
+            setError("Format non autorisé. Formats acceptés : JPEG, PNG, JPG, GIF, WEBP");
             return;
         }
 
-        if (file.size > 5 * 1024 * 1024) {
+        if (file.size > 5 * 1024 * 1024) {  // 5MB = 5120 KB
             setError("La photo ne doit pas dépasser 5MB");
             return;
         }
@@ -442,7 +444,7 @@ export default function PhotoUploadInput({
             <label className="cursor-pointer">
                 <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                     onChange={handleFileSelect}
                     disabled={isLoading}
                     className="hidden"
@@ -482,7 +484,7 @@ export default function PhotoUploadInput({
 
             {/* Info */}
             <p className="text-xs text-gray-500 text-center">
-                PNG, JPG, GIF • Max 5MB
+                JPEG, PNG, JPG, GIF, WEBP • Max 5MB
             </p>
 
             {showCamera && (

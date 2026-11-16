@@ -625,6 +625,7 @@ export default function CreateMember({ family, errors, sacrementRetour = null })
                                     >
                                         <input
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
                                                 fieldErrors.date_naissance
                                                     ? "border-red-500 focus:border-red-500"
@@ -839,6 +840,10 @@ export default function CreateMember({ family, errors, sacrementRetour = null })
                                             }}
                                             options={fonctions}
                                             placeholder="Sélectionner les fonctions dans l'église..."
+                                            excludedFunctions={[
+                                                "Marqueur de présence",
+                                                "Président des conducteurs",
+                                            ]}
                                         />
                                         {(fieldErrors.fonction_ids || errors.fonction_ids) && (
                                             <p className="text-red-500 text-xs mt-1">
@@ -924,6 +929,7 @@ export default function CreateMember({ family, errors, sacrementRetour = null })
                                                 >
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                         value={
                                                             data.date_mariage
@@ -1003,6 +1009,7 @@ export default function CreateMember({ family, errors, sacrementRetour = null })
                                                 <FormField label="Date du baptême">
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                         value={
                                                             data.date_bapteme
@@ -1055,6 +1062,7 @@ export default function CreateMember({ family, errors, sacrementRetour = null })
                                                 <FormField label="Date de première communion">
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                         value={
                                                             data.date_premiere_communion
@@ -1107,6 +1115,7 @@ export default function CreateMember({ family, errors, sacrementRetour = null })
                                                 <FormField label="Date du mariage religieux">
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                         value={
                                                             data.date_mariage_religieux

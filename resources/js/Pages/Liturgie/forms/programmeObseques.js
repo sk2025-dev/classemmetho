@@ -63,6 +63,11 @@ export function validateProgrammeRows(rows) {
         };
         const timeOk = (t) => /^\d{1,2}:\d{2}$/.test(t);
 
+        // Détermine si c'est un événement sur une seule journée
+        // Cas 1: pas de date_fin (événement simple sur une journée)
+        // Cas 2: date_fin === date_debut (intervalle sur une seule journée)
+        const isSameDay = !row.date_fin || (row.date_fin && row.date_fin === row.date_debut);
+
         if (!row.date_debut) errors[`${i}.date_debut`] = "La date est requise.";
         if (!row.libelle) errors[`${i}.libelle`] = "La désignation est requise.";
         if (row.libelle.length > 255)
@@ -74,7 +79,11 @@ export function validateProgrammeRows(rows) {
             errors[`${i}.heure`] = "Heure au format HH:MM.";
         if (row.heure_fin && !timeOk(row.heure_fin))
             errors[`${i}.heure_fin`] = "Heure au format HH:MM.";
+
+        // Validation de la cohérence des heures UNIQUEMENT pour les événements d'une seule journée
+        // Pour un intervalle sur plusieurs jours, l'heure de fin peut être antérieure à l'heure de début
         if (
+            isSameDay &&
             row.heure &&
             row.heure_fin &&
             timeOk(row.heure) &&
@@ -82,7 +91,7 @@ export function validateProgrammeRows(rows) {
             pad(row.heure_fin) < pad(row.heure)
         )
             errors[`${i}.heure_fin`] =
-                "L'heure de fin doit être après l'heure de début.";
+                "Pour un événement d'une seule journée, l'heure de fin ne peut pas être antérieure à l'heure de début.";
         if (row.lieu.length > 500) errors[`${i}.lieu`] = "500 caractères maximum.";
 
         if (row.date_fin && row.date_fin === row.date_debut) row.date_fin = "";

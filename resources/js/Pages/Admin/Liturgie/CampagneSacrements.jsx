@@ -206,6 +206,7 @@ export default function CampagneSacrements({ campagnes = [], status = {} }) {
                             <Field label="Date d’ouverture">
                                 <input
                                     type="date"
+                                    max={new Date().toISOString().split('T')[0]}
                                     required
                                     value={openForm.date_ouverture}
                                     onChange={(e) =>
@@ -223,6 +224,7 @@ export default function CampagneSacrements({ campagnes = [], status = {} }) {
                             <Field label="Date de fermeture">
                                 <input
                                     type="date"
+                                    max={new Date().toISOString().split('T')[0]}
                                     required
                                     value={openForm.date_fermeture}
                                     onChange={(e) =>
@@ -281,6 +283,7 @@ export default function CampagneSacrements({ campagnes = [], status = {} }) {
                             <Field label="Date d’ouverture">
                                 <input
                                     type="date"
+                                    max={new Date().toISOString().split('T')[0]}
                                     required
                                     value={reopenForm.date_ouverture}
                                     onChange={(e) =>
@@ -295,6 +298,7 @@ export default function CampagneSacrements({ campagnes = [], status = {} }) {
                             <Field label="Date de fermeture">
                                 <input
                                     type="date"
+                                    max={new Date().toISOString().split('T')[0]}
                                     required
                                     value={reopenForm.date_fermeture}
                                     onChange={(e) =>

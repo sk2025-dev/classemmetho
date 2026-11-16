@@ -15,13 +15,22 @@ const Select2Fonction = ({
     disabled = false,
     maxSelections = null,
     menuPortalTarget,
+    excludedFunctions = [],
 }) => {
     const normalizedFieldKey = String(name || id || "")
         .trim()
         .replace(/\s+/g, "_");
 
+    // Filtrer les options exclues (CM-021 : empêcher l'assignation de fonctions sensibles)
+    const excludedIds = excludedFunctions.map((f) => String(f).toLowerCase());
+    const filteredOptions = options.filter(
+        (option) =>
+            !excludedIds.includes(String(option.id).toLowerCase()) &&
+            !excludedIds.includes(option.nom.toLowerCase())
+    );
+
     // Transformer les options pour react-select
-    const selectOptions = options.map((option) => ({
+    const selectOptions = filteredOptions.map((option) => ({
         value: option.id,
         label: option.nom,
     }));

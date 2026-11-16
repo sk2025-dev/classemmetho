@@ -536,6 +536,7 @@ export default function ConducteurSondageCreate({
                                             <input
                                                 type="date"
                                                 value={survey.dateEcheance}
+                                                max={new Date().toISOString().split("T")[0]}
                                                 onChange={(event) =>
                                                     setSurvey((prev) => ({
                                                         ...prev,

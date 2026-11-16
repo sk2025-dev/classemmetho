@@ -1762,6 +1762,7 @@ function TabPaiement({
                                     type="date"
                                     style={inputStyle}
                                     value={cashForm.date}
+                                    max={new Date().toISOString().split("T")[0]}
                                     onChange={(e) =>
                                         setCashForm((p) => ({
                                             ...p,

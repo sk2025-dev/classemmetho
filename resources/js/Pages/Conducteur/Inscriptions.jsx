@@ -3739,16 +3739,21 @@ setSelectedMember(normalized);
                                                             </div>
                                                             <input
                                                                 type="file"
-                                                                accept="image/*"
+                                                                accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                                                                 onChange={(
                                                                     e,
                                                                 ) => {
+                                                                    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
                                                                     const file =
                                                                         e.target
                                                                             .files &&
                                                                         e.target
                                                                             .files[0];
                                                                     if (file) {
+                                                                        if (!allowedTypes.includes(file.type)) {
+                                                                            showToast('Formats acceptés : JPEG, PNG, JPG, GIF, WEBP', 'error');
+                                                                            return;
+                                                                        }
                                                                         const preview =
                                                                             URL.createObjectURL(
                                                                                 file,
@@ -3884,6 +3889,7 @@ setSelectedMember(normalized);
                                                         >
                                                             <input
                                                                 type="date"
+                                                                max={new Date().toISOString().split('T')[0]}
                                                                 className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
                                                                     fieldErrors.date_naissance
                                                                         ? "border-red-500 focus:border-red-500"
@@ -4168,6 +4174,10 @@ setSelectedMember(normalized);
                                                                     fonctions
                                                                 }
                                                                 placeholder="Selectionner 1 ou 2 fonctions"
+                                                                excludedFunctions={[
+                                                                    "Marqueur de présence",
+                                                                    "Président des conducteurs",
+                                                                ]}
                                                             />
                                                             {(fieldErrors.fonction_ids ||
                                                                 errors.fonction_ids ||
@@ -4319,6 +4329,7 @@ setSelectedMember(normalized);
                                                                     >
                                                                         <input
                                                                             type="date"
+                                                                            max={new Date().toISOString().split('T')[0]}
                                                                             className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                                             value={
                                                                                 data.date_mariage
@@ -4421,6 +4432,7 @@ setSelectedMember(normalized);
                                                             <FormField label="Date du baptême">
                                                                 <input
                                                                     type="date"
+                                                                    max={new Date().toISOString().split('T')[0]}
                                                                     className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                                     value={
                                                                         data.date_bapteme
@@ -4482,6 +4494,7 @@ setSelectedMember(normalized);
                                                             <FormField label="Date de première communion">
                                                                 <input
                                                                     type="date"
+                                                                    max={new Date().toISOString().split('T')[0]}
                                                                     className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                                     value={
                                                                         data.date_premiere_communion
@@ -4543,6 +4556,7 @@ setSelectedMember(normalized);
                                                             <FormField label="Date du mariage religieux">
                                                                 <input
                                                                     type="date"
+                                                                    max={new Date().toISOString().split('T')[0]}
                                                                     className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                                     value={
                                                                         data.date_mariage_religieux

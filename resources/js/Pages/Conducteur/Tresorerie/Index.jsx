@@ -221,6 +221,7 @@ const FInput = ({
     onChange,
     type = "text",
     span2,
+    max,
 }) => (
     <FW label={label} span2={span2}>
         <input
@@ -228,6 +229,7 @@ const FInput = ({
             value={value}
             onChange={onChange}
             placeholder={placeholder}
+            max={max}
             style={inputStyle}
             onFocus={(e) => (e.target.style.borderColor = "#6B46C1")}
             onBlur={(e) => (e.target.style.borderColor = "#D3D1C7")}
@@ -3266,6 +3268,7 @@ export default function ConducteurTresorerie({
                         label="Date"
                         type="date"
                         value={paymentForm.date_paiement}
+                        max={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
                             setPaymentForm((p) => ({
                                 ...p,
@@ -3576,6 +3579,7 @@ export default function ConducteurTresorerie({
                         label="Date de début"
                         type="date"
                         value={newCotisation.date_debut}
+                        max={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
                             setNewCotisation((p) => ({
                                 ...p,
@@ -3587,6 +3591,7 @@ export default function ConducteurTresorerie({
                         label="Date de fin"
                         type="date"
                         value={newCotisation.date_fin}
+                        max={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
                             setNewCotisation((p) => ({
                                 ...p,
@@ -3908,6 +3913,7 @@ export default function ConducteurTresorerie({
                                 label="Date de début"
                                 type="date"
                                 value={editCotisation.date_debut}
+                                max={new Date().toISOString().split("T")[0]}
                                 onChange={(e) =>
                                     setEditCotisation((p) => ({
                                         ...p,
@@ -3919,6 +3925,7 @@ export default function ConducteurTresorerie({
                                 label="Date de fin"
                                 type="date"
                                 value={editCotisation.date_fin}
+                                max={new Date().toISOString().split("T")[0]}
                                 onChange={(e) =>
                                     setEditCotisation((p) => ({
                                         ...p,
@@ -4076,6 +4083,7 @@ export default function ConducteurTresorerie({
                         label="Date du don"
                         type="date"
                         value={newDon.date_don}
+                        max={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
                             setNewDon((p) => ({
                                 ...p,
@@ -4150,6 +4158,7 @@ export default function ConducteurTresorerie({
                         label="Date de début"
                         type="date"
                         value={newCollecte.date_debut}
+                        max={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
                             setNewCollecte((p) => ({
                                 ...p,
@@ -4161,6 +4170,7 @@ export default function ConducteurTresorerie({
                         label="Date de fin"
                         type="date"
                         value={newCollecte.date_fin}
+                        max={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
                             setNewCollecte((p) => ({
                                 ...p,

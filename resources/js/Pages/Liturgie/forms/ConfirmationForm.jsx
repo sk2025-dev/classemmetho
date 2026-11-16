@@ -220,7 +220,7 @@ export default function ConfirmationForm({
                                 <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">Renseignez les informations de la personne à confirmer.</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Nom complet *"><input value={form.details.confirmand} onChange={(e) => setDetail("confirmand", e.target.value)} />{errors["details.confirmand"] && <Err>{errors["details.confirmand"]}</Err>}</Field>
-                                    <Field label="Date de naissance"><input type="date" value={form.details.date_naissance} onChange={(e) => setDetail("date_naissance", e.target.value)} /></Field>
+                                    <Field label="Date de naissance"><input type="date" max={new Date().toISOString().split('T')[0]} value={form.details.date_naissance} onChange={(e) => setDetail("date_naissance", e.target.value)} /></Field>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Lieu de naissance"><input value={form.details.lieu_naissance} onChange={(e) => setDetail("lieu_naissance", e.target.value)} /></Field>
@@ -230,7 +230,7 @@ export default function ConfirmationForm({
                                         </select>
                                     </Field>
                                 </div>
-                                <Field label="Date du baptême"><input type="date" value={form.details.date_bapteme} onChange={(e) => setDetail("date_bapteme", e.target.value)} /></Field>
+                                <Field label="Date du baptême"><input type="date" max={new Date().toISOString().split('T')[0]} value={form.details.date_bapteme} onChange={(e) => setDetail("date_bapteme", e.target.value)} /></Field>
                                 <FooterButtons onPrev={prev} onNext={next} />
                             </section>
                         )}
@@ -248,7 +248,7 @@ export default function ConfirmationForm({
                                     <Field label="Responsable catéchèse"><input value={form.details.responsable_catechese} onChange={(e) => setDetail("responsable_catechese", e.target.value)} /></Field>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <Field label="Date de confirmation *"><input type="date" value={form.details.date} onChange={(e) => setDetail("date", e.target.value)} />{errors["details.date"] && <Err>{errors["details.date"]}</Err>}</Field>
+                                    <Field label="Date de confirmation *"><input type="date" max={new Date().toISOString().split('T')[0]} value={form.details.date} onChange={(e) => setDetail("date", e.target.value)} />{errors["details.date"] && <Err>{errors["details.date"]}</Err>}</Field>
                                     <Field label="Lieu de la celebration *"><input value={form.details.lieu} onChange={(e) => setDetail("lieu", e.target.value)} />{errors["details.lieu"] && <Err>{errors["details.lieu"]}</Err>}</Field>
                                 </div>
                                 <Field label="Observations"><textarea value={form.details.observations} onChange={(e) => setDetail("observations", e.target.value)} /></Field>

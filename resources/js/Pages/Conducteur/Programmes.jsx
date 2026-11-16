@@ -2977,6 +2977,14 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
         showToast(`L'activité "${activity.title}" a une date de fin antérieure à la date de début`, 'error');
         return;
       }
+      // Validation cohérence heures sur une même journée
+      const endDate = activity.end_date || activity.start_date;
+      if (activity.start_date === endDate && activity.start_time && activity.end_time) {
+        if (activity.end_time < activity.start_time) {
+          showToast(`Pour l'activité "${activity.title}" (d'une seule journée), l'heure de fin ne peut pas être antérieure à l'heure de début`, 'error');
+          return;
+        }
+      }
     }
     setIsSubmitting(true);
     const cleanedActivities = validActivities.map(cleanActivityData);
@@ -3031,12 +3039,12 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
                     <div className="form-group">
                       <label>Date de début *</label>
                       <span className="input-icon"><IconCalendar /></span>
-                      <input type="date" value={activity.start_date} onChange={(e) => { const updated = [...activities]; updated[index].start_date = e.target.value; setActivities(updated); }} required />
+                      <input type="date" value={activity.start_date} max={new Date().toISOString().split("T")[0]} onChange={(e) => { const updated = [...activities]; updated[index].start_date = e.target.value; setActivities(updated); }} required />
                     </div>
                     <div className="form-group">
                       <label>Date de fin</label>
                       <span className="input-icon"><IconCalendar /></span>
-                      <input type="date" value={activity.end_date} onChange={(e) => { const updated = [...activities]; updated[index].end_date = e.target.value; setActivities(updated); }} />
+                      <input type="date" value={activity.end_date} max={new Date().toISOString().split("T")[0]} onChange={(e) => { const updated = [...activities]; updated[index].end_date = e.target.value; setActivities(updated); }} />
                       <p style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '4px' }}>Optionnelle - laisse vide pour une activité d'un jour</p>
                     </div>
                     <div className="form-group">
@@ -3199,14 +3207,20 @@ const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [],
   const getVideoThumbnail = (url) => getYouTubeThumbnail(url) || getVimeoThumbnail(url) || null;
 
   const handleFilesSelect = (selectedFiles) => {
-    const validFiles = selectedFiles.filter(file => (mediaType === 'photo' && file.type.startsWith('image/')));
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+    const validFiles = selectedFiles.filter(file =>
+      mediaType === 'photo' && allowedTypes.includes(file.type)
+    );
+    if (validFiles.length !== selectedFiles.length) {
+      showToast('Formats acceptés : JPEG, PNG, JPG, GIF, WEBP', 'error');
+    }
     setFiles(prev => [...prev, ...validFiles]);
-    validFiles.forEach(file => { 
-      const reader = new FileReader(); 
-      reader.onloadend = () => { 
-        setPreviews(prev => [...prev, { url: reader.result, name: file.name, type: file.type, index: prev.length }]); 
-      }; 
-      reader.readAsDataURL(file); 
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviews(prev => [...prev, { url: reader.result, name: file.name, type: file.type, index: prev.length }]);
+      };
+      reader.readAsDataURL(file);
     });
   };
 
@@ -3287,7 +3301,7 @@ const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [],
             
             <div className="form-group modal-full"><label>Titre *</label><span className="input-icon"><IconEdit /></span><input type="text" placeholder="Titre du contenu..." value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
             <div className="form-group modal-full"><label>Description</label><span className="input-icon"><IconEdit /></span><textarea rows="3" placeholder="Description..." value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-            <div className="form-group"><label>Date</label><span className="input-icon"><IconCalendar /></span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} required /></div>
+            <div className="form-group"><label>Date</label><span className="input-icon"><IconCalendar /></span><input type="date" value={date} max={new Date().toISOString().split("T")[0]} onChange={(e) => setDate(e.target.value)} required /></div>
             <div className="form-group modal-full"><label>Activité associée</label><span className="input-icon"><IconActivity /></span><select value={selectedEventId} onChange={(e) => setSelectedEventId(e.target.value)} style={{ appearance: 'auto', paddingLeft: '42px' }}><option value="">-- Aucune activité --</option>{events.map(event => (<option key={event.id} value={event.id}>{event.title} - {formatDateFrench(event.start_date)}</option>))}</select></div>
             
             {mediaType === 'video' ? (
@@ -3305,7 +3319,7 @@ const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [],
                   <div className="import-icon">🖼️</div>
                   <div className="import-title">Glissez-déposez vos photos ici</div>
                   <div className="import-subtitle">ou cliquez pour parcourir</div>
-                  <input ref={fileInputRef} type="file" className="file-input" accept="image/*" multiple onChange={(e) => e.target.files && handleFilesSelect(Array.from(e.target.files))} />
+                  <input ref={fileInputRef} type="file" className="file-input" accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" multiple onChange={(e) => e.target.files && handleFilesSelect(Array.from(e.target.files))} />
                   <button type="button" className="import-btn-select" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>Sélectionner des photos</button>
                 </div>
                 
@@ -4198,8 +4212,13 @@ export default function Programmes() {
   };
 
   const handleLivePhotoCapture = (e) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
     const file = e.target.files[0];
     if (!file) return;
+    if (!allowedTypes.includes(file.type)) {
+      showToast('Formats acceptés : JPEG, PNG, JPG, GIF, WEBP', 'error');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => setCapturedPhoto({ file, preview: ev.target.result });
     reader.readAsDataURL(file);
@@ -4859,7 +4878,7 @@ export default function Programmes() {
                   <div className="form-group">
                     <label>Date *</label>
                     <span className="input-icon"><IconCalendar /></span>
-                    <input type="date" name="date" value={editMediaForm.date} onChange={handleEditMediaFormChange} required />
+                    <input type="date" name="date" value={editMediaForm.date} max={new Date().toISOString().split("T")[0]} onChange={handleEditMediaFormChange} required />
                     {editMediaErrors.date && <p className="text-red-500 text-sm mt-1">{editMediaErrors.date}</p>}
                   </div>
                   <div className="form-group">
@@ -4952,7 +4971,7 @@ export default function Programmes() {
               <input
                 ref={livePhotoInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                 capture="environment"
                 style={{ display: 'none' }}
                 onChange={handleLivePhotoCapture}

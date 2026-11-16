@@ -429,6 +429,12 @@ export default function CreateMember({ family, errors }) {
     const handlePhotoChange = (e) => {
         const file = e.target.files && e.target.files[0];
         if (file) {
+            // Validation MIME types - Alignée sur backend CM-020 : mimes:jpeg,png,jpg,gif,webp|max:5120
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                alert("Format non autorisé. Formats acceptés : JPEG, PNG, JPG, GIF, WEBP");
+                return;
+            }
             if (file.size > 5 * 1024 * 1024) {
                 alert("Le fichier est trop volumineux (max 5MB).");
                 return;
@@ -519,7 +525,7 @@ export default function CreateMember({ family, errors }) {
                                         </div>
                                         <input
                                             type="file"
-                                            accept="image/*"
+                                            accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                                             onChange={handlePhotoChange}
                                             className="file:py-0.5 file:px-2 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
                                         />
@@ -622,6 +628,7 @@ export default function CreateMember({ family, errors }) {
                                     >
                                         <input
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
                                                 fieldErrors.date_naissance
                                                     ? "border-red-500 focus:border-red-500"
@@ -834,6 +841,10 @@ export default function CreateMember({ family, errors }) {
                                             }}
                                             options={fonctions}
                                             placeholder="Sélectionner une fonction..."
+                                            excludedFunctions={[
+                                                "Marqueur de présence",
+                                                "Président des conducteurs",
+                                            ]}
                                         />
                                         {(fieldErrors.fonction_id ||
                                             errors.fonction_id) && (
@@ -924,6 +935,7 @@ export default function CreateMember({ family, errors }) {
                                                 >
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                         value={
                                                             data.date_mariage
@@ -1003,6 +1015,7 @@ export default function CreateMember({ family, errors }) {
                                                 <FormField label="Date du baptême">
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                         value={
                                                             data.date_bapteme
@@ -1055,6 +1068,7 @@ export default function CreateMember({ family, errors }) {
                                                 <FormField label="Date de première communion">
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                         value={
                                                             data.date_premiere_communion
@@ -1107,6 +1121,7 @@ export default function CreateMember({ family, errors }) {
                                                 <FormField label="Date du mariage religieux">
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                         value={
                                                             data.date_mariage_religieux

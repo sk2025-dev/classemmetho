@@ -177,6 +177,12 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
     const handlePhotoChange = (e) => {
         const file = e.target.files?.[0];
         if (file) {
+            // Validation MIME types - Alignée sur backend CM-020 : mimes:jpeg,png,jpg,gif,webp|max:5120
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                alert("Format non autorisé. Formats acceptés : JPEG, PNG, JPG, GIF, WEBP");
+                return;
+            }
             if (file.size > 5 * 1024 * 1024) {
                 alert("Le fichier est trop volumineux (max 5MB).");
                 return;
@@ -332,7 +338,7 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
                                         type="file"
                                         id="photoInput"
                                         onChange={handlePhotoChange}
-                                        accept="image/*"
+                                        accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                                         className="hidden"
                                     />
                                     <label
@@ -356,7 +362,7 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
                                     </label>
                                 </div>
                                 <p className="text-xs text-gray-500 italic">
-                                    Formats acceptés: JPEG, PNG, GIF (max 5MB)
+                                    Formats acceptés: JPEG, PNG, JPG, GIF, WEBP (max 5MB)
                                 </p>
                             </div>
                         </div>
@@ -459,6 +465,7 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
                             >
                                 <input
                                     type="date"
+                                    max={new Date().toISOString().split('T')[0]}
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.date_naissance}
                                     onChange={(e) =>
@@ -577,6 +584,10 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
                                     }
                                     options={fonctions}
                                     placeholder="Sélectionner une ou plusieurs fonctions..."
+                                    excludedFunctions={[
+                                        "Marqueur de présence",
+                                        "Président des conducteurs",
+                                    ]}
                                 />
                             </FormField>
 
@@ -614,6 +625,7 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
                                         >
                                             <input
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                 value={data.date_mariage}
                                                 onChange={(e) =>
@@ -666,6 +678,7 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
                             <FormField label="Date du Baptême" icon={Calendar}>
                                 <input
                                     type="date"
+                                    max={new Date().toISOString().split('T')[0]}
                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.date_bapteme}
                                     onChange={(e) =>
@@ -709,6 +722,7 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
                             >
                                 <input
                                     type="date"
+                                    max={new Date().toISOString().split('T')[0]}
                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.date_premiere_communion}
                                     onChange={(e) =>
@@ -754,6 +768,7 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
                             >
                                 <input
                                     type="date"
+                                    max={new Date().toISOString().split('T')[0]}
                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.date_mariage_religieux}
                                     onChange={(e) =>

@@ -1,5 +1,5 @@
-import React from "react";
-import { CalendarDays, MapPin, Clock, Trash2, Plus, Lock } from "lucide-react";
+import React, { useMemo } from "react";
+import { CalendarDays, MapPin, Clock, Trash2, Plus, Lock, AlertCircle } from "lucide-react";
 import {
     emptyProgrammeRow,
     isIntervalRow,
@@ -25,6 +25,24 @@ export default function ProgrammeObsequesEditor({
     closedNote = "Programme clôturé par le conducteur — modification impossible.",
 }) {
     const rows = Array.isArray(value) ? value : [];
+
+    // Validation côté client pour la cohérence des heures (même jour)
+    const timeErrors = useMemo(() => {
+        const errs = {};
+        rows.forEach((row, i) => {
+            // Détermine si c'est un événement sur une seule journée
+            // Cas 1: pas de date_fin (événement simple sur une journée)
+            // Cas 2: date_fin === date_debut (intervalle sur une seule journée)
+            const isSameDay = !row.date_fin || (row.date_fin && row.date_fin === row.date_debut);
+
+            if (isSameDay && row.heure && row.heure_fin) {
+                if (row.heure_fin < row.heure) {
+                    errs[`${i}.heure_fin`] = "Pour un événement d'une seule journée, l'heure de fin ne peut pas être antérieure à l'heure de début.";
+                }
+            }
+        });
+        return errs;
+    }, [rows]);
 
     const update = (index, key, val) => {
         const next = rows.map((r, i) => (i === index ? { ...r, [key]: val } : r));
@@ -85,7 +103,9 @@ export default function ProgrammeObsequesEditor({
 
             {rows.map((row, i) => {
                 const interval = !!row._interval || isIntervalRow(row);
-                const err = (k) => errors[`${i}.${k}`];
+                // Fusionner les erreurs backend et frontend (timeErrors)
+                const allErrors = { ...errors, ...timeErrors };
+                const err = (k) => allErrors[`${i}.${k}`];
                 return (
                     <div
                         key={i}

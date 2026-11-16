@@ -1446,6 +1446,7 @@ export default function RegisterConducteur({
                   type="date"
                   className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
                   value={responsable.dateNaissance}
+                  max={new Date().toISOString().split("T")[0]}
                   onChange={(e) =>
                     setResponsable({
                       ...responsable,
@@ -1634,6 +1635,10 @@ export default function RegisterConducteur({
                   }}
                   options={churchRoles}
                   placeholder="Sélectionner des fonctions..."
+                  excludedFunctions={[
+                      "Marqueur de présence",
+                      "Président des conducteurs",
+                  ]}
                 />
               </FormField>
             </div>
@@ -1674,6 +1679,7 @@ export default function RegisterConducteur({
                       type="date"
                       className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none focus:border-blue-500"
                       value={responsable.dateMariage}
+                      max={new Date().toISOString().split("T")[0]}
                       onChange={(e) =>
                         setResponsable({
                           ...responsable,
@@ -1710,6 +1716,7 @@ export default function RegisterConducteur({
                       type="date"
                       className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none focus:border-blue-500"
                       value={responsable.dateDote}
+                      max={new Date().toISOString().split("T")[0]}
                       onChange={(e) =>
                         setResponsable({
                           ...responsable,
@@ -1742,6 +1749,7 @@ export default function RegisterConducteur({
                       type="date"
                       className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none"
                       value={responsable.dateDivorce}
+                      max={new Date().toISOString().split("T")[0]}
                       onChange={(e) =>
                         setResponsable({
                           ...responsable,
@@ -1778,6 +1786,7 @@ export default function RegisterConducteur({
                       type="date"
                       className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none"
                       value={responsable.dateDeces}
+                      max={new Date().toISOString().split("T")[0]}
                       onChange={(e) =>
                         setResponsable({
                           ...responsable,
@@ -1841,6 +1850,7 @@ export default function RegisterConducteur({
                         type="date"
                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white"
                         value={responsable.dateBapteme}
+                        max={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
                           setResponsable({
                             ...responsable,
@@ -1897,6 +1907,7 @@ export default function RegisterConducteur({
                         type="date"
                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white"
                         value={responsable.datePremiereCommunion}
+                        max={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
                           setResponsable({
                             ...responsable,
@@ -1953,6 +1964,7 @@ export default function RegisterConducteur({
                         type="date"
                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white"
                         value={responsable.dateMariageReligieux}
+                        max={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
                           setResponsable({
                             ...responsable,
@@ -2150,6 +2162,7 @@ export default function RegisterConducteur({
                         type="date"
                         className={STYLES.input}
                         value={membreTemp.dateNaissance}
+                        max={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
                           setMembreTemp({
                             ...membreTemp,
@@ -2236,6 +2249,10 @@ export default function RegisterConducteur({
                         }}
                         options={churchRoles}
                         placeholder="Sélectionner des fonctions..."
+                        excludedFunctions={[
+                            "Marqueur de présence",
+                            "Président des conducteurs",
+                        ]}
                       />
                     </FormField>
                     <FormField
@@ -2385,6 +2402,7 @@ export default function RegisterConducteur({
                           type="date"
                           className={STYLES.input}
                           value={membreTemp.dateMariage}
+                          max={new Date().toISOString().split("T")[0]}
                           onChange={(e) =>
                             setMembreTemp({
                               ...membreTemp,
@@ -2434,6 +2452,7 @@ export default function RegisterConducteur({
                           type="date"
                           className={STYLES.input}
                           value={membreTemp.dateDivorce}
+                          max={new Date().toISOString().split("T")[0]}
                           onChange={(e) =>
                             setMembreTemp({
                               ...membreTemp,
@@ -2479,6 +2498,7 @@ export default function RegisterConducteur({
                           type="date"
                           className={STYLES.input}
                           value={membreTemp.dateDeces}
+                          max={new Date().toISOString().split("T")[0]}
                           onChange={(e) =>
                             setMembreTemp({
                               ...membreTemp,
@@ -2520,6 +2540,7 @@ export default function RegisterConducteur({
                           type="date"
                           className={STYLES.input}
                           value={membreTemp.dateDot || ""}
+                          max={new Date().toISOString().split("T")[0]}
                           onChange={(e) =>
                             setMembreTemp({
                               ...membreTemp,
@@ -2591,6 +2612,7 @@ export default function RegisterConducteur({
                               type="date"
                               className={STYLES.input}
                               value={membreTemp.dateBapteme || ""}
+                              max={new Date().toISOString().split("T")[0]}
                               onChange={(e) =>
                                 setMembreTemp({
                                   ...membreTemp,
@@ -2646,6 +2668,7 @@ export default function RegisterConducteur({
                               type="date"
                               className={STYLES.input}
                               value={membreTemp.datePremiereCommunion || ""}
+                              max={new Date().toISOString().split("T")[0]}
                               onChange={(e) =>
                                 setMembreTemp({
                                   ...membreTemp,
@@ -2701,6 +2724,7 @@ export default function RegisterConducteur({
                               type="date"
                               className={STYLES.input}
                               value={membreTemp.dateMariageReligieux || ""}
+                              max={new Date().toISOString().split("T")[0]}
                               onChange={(e) =>
                                 setMembreTemp({
                                   ...membreTemp,

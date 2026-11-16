@@ -285,6 +285,7 @@ export default function MariageForm({
                                     <Field label="Date de naissance">
                                         <input
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             value={
                                                 form.details
                                                     .epoux_date_naissance
@@ -405,6 +406,7 @@ export default function MariageForm({
                                         <Field label="Date du baptême *">
                                             <input
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 value={
                                                     form.details
                                                         .epoux_bapteme_date

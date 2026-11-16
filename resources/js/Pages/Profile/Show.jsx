@@ -52,8 +52,14 @@ export default function ProfileShow({ user }) {
     .join('') || 'P'
 
   const handlePhotoChange = (e) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
     const file = e.target.files?.[0]
     if (!file) return
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Formats acceptés : JPEG, PNG, JPG, GIF, WEBP')
+      return
+    }
 
     photoForm.setData('photo', file)
     const objectUrl = URL.createObjectURL(file)
@@ -162,7 +168,7 @@ export default function ProfileShow({ user }) {
               </div>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                 onChange={handlePhotoChange}
                 disabled={photoForm.processing}
                 className="hidden"

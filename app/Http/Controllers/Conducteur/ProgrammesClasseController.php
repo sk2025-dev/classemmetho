@@ -588,6 +588,21 @@ class ProgrammesClasseController extends Controller
                 'moderateur' => 'nullable|string|max:255',
                 'famille_reception' => 'nullable|string|max:255',
                 'lieu' => 'nullable|string|max:500',
+            ], [], [
+                // Validation personnalisée pour la cohérence des heures sur une même journée
+                'end_time' => function ($attribute, $value, $fail) use ($request) {
+                    $startDate = $request->input('start_date');
+                    $endDate = $request->input('end_date') ?? $startDate;
+                    $startTime = $request->input('start_time');
+
+
+                    // Si même date (ou pas de date de fin = même jour) et les deux heures sont fournies
+                    if ($startDate === $endDate && $value && $startTime) {
+                        if ($value < $startTime) {
+                            $fail('Pour un événement d\'une seule journée, l\'heure de fin ne peut pas être antérieure à l\'heure de début.');
+                        }
+                    }
+                },
             ]);
             
             $currentYear = now()->year;
@@ -677,18 +692,37 @@ class ProgrammesClasseController extends Controller
                 'activities.*.moderateur' => 'nullable|string|max:255',
                 'activities.*.famille_reception' => 'nullable|string|max:255',
                 'activities.*.lieu' => 'nullable|string|max:500',
+            ], [], [
+                // Validation personnalisée pour la cohérence des heures sur une même journée
+                'activities.*.end_time' => function ($attribute, $value, $fail) use ($request) {
+                    $activityIndex = (int) explode('.', $attribute)[1];
+                    $activity = $request->input("activities.{$activityIndex}");
+
+                    if ($activity) {
+                        $startDate = $activity['start_date'] ?? null;
+                        $endDate = $activity['end_date'] ?? $startDate;
+                        $startTime = $activity['start_time'] ?? null;
+
+                        // Si même date (ou pas de date de fin = même jour) et les deux heures sont fournies
+                        if ($startDate && $startDate === $endDate && $value && $startTime) {
+                            if ($value < $startTime) {
+                                $fail("Pour l'activité « {$activity['title']} » (d'une seule journée), l'heure de fin ne peut pas être antérieure à l'heure de début.");
+                            }
+                        }
+                    }
+                },
             ]);
-            
+
             $activities = $validated['activities'];
             $currentYear = now()->year;
-            
+
             // Vérification des années des activités
             $invalidYearActivities = [];
             $validActivities = [];
-            
+
             foreach ($activities as $index => $activity) {
                 $activityYear = date('Y', strtotime($activity['start_date']));
-                
+
                 if ($activityYear < $currentYear) {
                     $invalidYearActivities[] = [
                         'index' => $index + 1,
@@ -856,8 +890,22 @@ class ProgrammesClasseController extends Controller
                 'moderateur' => 'nullable|string|max:255',
                 'famille_reception' => 'nullable|string|max:255',
                 'lieu' => 'nullable|string|max:500',
+            ], [], [
+                // Validation personnalisée pour la cohérence des heures sur une même journée
+                'end_time' => function ($attribute, $value, $fail) use ($request, $event) {
+                    $startDate = $request->input('start_date') ?? $event->start_date?->format('Y-m-d');
+                    $endDate = $request->input('end_date') ?? $event->end_date?->format('Y-m-d') ?? $startDate;
+                    $startTime = $request->input('start_time') ?? ($event->start_time ? $event->start_time->format('H:i') : null);
+
+                    // Si même date (ou pas de date de fin = même jour) et les deux heures sont fournies
+                    if ($startDate && $startDate === $endDate && $value && $startTime) {
+                        if ($value < $startTime) {
+                            $fail('Pour un événement d\'une seule journée, l\'heure de fin ne peut pas être antérieure à l\'heure de début.');
+                        }
+                    }
+                },
             ]);
-            
+
             // Récupérer TOUTES les données
             $data = $request->all();
             
@@ -997,11 +1045,30 @@ class ProgrammesClasseController extends Controller
                 'events.*.moderateur' => 'nullable|string|max:255',
                 'events.*.famille_reception' => 'nullable|string|max:255',
                 'events.*.lieu' => 'nullable|string|max:500',
+            ], [], [
+                // Validation personnalisée pour la cohérence des heures sur une même journée
+                'events.*.end_time' => function ($attribute, $value, $fail) use ($request) {
+                    $eventIndex = (int) explode('.', $attribute)[1];
+                    $event = $request->input("events.{$eventIndex}");
+
+                    if ($event) {
+                        $startDate = $event['start_date'] ?? null;
+                        $endDate = $event['end_date'] ?? $startDate;
+                        $startTime = $event['start_time'] ?? null;
+
+                        // Si même date (ou pas de date de fin = même jour) et les deux heures sont fournies
+                        if ($startDate && $startDate === $endDate && $value && $startTime) {
+                            if ($value < $startTime) {
+                                $fail("Pour l'événement « {$event['title']} » (d'une seule journée), l'heure de fin ne peut pas être antérieure à l'heure de début.");
+                            }
+                        }
+                    }
+                },
             ]);
-            
+
             $events = $validated['events'];
             $currentYear = now()->year;
-            
+
             // Vérification des années des événements
             $invalidYearEvents = [];
             $validEvents = [];
@@ -1308,6 +1375,18 @@ class ProgrammesClasseController extends Controller
 
                 if (!empty($rowData['end_date']) && $rowData['end_date'] < $startDate) {
                     unset($rowData['end_date']);
+                }
+
+                // Validation de la cohérence des heures sur une même journée
+                $endDate = $rowData['end_date'] ?? $startDate;
+                $startTime = $rowData['start_time'] ?? null;
+                $endTime = $rowData['end_time'] ?? null;
+
+                if ($startDate === $endDate && $endTime && $startTime) {
+                    if ($endTime < $startTime) {
+                        $skipped[] = "Ligne {$rowIndex} (« {$title} »): pour un événement d'une seule journée, l'heure de fin ne peut pas être antérieure à l'heure de début.";
+                        continue;
+                    }
                 }
 
                 $event = SpecialEvent::create([

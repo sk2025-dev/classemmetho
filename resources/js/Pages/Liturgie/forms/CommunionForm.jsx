@@ -279,7 +279,7 @@ export default function CommunionForm({
                                     <Field label="Nom complet *"><input value={form.details.personne} onChange={(e) => setDetail("personne", e.target.value)} />{errors["details.personne"] && <Err>{errors["details.personne"]}</Err>}</Field>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <Field label="Date de naissance *"><input type="date" value={form.details.can_ddn} onChange={(e) => setDetail("can_ddn", e.target.value)} />{errors["details.can_ddn"] && <Err>{errors["details.can_ddn"]}</Err>}</Field>
+                                    <Field label="Date de naissance *"><input type="date" max={new Date().toISOString().split('T')[0]} value={form.details.can_ddn} onChange={(e) => setDetail("can_ddn", e.target.value)} />{errors["details.can_ddn"] && <Err>{errors["details.can_ddn"]}</Err>}</Field>
                                     <Field label="Sexe">
                                         <select value={form.details.can_sexe} onChange={(e) => setDetail("can_sexe", e.target.value)}>
                                             <option value="">Choisir</option><option value="Masculin">Masculin</option><option value="Feminin">Feminin</option>
@@ -294,7 +294,7 @@ export default function CommunionForm({
                                         </select>
                                         {errors["details.can_baptise"] && <Err>{errors["details.can_baptise"]}</Err>}
                                     </Field>
-                                    <Field label="Date du baptême"><input type="date" value={form.details.can_date_bap} onChange={(e) => setDetail("can_date_bap", e.target.value)} /></Field>
+                                    <Field label="Date du baptême"><input type="date" max={new Date().toISOString().split('T')[0]} value={form.details.can_date_bap} onChange={(e) => setDetail("can_date_bap", e.target.value)} /></Field>
                                 </div>
                                 <Field label="Anciennete dans l'eglise">
                                     <select value={form.details.can_anciennete} onChange={(e) => setDetail("can_anciennete", e.target.value)}>
@@ -324,7 +324,7 @@ export default function CommunionForm({
                                     <Field label="Duree du suivi"><input value={form.details.cat_duree} onChange={(e) => setDetail("cat_duree", e.target.value)} /></Field>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <Field label="Date souhaitee *"><input type="date" value={form.details.date} onChange={(e) => setDetail("date", e.target.value)} />{errors["details.date"] && <Err>{errors["details.date"]}</Err>}</Field>
+                                    <Field label="Date souhaitee *"><input type="date" max={new Date().toISOString().split('T')[0]} value={form.details.date} onChange={(e) => setDetail("date", e.target.value)} />{errors["details.date"] && <Err>{errors["details.date"]}</Err>}</Field>
                                     <Field label="Lieu *"><input value={form.details.lieu} onChange={(e) => setDetail("lieu", e.target.value)} />{errors["details.lieu"] && <Err>{errors["details.lieu"]}</Err>}</Field>
                                 </div>
                                 <div className="space-y-2 mb-4">

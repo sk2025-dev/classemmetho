@@ -44,7 +44,34 @@ class ProgrammeObsequesService
             "{$prefix}.*.date_debut" => ['required_with:' . $prefix . '.*', 'date'],
             "{$prefix}.*.date_fin" => ['nullable', 'date', 'after_or_equal:' . $prefix . '.*.date_debut'],
             "{$prefix}.*.heure" => ['nullable', 'date_format:H:i'],
-            "{$prefix}.*.heure_fin" => ['nullable', 'date_format:H:i'],
+            "{$prefix}.*.heure_fin" => [
+                'nullable',
+                'date_format:H:i',
+                function ($attribute, $value, $fail) use ($prefix) {
+                    // Récupère l'index de la ligne courante (ex: "programme_evenements.0.heure_fin" -> 0)
+                    $matches = [];
+                    if (!preg_match('/\.(\d+)\./', $attribute, $matches)) {
+                        return;
+                    }
+                    $index = $matches[1];
+
+                    $dateDebut = request()->input("{$prefix}.{$index}.date_debut");
+                    $dateFin = request()->input("{$prefix}.{$index}.date_fin");
+                    $heure = request()->input("{$prefix}.{$index}.heure");
+
+                    // Détermine si c'est un événement sur une seule journée
+                    // Cas 1: pas de date_fin (événement simple sur une journée)
+                    // Cas 2: date_fin === date_debut (intervalle sur une seule journée)
+                    $isSameDay = !$dateFin || ($dateFin && $dateFin === $dateDebut);
+
+                    // Validation de la cohérence des heures UNIQUEMENT pour les événements d'une seule journée
+                    if ($isSameDay && $value && $heure) {
+                        if ($value < $heure) {
+                            $fail("Pour un événement d'une seule journée, l'heure de fin ne peut pas être antérieure à l'heure de début.");
+                        }
+                    }
+                },
+            ],
             "{$prefix}.*.libelle" => ['required_with:' . $prefix . '.*', 'string', 'max:255'],
             "{$prefix}.*.lieu" => ['nullable', 'string', 'max:500'],
         ];

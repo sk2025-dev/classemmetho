@@ -1191,8 +1191,13 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
     };
 
     const handlePhotoChange = (e) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
         const file = e.target.files && e.target.files[0];
         if (file) {
+            if (!allowedTypes.includes(file.type)) {
+                showToast('Formats acceptés : JPEG, PNG, JPG, GIF, WEBP', 'error');
+                return;
+            }
             if (file.size > 5 * 1024 * 1024) {
                 showToast("Le fichier est trop volumineux (max 5MB).");
                 return;
@@ -1429,7 +1434,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                             </div>
                                             <input
                                                 type="file"
-                                                accept="image/*"
+                                                accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                                                 onChange={handlePhotoChange}
                                                 className="file:py-0.5 file:px-2 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
                                             />
@@ -1526,6 +1531,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                         >
                                             <input
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
                                                     fieldErrors.date_naissance
                                                         ? "border-red-500 focus:border-red-500"
@@ -1661,6 +1667,10 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                 }}
                                                 options={fonctions}
                                                 placeholder="Sélectionner une fonction..."
+                                                excludedFunctions={[
+                                                    "Marqueur de présence",
+                                                    "Président des conducteurs",
+                                                ]}
                                             />
                                             {fieldErrors.fonction_id && (
                                                 <p className="text-red-500 text-xs mt-1">
@@ -1743,6 +1753,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                     >
                                                         <input
                                                             type="date"
+                                                            max={new Date().toISOString().split('T')[0]}
                                                             className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                             value={
                                                                 data.date_mariage
@@ -1809,6 +1820,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                     <FormField label="Date du baptême">
                                                         <input
                                                             type="date"
+                                                            max={new Date().toISOString().split('T')[0]}
                                                             className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                             value={
                                                                 data.date_bapteme
@@ -1859,6 +1871,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                     <FormField label="Date de première communion">
                                                         <input
                                                             type="date"
+                                                            max={new Date().toISOString().split('T')[0]}
                                                             className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                             value={
                                                                 data.date_premiere_communion
@@ -1909,6 +1922,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                     <FormField label="Date du mariage religieux">
                                                         <input
                                                             type="date"
+                                                            max={new Date().toISOString().split('T')[0]}
                                                             className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                             value={
                                                                 data.date_mariage_religieux

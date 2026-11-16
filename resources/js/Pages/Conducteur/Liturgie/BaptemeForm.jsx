@@ -336,6 +336,7 @@ export default function BaptemeForm({
                                     <Field label="Date de naissance">
                                         <input
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             value={form.details.date_naissance}
                                             onChange={(e) =>
                                                 setDetail(
@@ -395,6 +396,7 @@ export default function BaptemeForm({
                                         <Field label="Date du baptême">
                                             <input
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 value={form.details.bapteme_date}
                                                 onChange={(e) =>
                                                     setDetail(
@@ -461,6 +463,7 @@ export default function BaptemeForm({
                                         <Field label="Date du baptême">
                                             <input
                                                 type="date"
+                                                max={new Date().toISOString().split('T')[0]}
                                                 value={form.details.can_date_bap}
                                                 onChange={(e) =>
                                                     setDetail(

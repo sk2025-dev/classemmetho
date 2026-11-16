@@ -397,6 +397,7 @@ export default function NaissanceForm({
                                     <Field label="Date de naissance *">
                                         <input
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             value={form.details.date_naissance}
                                             onChange={(e) =>
                                                 setDetail(

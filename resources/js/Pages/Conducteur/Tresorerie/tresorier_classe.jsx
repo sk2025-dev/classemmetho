@@ -822,6 +822,7 @@ export default function TresorierClasse({
                         style={inputStyle}
                         type="date"
                         value={filters.date}
+                        max={new Date().toISOString().split("T")[0]}
                         onChange={(e) =>
                             setFilters((prev) => ({
                                 ...prev,
@@ -1644,6 +1645,7 @@ export default function TresorierClasse({
                             style={inputStyle}
                             type="date"
                             value={paiementForm.date_paiement}
+                            max={new Date().toISOString().split("T")[0]}
                             onChange={(e) =>
                                 setPaiementForm((p) => ({
                                     ...p,
@@ -1790,6 +1792,7 @@ export default function TresorierClasse({
                             style={inputStyle}
                             type="date"
                             value={donForm.date_don}
+                            max={new Date().toISOString().split("T")[0]}
                             onChange={(e) =>
                                 setDonForm((p) => ({
                                     ...p,

@@ -384,6 +384,7 @@ export default function PublicSondageRespond({
                                     </div>
                                     <input
                                         type="date"
+                                        max={new Date().toISOString().split('T')[0]}
                                         value={memberForm.date_naissance}
                                         onChange={(event) =>
                                             setMemberForm((current) => ({

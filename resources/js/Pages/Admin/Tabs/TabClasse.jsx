@@ -1087,8 +1087,13 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
     };
 
     const handlePhotoChange = (e) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
         const file = e.target.files && e.target.files[0];
         if (file) {
+            if (!allowedTypes.includes(file.type)) {
+                showToast('Formats acceptés : JPEG, PNG, JPG, GIF, WEBP', 'error');
+                return;
+            }
             const preview = URL.createObjectURL(file);
             setFormData((prev) => ({ ...prev, photo_file: file }));
             setPhotoPreview(preview);
@@ -1190,7 +1195,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                         </div>
                                         <input
                                             type="file"
-                                            accept="image/*"
+                                            accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                                             onChange={handlePhotoChange}
                                             className="file:py-0.5 file:px-2 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
                                         />
@@ -1256,6 +1261,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                     >
                                         <input
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             className="w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 border-gray-300 focus:border-blue-500"
                                             value={
                                                 formData.date_naissance || ""
@@ -1351,6 +1357,10 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                             }}
                                             options={fonctions}
                                             placeholder="Sélectionner une fonction..."
+                                            excludedFunctions={[
+                                                "Marqueur de présence",
+                                                "Président des conducteurs",
+                                            ]}
                                         />
                                     </FormField>
                                     <FormField
@@ -1423,6 +1433,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                 >
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                         value={
                                                             formData.date_mariage ||
@@ -1487,6 +1498,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                 <FormField label="Date du baptême">
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                         value={
                                                             formData.date_bapteme ||
@@ -1531,6 +1543,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                 <FormField label="Date de première communion">
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                         value={
                                                             formData.date_premiere_communion ||
@@ -1576,6 +1589,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                 <FormField label="Date du mariage religieux">
                                                     <input
                                                         type="date"
+                                                        max={new Date().toISOString().split('T')[0]}
                                                         className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                         value={
                                                             formData.date_mariage_religieux ||
@@ -2294,8 +2308,13 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
     }, [isOpen, classeData, setData]);
 
     const handleLogoChange = (e) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
         const file = e.target.files && e.target.files[0];
         if (file) {
+            if (!allowedTypes.includes(file.type)) {
+                showToast('Formats acceptés : JPEG, PNG, JPG, GIF, WEBP', 'error');
+                return;
+            }
             setLogoPreview(URL.createObjectURL(file));
             setData((prev) => ({ ...prev, logo: file, remove_logo: 0 }));
         }
@@ -2307,8 +2326,13 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
     };
 
     const handleCachetChange = (e) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
         const file = e.target.files && e.target.files[0];
         if (file) {
+            if (!allowedTypes.includes(file.type)) {
+                showToast('Formats acceptés : JPEG, PNG, JPG, GIF, WEBP', 'error');
+                return;
+            }
             setCachetPreview(URL.createObjectURL(file));
             setData((prev) => ({ ...prev, cachet: file, remove_cachet: 0 }));
         }
@@ -2462,7 +2486,7 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
                                     <div className="flex flex-col gap-2">
                                         <input
                                             type="file"
-                                            accept="image/*"
+                                            accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                                             onChange={handleLogoChange}
                                             className="file:py-1 file:px-2 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs text-xs"
                                         />
@@ -2504,7 +2528,7 @@ const ClasseFormModal = ({ isOpen, onClose, classeData, onSuccess, toast }) => {
                                     <div className="flex flex-col gap-2">
                                         <input
                                             type="file"
-                                            accept="image/*"
+                                            accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
                                             onChange={handleCachetChange}
                                             className="file:py-1 file:px-2 file:rounded file:bg-emerald-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-emerald-700 file:transition-colors file:text-xs text-xs"
                                         />

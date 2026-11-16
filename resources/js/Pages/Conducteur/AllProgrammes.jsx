@@ -1259,14 +1259,14 @@ const EditProgrammeModal = ({ isOpen, onClose, event, onSave }) => {
               <div className="form-group">
                 <label>Date de début *</label>
                 <span className="input-icon"><IconCalendar /></span>
-                <input type="date" name="start_date" value={formData.start_date} onChange={handleChange} required />
+                <input type="date" name="start_date" value={formData.start_date} max={today} onChange={handleChange} required />
                 {errors.start_date && <small style={{ color: '#dc2626', marginTop: '4px' }}>{errors.start_date}</small>}
               </div>
-              
+
               <div className="form-group">
                 <label>Date de fin</label>
                 <span className="input-icon"><IconCalendar /></span>
-                <input type="date" name="end_date" value={formData.end_date} onChange={handleChange} min={formData.start_date || today} />
+                <input type="date" name="end_date" value={formData.end_date} onChange={handleChange} min={formData.start_date || today} max={today} />
                 <small style={{ fontSize: '0.7rem', color: '#6b7280' }}>Optionnelle - laisse vide pour une activité d'un jour</small>
                 {errors.end_date && <small style={{ color: '#dc2626', marginTop: '4px' }}>{errors.end_date}</small>}
               </div>

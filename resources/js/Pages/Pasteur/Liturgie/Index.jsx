@@ -4241,6 +4241,7 @@ export default function Index({
                                     <Field label="Date souhaitée" required>
                                         <input
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             className="modal-input"
                                             value={createForm.date_souhaitee}
                                             onChange={(e) =>
@@ -5625,6 +5626,7 @@ export default function Index({
                                         <input
                                             className="ann-input"
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             value={annonceForm.date_annonce}
                                             onChange={(e) =>
                                                 setAnnonceForm((f) => ({
@@ -5639,6 +5641,7 @@ export default function Index({
                                         <input
                                             className="ann-input"
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             value={annonceForm.date_publication}
                                             onChange={(e) =>
                                                 setAnnonceForm((f) => ({
@@ -5653,6 +5656,7 @@ export default function Index({
                                         <input
                                             className="ann-input"
                                             type="date"
+                                            max={new Date().toISOString().split('T')[0]}
                                             value={annonceForm.date_expiration}
                                             onChange={(e) =>
                                                 setAnnonceForm((f) => ({
@@ -6073,6 +6077,7 @@ export default function Index({
                                 <label className="modal-label">Date du culte</label>
                                 <input
                                     type="date"
+                                    max={new Date().toISOString().split('T')[0]}
                                     className="modal-textarea"
                                     style={{ minHeight: "auto" }}
                                     value={rescheduleForm.date_annonce}

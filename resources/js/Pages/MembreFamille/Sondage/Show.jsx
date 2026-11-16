@@ -462,6 +462,7 @@ export default function MembreFamilleSondageShow({
                                         type="date"
                                         name="respondentProfile.date_naissance"
                                         value={respondentProfile.date_naissance}
+                                        max={new Date().toISOString().split("T")[0]}
                                         onChange={(event) =>
                                             setRespondentProfile((current) => ({
                                                 ...current,

@@ -518,6 +518,7 @@ export default function Selection({
                                                 <input
                                                     className="sel-ann-input"
                                                     type="date"
+                                                    max={new Date().toISOString().split('T')[0]}
                                                     value={annonceForm.date_annonce}
                                                     onChange={(e) =>
                                                         setAnnonceForm((f) => ({

@@ -118,7 +118,7 @@ class MemberController extends Controller
                     }
                 }],
                 'relation' => 'nullable|string|max:255',
-                'photo' => 'nullable',
+                'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
                 // Sacrements
                 'baptise' => 'nullable|in:0,1',
                 'date_bapteme' => 'nullable|date|before_or_equal:today|required_if:baptise,1',
@@ -149,7 +149,7 @@ class MemberController extends Controller
                 'fonction_ids.max' => 'Vous pouvez sélectionner au maximum 10 fonctions',
                 'fonction_ids.*.exists' => 'Une des fonctions sélectionnées n\'existe pas',
                 'photo.image' => 'Le fichier doit être une image valide',
-                'photo.mimes' => 'L\'image doit être au format JPEG, PNG ou GIF',
+                'photo.mimes' => 'L\'image doit être au format JPEG, PNG, JPG, GIF ou WEBP',
                 'photo.max' => 'L\'image ne doit pas dépasser 5MB',
                 'date_bapteme.required_if' => 'La date du baptême est obligatoire si vous avez coché le baptême',
                 'date_bapteme.before_or_equal' => 'La date du baptême ne peut pas être dans le futur',
@@ -346,7 +346,7 @@ class MemberController extends Controller
                 }],
                 'ville_id' => 'nullable|exists:villes,id',
                 'relation' => 'nullable|string|max:255',
-                'photo' => 'nullable',
+                'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
                 'baptise' => 'nullable|in:0,1',
                 'date_bapteme' => 'nullable|date|before_or_equal:today|required_if:baptise,1',
                 'lieu_bapteme' => 'nullable|string|max:255|required_if:baptise,1',
@@ -363,6 +363,9 @@ class MemberController extends Controller
                 'date_bapteme.before_or_equal' => 'La date du baptême ne peut pas être dans le futur',
                 'date_premiere_communion.before_or_equal' => 'La date de la première communion ne peut pas être dans le futur',
                 'date_mariage_religieux.before_or_equal' => 'La date du mariage religieux ne peut pas être dans le futur',
+                'photo.image' => 'Le fichier doit être une image valide',
+                'photo.mimes' => 'L\'image doit être au format JPEG, PNG, JPG, GIF ou WEBP',
+                'photo.max' => 'L\'image ne doit pas dépasser 5MB',
             ]
         );
 
