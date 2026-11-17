@@ -213,6 +213,16 @@ class DonationController extends Controller
         };
     }
 
+    public static function isConfigured(): bool
+    {
+        $masterKey = trim((string) config('services.paydunya.master_key', env('PAYDUNYA_MASTER_KEY', '')));
+        $publicKey = trim((string) config('services.paydunya.public_key', env('PAYDUNYA_PUBLIC_KEY', '')));
+        $privateKey = trim((string) config('services.paydunya.private_key', env('PAYDUNYA_PRIVATE_KEY', '')));
+        $token = trim((string) config('services.paydunya.token', env('PAYDUNYA_TOKEN', '')));
+
+        return $masterKey !== '' && $publicKey !== '' && $privateKey !== '' && $token !== '';
+    }
+
     private function bootstrapPayDunya(): void
     {
         $masterKey = trim((string) config('services.paydunya.master_key', env('PAYDUNYA_MASTER_KEY', '')));

@@ -50,7 +50,9 @@ use App\Http\Controllers\ResponsableFamille\TresorerieController as ResponsableF
 use App\Http\Controllers\VerificationCertificatController;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome');
+    return Inertia::render('Welcome', [
+        'paydunya_configured' => \App\Http\Controllers\Public\DonationController::isConfigured(),
+    ]);
 });
 
 Route::get('/certificat/verification/{reference}', [VerificationCertificatController::class, 'show'])

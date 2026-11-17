@@ -9,6 +9,7 @@ import {
   Facebook,
   Instagram,
   Youtube,
+  AlertTriangle,
 } from "lucide-react";
 import { clearOldStepData } from "../Hooks/usePersistentState";
 import { withBasePath } from "../Utils/urlHelper";
@@ -119,7 +120,7 @@ const Navbar = ({ activeSection, isScrolled, basePath }) => {
 };
 
 export default function Welcome() {
-  const { app } = usePage().props;
+  const { app, paydunya_configured } = usePage().props;
   const basePath = app?.basePath || "";
   const withBase = (path) => withBasePath(basePath, path);
 
@@ -443,18 +444,31 @@ export default function Welcome() {
           </p>
 
           <div className="flex justify-center">
-            <button
-              onClick={() => setIsDonModalOpen(true)}
-              className="group px-8 py-4 bg-amber-500 text-white rounded-full font-bold text-lg transition-all hover:scale-105 hover:bg-amber-600 shadow-2xl shadow-amber-500/30"
-            >
-              <span className="flex items-center gap-2">
-                Faire un don
-                <ArrowRight
-                  size={20}
-                  className="group-hover:translate-x-1 transition-transform"
-                />
-              </span>
-            </button>
+            {!paydunya_configured ? (
+              <button
+                disabled
+                className="px-8 py-4 bg-slate-300 text-slate-500 rounded-full font-bold text-lg cursor-not-allowed"
+                title="Paiement en ligne temporairement indisponible"
+              >
+                <span className="flex items-center gap-2">
+                  Faire un don
+                  <ArrowRight size={20} />
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsDonModalOpen(true)}
+                className="group px-8 py-4 bg-amber-500 text-white rounded-full font-bold text-lg transition-all hover:scale-105 hover:bg-amber-600 shadow-2xl shadow-amber-500/30"
+              >
+                <span className="flex items-center gap-2">
+                  Faire un don
+                  <ArrowRight
+                    size={20}
+                    className="group-hover:translate-x-1 transition-transform"
+                  />
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -478,12 +492,33 @@ export default function Welcome() {
               <X size={18} />
             </button>
 
-            <h3 className="text-2xl font-black text-slate-900 mb-2">
-              Faire un don
-            </h3>
-            <p className="text-slate-600 mb-6">
-              Remplissez le formulaire ci-dessous pour effectuer votre don.
-            </p>
+            {!paydunya_configured ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle size={36} className="text-amber-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">
+                  Service indisponible
+                </h3>
+                <p className="text-slate-600 mb-6">
+                  Le paiement en ligne via PayDunya n&apos;est pas encore configuré.
+                  Veuillez réessayer plus tard ou contacter l&apos;administration.
+                </p>
+                <button
+                  onClick={closeDonModal}
+                  className="px-6 py-3 bg-slate-800 text-white rounded-full font-bold hover:bg-slate-700 transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-2xl font-black text-slate-900 mb-2">
+                  Faire un don
+                </h3>
+                <p className="text-slate-600 mb-6">
+                  Remplissez le formulaire ci-dessous pour effectuer votre don.
+                </p>
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-semibold text-slate-700">
@@ -757,6 +792,8 @@ export default function Welcome() {
                 </button>
               </div>
             </div>
+              </>
+            )}
           </div>
         </div>
       )}
