@@ -13,7 +13,8 @@ export default function ProfileShow({ user }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const profileForm = useForm({
-    name: user.name || '',
+    nom: user.nom || '',
+    prenom: user.prenom || '',
     email: user.email || '',
   })
 
@@ -82,8 +83,10 @@ export default function ProfileShow({ user }) {
   const handleProfileSubmit = (e) => {
     e.preventDefault()
     profileForm.post(withBasePath('', '/profile/update'), {
+      preserveScroll: true,
       onSuccess: () => {
-        profileForm.reset()
+        // Inertia gère automatiquement la navigation après le redirect
+        // Le composant se re-rendra avec les nouvelles props (user.nom, user.prenom mis à jour)
       },
     })
   }
@@ -256,17 +259,32 @@ export default function ProfileShow({ user }) {
                 </div>
 
                 <form onSubmit={handleProfileSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">Nom Complet</label>
-                    <input
-                      type="text"
-                      value={profileForm.data.name}
-                      onChange={(e) => profileForm.setData('name', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    {profileForm.errors.name && (
-                      <p className="text-red-600 text-sm mt-1">{profileForm.errors.name}</p>
-                    )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">Nom</label>
+                      <input
+                        type="text"
+                        value={profileForm.data.nom}
+                        onChange={(e) => profileForm.setData('nom', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {profileForm.errors.nom && (
+                        <p className="text-red-600 text-sm mt-1">{profileForm.errors.nom}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">Prénom</label>
+                      <input
+                        type="text"
+                        value={profileForm.data.prenom}
+                        onChange={(e) => profileForm.setData('prenom', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {profileForm.errors.prenom && (
+                        <p className="text-red-600 text-sm mt-1">{profileForm.errors.prenom}</p>
+                      )}
+                    </div>
                   </div>
 
                   <div>

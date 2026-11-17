@@ -26,6 +26,8 @@ class ProfileController extends Controller
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
+                'nom' => $user->nom,
+                'prenom' => $user->prenom,
                 'email' => $user->email,
                 'code_membre' => $user->code_membre,
                 'identifier' => $user->identifier,
@@ -49,7 +51,8 @@ class ProfileController extends Controller
         $user = Auth::user();
 
         $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
+            'nom' => 'nullable|string|max:255',
+            'prenom' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255|unique:users,email,' . $user->id,
         ], [
             'email.unique' => 'Cet email est deja utilise.',
