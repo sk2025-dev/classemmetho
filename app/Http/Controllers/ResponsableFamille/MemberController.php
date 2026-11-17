@@ -109,12 +109,8 @@ class MemberController extends Controller
                 'fonction_id' => 'nullable|exists:fonctions,id',
                 'fonction_ids' => 'nullable|array|max:10',
                 'fonction_ids.*' => ['integer', 'exists:fonctions,id', function ($attribute, $value, $fail) {
-                    $forbiddenFonctions = Fonction::whereIn('nom', [
-                        'marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs',
-                        'Marqueur de présence', 'Marqueur presence', 'Président des conducteurs', 'President des conducteurs'
-                    ])->pluck('id', 'nom')->all();
-                    if (isset($forbiddenFonctions[$value])) {
-                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . $forbiddenFonctions[$value] . ' ».');
+                    if (Fonction::isForbidden($value)) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . Fonction::getForbiddenName($value) . ' ».');
                     }
                 }],
                 'relation' => 'nullable|string|max:255',
@@ -333,15 +329,15 @@ class MemberController extends Controller
                 'employment_status' => 'nullable|string|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
                 'profession' => 'nullable|string|max:255',
                 'niveau_etude' => 'nullable|string|max:255',
-                'fonction_id' => 'nullable|exists:fonctions,id',
+                'fonction_id' => ['nullable', 'exists:fonctions,id', function ($attribute, $value, $fail) {
+                    if (Fonction::isForbidden($value)) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . Fonction::getForbiddenName($value) . ' ».');
+                    }
+                }],
                 'fonction_ids' => 'nullable|array|max:10',
                 'fonction_ids.*' => ['integer', 'exists:fonctions,id', function ($attribute, $value, $fail) {
-                    $forbiddenFonctions = Fonction::whereIn('nom', [
-                        'marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs',
-                        'Marqueur de présence', 'Marqueur presence', 'Président des conducteurs', 'President des conducteurs'
-                    ])->pluck('id', 'nom')->all();
-                    if (isset($forbiddenFonctions[$value])) {
-                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . $forbiddenFonctions[$value] . ' ».');
+                    if (Fonction::isForbidden($value)) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . Fonction::getForbiddenName($value) . ' ».');
                     }
                 }],
                 'ville_id' => 'nullable|exists:villes,id',

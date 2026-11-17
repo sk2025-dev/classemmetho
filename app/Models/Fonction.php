@@ -52,4 +52,31 @@ class Fonction extends Model
     {
         return $this->hasMany(AuditLog::class, 'record_id')->where('table_name', 'fonctions');
     }
+
+    /**
+     * Récupère les fonctions interdites à l'assignation par les utilisateurs non-admin
+     * Comparaison case-insensitive et trim pour robustesse
+     */
+    public static function forbiddenForAssignation(): \Illuminate\Support\Collection
+    {
+        return self::whereRaw('LOWER(TRIM(nom)) IN (?)', [
+            ['marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs']
+        ])->get(['id', 'nom']);
+    }
+
+    /**
+     * Vérifie si une fonction est interdite à l'assignation
+     */
+    public static function isForbidden(int $fonctionId): bool
+    {
+        return self::forbiddenForAssignation()->contains('id', $fonctionId);
+    }
+
+    /**
+     * Récupère le nom d'une fonction interdite pour message d'erreur
+     */
+    public static function getForbiddenName(int $fonctionId): ?string
+    {
+        return self::forbiddenForAssignation()->firstWhere('id', $fonctionId)?->nom;
+    }
 }

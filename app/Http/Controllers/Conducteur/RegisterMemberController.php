@@ -71,12 +71,8 @@ class RegisterMemberController extends Controller
                 'responsable.fonction_professionnelle' => 'nullable|string|max:255',
                 'responsable.fonction_ids' => 'nullable|array|max:10',
                 'responsable.fonction_ids.*' => ['integer', 'exists:fonctions,id', function ($attribute, $value, $fail) {
-                    $forbiddenFonctions = Fonction::whereIn('nom', [
-                        'marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs',
-                        'Marqueur de présence', 'Marqueur presence', 'Président des conducteurs', 'President des conducteurs'
-                    ])->pluck('id', 'nom')->all();
-                    if (isset($forbiddenFonctions[$value])) {
-                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . $forbiddenFonctions[$value] . ' ».');
+                    if (Fonction::isForbidden($value)) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . Fonction::getForbiddenName($value) . ' ».');
                     }
                 }],
                 'responsable.adresse' => 'nullable|string|max:1000',
@@ -127,12 +123,8 @@ class RegisterMemberController extends Controller
                 'membres.*.fonction' => 'nullable|string|max:255',
                 'membres.*.fonction_ids' => 'nullable|array|max:10',
                 'membres.*.fonction_ids.*' => ['integer', 'exists:fonctions,id', function ($attribute, $value, $fail) {
-                    $forbiddenFonctions = Fonction::whereIn('nom', [
-                        'marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs',
-                        'Marqueur de présence', 'Marqueur presence', 'Président des conducteurs', 'President des conducteurs'
-                    ])->pluck('id', 'nom')->all();
-                    if (isset($forbiddenFonctions[$value])) {
-                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . $forbiddenFonctions[$value] . ' ».');
+                    if (Fonction::isForbidden($value)) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . Fonction::getForbiddenName($value) . ' ».');
                     }
                 }],
                 'membres.*.profession' => 'nullable|string|max:255',

@@ -832,11 +832,6 @@ class InscriptionsController extends Controller
         }
 
         try {
-            $forbiddenFonctions = Fonction::whereIn('nom', [
-                'marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs',
-                'Marqueur de présence', 'Marqueur presence', 'Président des conducteurs', 'President des conducteurs'
-            ])->pluck('id', 'nom')->all();
-
             $validated = $request->validate([
                 'family_id' => 'nullable|exists:families,id',
                 'family_name' => 'nullable|string|max:255',
@@ -849,9 +844,9 @@ class InscriptionsController extends Controller
                 'date_naissance' => 'required|date|before_or_equal:today',
                 'genre' => 'required|string|max:10',
                 'classe_id' => 'required|integer',
-                'fonction_id' => ['nullable', 'integer', 'exists:fonctions,id', function ($attribute, $value, $fail) use ($forbiddenFonctions) {
-                    if (isset($forbiddenFonctions[$value])) {
-                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . $forbiddenFonctions[$value] . ' ».');
+                'fonction_id' => ['nullable', 'integer', 'exists:fonctions,id', function ($attribute, $value, $fail) {
+                    if (Fonction::isForbidden($value)) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . Fonction::getForbiddenName($value) . ' ».');
                     }
                 }],
                 'employment_status' => 'required|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
@@ -993,11 +988,6 @@ class InscriptionsController extends Controller
             return response()->json(['success' => false, 'message' => 'Aucune modification n\'est possible sur cet ancien membre ou sur un transfert en cours.'], 422);
         }
 
-        $forbiddenFonctions = Fonction::whereIn('nom', [
-            'marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs',
-            'Marqueur de présence', 'Marqueur presence', 'Président des conducteurs', 'President des conducteurs'
-        ])->pluck('id', 'nom')->all();
-
         $validated = $request->validate([
             'nom' => 'nullable|string|max:255',
             'prenom' => 'nullable|string|max:255',
@@ -1014,15 +1004,15 @@ class InscriptionsController extends Controller
             'profession' => 'nullable|string|max:255',
             'employment_status' => 'nullable|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
             'profession_detail' => 'nullable|string|max:255',
-            'fonction_id' => ['nullable', 'integer', 'exists:fonctions,id', function ($attribute, $value, $fail) use ($forbiddenFonctions) {
-                    if (isset($forbiddenFonctions[$value])) {
-                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . $forbiddenFonctions[$value] . ' ».');
+            'fonction_id' => ['nullable', 'integer', 'exists:fonctions,id', function ($attribute, $value, $fail) {
+                    if (Fonction::isForbidden($value)) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . Fonction::getForbiddenName($value) . ' ».');
                     }
                 }],
             'fonction_ids' => 'nullable|array|max:2',
-            'fonction_ids.*' => ['integer', 'exists:fonctions,id', function ($attribute, $value, $fail) use ($forbiddenFonctions) {
-                    if (isset($forbiddenFonctions[$value])) {
-                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . $forbiddenFonctions[$value] . ' ».');
+            'fonction_ids.*' => ['integer', 'exists:fonctions,id', function ($attribute, $value, $fail) {
+                    if (Fonction::isForbidden($value)) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . Fonction::getForbiddenName($value) . ' ».');
                     }
                 }],
             'statut' => 'nullable|in:actif,inactif,decede',

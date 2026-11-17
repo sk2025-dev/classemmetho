@@ -46,22 +46,14 @@ class QuickMemberController extends Controller
                 'profession_detail' => 'nullable|string|max:255',
                 'profession' => 'nullable|string|max:255',
                 'fonction_id' => ['nullable', 'exists:fonctions,id', function ($attribute, $value, $fail) {
-                    $forbiddenFonctions = Fonction::whereIn('nom', [
-                        'marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs',
-                        'Marqueur de présence', 'Marqueur presence', 'Président des conducteurs', 'President des conducteurs'
-                    ])->pluck('id', 'nom')->all();
-                    if (isset($forbiddenFonctions[$value])) {
-                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . $forbiddenFonctions[$value] . ' ».');
+                    if (Fonction::isForbidden($value)) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . Fonction::getForbiddenName($value) . ' ».');
                     }
                 }],
                 'fonction_ids' => 'nullable|array|max:10',
                 'fonction_ids.*' => ['integer', 'exists:fonctions,id', function ($attribute, $value, $fail) {
-                    $forbiddenFonctions = Fonction::whereIn('nom', [
-                        'marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs',
-                        'Marqueur de présence', 'Marqueur presence', 'Président des conducteurs', 'President des conducteurs'
-                    ])->pluck('id', 'nom')->all();
-                    if (isset($forbiddenFonctions[$value])) {
-                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . $forbiddenFonctions[$value] . ' ».');
+                    if (Fonction::isForbidden($value)) {
+                        $fail('Vous n\'êtes pas autorisé à accorder la fonction « ' . Fonction::getForbiddenName($value) . ' ».');
                     }
                 }],
                 'relation' => 'nullable|string|max:100',
