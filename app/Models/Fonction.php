@@ -59,9 +59,17 @@ class Fonction extends Model
      */
     public static function forbiddenForAssignation(): \Illuminate\Support\Collection
     {
-        return self::whereRaw('LOWER(TRIM(nom)) IN (?)', [
-            ['marqueur de présence', 'marqueur presence', 'président des conducteurs', 'president des conducteurs']
-        ])->get(['id', 'nom']);
+        $forbiddenNames = [
+            'marqueur de présence',
+            'marqueur presence',
+            'président des conducteurs',
+            'president des conducteurs',
+        ];
+
+        $placeholders = implode(', ', array_fill(0, count($forbiddenNames), '?'));
+
+        return self::whereRaw('LOWER(TRIM(nom)) IN (' . $placeholders . ')', $forbiddenNames)
+            ->get(['id', 'nom']);
     }
 
     /**
