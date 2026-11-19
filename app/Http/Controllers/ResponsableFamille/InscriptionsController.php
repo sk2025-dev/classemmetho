@@ -21,6 +21,27 @@ class InscriptionsController extends Controller
             ->where('responsable_id', $user->id)
             ->first();
 
+        // Si le responsable_famille n'a pas de famille liée (incohérence données),
+        // on essaie de trouver sa famille via son family_id
+        if (!$family && $user->family_id) {
+            $family = Family::with('ville', 'classe')->find($user->family_id);
+        }
+
+        // Si toujours pas de famille, en créer une automatiquement pour ce responsable
+        if (!$family) {
+            $family = Family::create([
+                'nom' => $user->nom . ' ' . $user->prenom,
+                'responsable_id' => $user->id,
+                'classe_id' => $user->classe_id,
+                'email' => $user->email,
+                'telephone' => $user->telephone,
+                'telephone2' => $user->telephone2,
+                'adresse' => $user->adresse,
+            ]);
+            // Mettre à jour le family_id de l'utilisateur
+            $user->update(['family_id' => $family->id]);
+        }
+
         if ($family && !$family->ville_id) {
             $inscription = \App\Models\Inscription::where('responsable_email', $family->email)
                 ->whereIn('status', ['approuve', 'approved'])
